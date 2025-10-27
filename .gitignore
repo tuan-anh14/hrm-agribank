@@ -1,0 +1,115 @@
+# ============================================================
+# 🌱 GLOBAL SETTINGS
+# ============================================================
+
+# Node modules (FE + BE)
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+build/
+out/
+.next/
+.cache/
+.vite/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files (chứa mật khẩu, token, config nhạy cảm)
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+**/.env
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor config
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Coverage / Test
+coverage/
+.nyc_output/
+
+# ============================================================
+# 🖥 FRONTEND (React + Vite)
+# ============================================================
+
+# Output của Vite build
+frontend/dist/
+frontend/.vite/
+frontend/node_modules/
+frontend/*.local
+
+# Dependency lock (nếu không dùng chung package manager)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# ============================================================
+# ⚙️ BACKEND (NestJS)
+# ============================================================
+
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/.env.*
+backend/.cache/
+backend/.DS_Store
+backend/src/**/*.spec.ts  # bỏ file test nếu không cần
+
+# Prisma
+backend/prisma/dev.db
+backend/prisma/test.db
+backend/prisma/migrations/
+
+# ============================================================
+# 🗄 DATABASE / DOCKER
+# ============================================================
+
+database/*.sql
+database/backup/
+database/data/
+postgres-data/
+docker-data/
+
+# Docker
+docker-compose.override.yml
+*.pid
+*.sock
+
+# ============================================================
+# 🧪 MISC
+# ============================================================
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.old
+
+# Generated assets
+frontend/public/uploads/
+backend/uploads/
+uploads/
+
+# Lock files (optional)
+# *.lock
+
+# ============================================================
+# ✅ END
+# ============================================================
