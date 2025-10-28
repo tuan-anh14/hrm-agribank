@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Role {
+  ADMIN
+  HR
+  EMPLOYEE
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AttendanceStatus {
+  ON_TIME
+  LATE
+  ABSENT
+}
+
+enum NotificationType {
+  SYSTEM
+  PAYROLL
+  ATTENDANCE
+  REQUEST
+  SHIFT
+}
+
+enum RewardPenaltyType {
+  REWARD
+  PENALTY
+}
+
+// Account / Employee
+model Account {
+  id         String    @id @default(uuid())
+  username   String    @unique
+  password   String
+  role       Role      @default(EMPLOYEE)
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+  employeeId String?   @unique
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Employee {
+  id           String    @id @default(uuid())
+  fullName     String
+  gender       String?
+  dateOfBirth  DateTime?
+  phone        String?
+  email        String?
+  address      String?
+  positionId   String?
+  departmentId String?
+  startDate    DateTime? @default(now())
+  status       String?   @default("working")
+
+  // relations
+  position      Position?       @relation(fields: [positionId], references: [id])
+  department    Department?     @relation(fields: [departmentId], references: [id])
+  account       Account?
+  attendances   Attendance[]
+  workSchedules WorkSchedule[]
+  payrolls      Payroll[]
+  requests      Request[]
+  notifications Notification[]
+  rewards       RewardPenalty[]
+
+  // back-relations for approvals
+  schedulesApproved WorkSchedule[] @relation("ScheduleApprovedBy")
+  requestsApproved  Request[]      @relation("RequestApprovedBy")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Department / Position
+model Department {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  employees   Employee[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Position {
+  id         String     @id @default(uuid())
+  title      String
+  baseSalary Float
+  allowance  Float?     @default(0)
+  employees  Employee[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+// Shift / WorkSchedule / Attendance
+model Shift {
+  id        String         @id @default(uuid())
+  name      String
+  startTime DateTime
+  endTime   DateTime
+  schedules WorkSchedule[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model WorkSchedule {
+  id           String        @id @default(uuid())
+  employeeId   String
+  shiftId      String
+  date         DateTime
+  status       RequestStatus @default(PENDING)
+  approvedById String?
+  note         String?
+
+  // relations
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+  shift      Shift     @relation(fields: [shiftId], references: [id])
+  approvedBy Employee? @relation("ScheduleApprovedBy", fields: [approvedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Attendance {
+  id           String           @id @default(uuid())
+  employeeId   String
+  checkInTime  DateTime?
+  checkOutTime DateTime?
+  status       AttendanceStatus @default(ON_TIME)
+  note         String?
+
+  employee  Employee @relation(fields: [employeeId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Payroll / RewardPenalty
+model Payroll {
+  id          String  @id @default(uuid())
+  employeeId  String
+  month       Int
+  year        Int
+  basicSalary Float
+  bonus       Float?  @default(0)
+  deduction   Float?  @default(0)
+  totalSalary Float
+  status      String? @default("pending")
+
+  employee  Employee @relation(fields: [employeeId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RewardPenalty {
+  id         String            @id @default(uuid())
+  employeeId String
+  type       RewardPenaltyType
+  reason     String?
+  amount     Float
+
+  employee  Employee @relation(fields: [employeeId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Request / RequestType
+model Request {
+  id            String        @id @default(uuid())
+  employeeId    String
+  requestTypeId String
+  reason        String?
+  status        RequestStatus @default(PENDING)
+  approvedById  String?
+  approvedDate  DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  employee    Employee    @relation(fields: [employeeId], references: [id])
+  requestType RequestType @relation(fields: [requestTypeId], references: [id])
+  approvedBy  Employee?   @relation("RequestApprovedBy", fields: [approvedById], references: [id])
+}
+
+model RequestType {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  requests    Request[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// Notification
+model Notification {
+  id         String           @id @default(uuid())
+  employeeId String
+  type       NotificationType
+  title      String
+  content    String
+  isRead     Boolean          @default(false)
+
+  employee  Employee @relation(fields: [employeeId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
