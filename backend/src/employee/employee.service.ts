@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Employee, Account } from '@prisma/client';
+import { Employee, Account, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 type EmployeeWithAccount = Employee & {
@@ -20,30 +20,66 @@ export class EmployeeService {
     });
   }
 
-  async getById(id: string): Promise<Employee | null> {
-    return this.prisma.employee.findUnique({
+  async getById(id: string): Promise<Employee> {
+    const employee = await this.prisma.employee.findUnique({
       where: { id },
       include: { department: true, position: true },
     });
+
+    if (!employee) {
+      throw new NotFoundException(`Employee with ID ${id} not found`);
+    }
+
+    return employee;
   }
 
   async create(data: any): Promise<Employee> {
-    return this.prisma.employee.create({
-      data,
-    });
+    try {
+      return await this.prisma.employee.create({
+        data,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException('Email already exists');
+        }
+      }
+      throw new BadRequestException('Failed to create employee');
+    }
   }
 
   async update(id: string, data: any): Promise<Employee> {
-    return this.prisma.employee.update({
-      where: { id },
-      data,
-    });
+    try {
+      return await this.prisma.employee.update({
+        where: { id },
+        data,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(`Employee with ID ${id} not found`);
+        }
+        if (error.code === 'P2002') {
+          throw new ConflictException('Email already exists');
+        }
+      }
+      throw new BadRequestException('Failed to update employee');
+    }
   }
 
   async delete(id: string): Promise<Employee> {
-    return this.prisma.employee.delete({
-      where: { id },
-    });
+    try {
+      return await this.prisma.employee.delete({
+        where: { id },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(`Employee with ID ${id} not found`);
+        }
+      }
+      throw new BadRequestException('Failed to delete employee');
+    }
   }
 
   async findOneByUsername(username: string): Promise<EmployeeWithAccount | null> {
