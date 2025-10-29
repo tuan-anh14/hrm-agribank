@@ -1,68 +1,144 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import * as bcrypt from 'bcrypt';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { EmployeeService } from 'src/employee/employee.service';
 import { JwtService } from '@nestjs/jwt';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService, private jwtService: JwtService) {}
+    constructor(
+        private employeeService: EmployeeService,
+        private jwtService: JwtService,
+        private configService: ConfigService,
+    ) { }
 
-  // 🧱 Đăng ký tài khoản
-  async register(data: any) {
-    const { username, password, role, employeeId } = data;
+    //username/ pass là 2 tham số thư viện passport nó ném về
+    async validateUser(username: string, pass: string): Promise<any> {
+        const user = await this.employeeService.findOneByUsername(username);
+        if (user && user.account) {
+            const isValid = await this.employeeService.isValidPassword(pass, user.account.password);
+            if (isValid) {
+                return user;
+            }
+        }
 
-    const existUser = await this.prisma.account.findUnique({
-      where: { username },
-    });
-    if (existUser) {
-      throw new UnauthorizedException('Tài khoản đã tồn tại');
+        return null;
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    async register(data: RegisterDto) {
+        // Check if email already exists
+        const existingEmployee = await this.employeeService.findOneByUsername(data.email);
+        if (existingEmployee) {
+            throw new BadRequestException('Email đã được sử dụng');
+        }
 
-    const account = await this.prisma.account.create({
-      data: {
-        username,
-        password: hashed,
-        role,
-        employeeId,
-      },
-    });
+        try {
+            // Create employee first
+            const employee = await this.employeeService.create({
+                fullName: data.fullName,
+                email: data.email,
+                phone: data.phone,
+                address: data.address,
+                gender: data.gender,
+                dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+                positionId: data.positionId,
+                departmentId: data.departmentId
+            });
 
-    return { message: 'Đăng ký thành công', account };
-  }
+            // Create account linked to employee
+            const account = await this.employeeService.createAccount({
+                username: data.email,
+                password: data.password,
+                role: data.role || 'EMPLOYEE',
+                employeeId: employee.id
+            });
 
-  // 🔐 Đăng nhập
-  async login(data: any) {
-    const { username, password } = data;
+            return {
+                message: 'Đăng ký thành công',
+                employee: {
+                    id: employee.id,
+                    fullName: employee.fullName,
+                    email: employee.email,
+                    phone: employee.phone,
+                    address: employee.address,
+                    gender: employee.gender,
+                    dateOfBirth: employee.dateOfBirth,
+                },
+                account: {
+                    id: account.id,
+                    username: account.username,
+                    role: account.role,
+                    isActive: account.isActive
+                }
+            };
+        } catch (error) {
+            throw new BadRequestException('Có lỗi xảy ra khi đăng ký tài khoản');
+        }
+    }
 
-    const user = await this.prisma.account.findUnique({
-      where: { username },
-      include: { employee: true },
-    });
+    async login(data: LoginDto) {
+        const user = await this.validateUser(data.username, data.password);
+        if (!user) {
+            throw new UnauthorizedException('Tên đăng nhập hoặc mật khẩu không đúng');
+        }
 
-    if (!user) throw new UnauthorizedException('Sai tên đăng nhập');
+        const payload = {
+            username: user.email,
+            sub: user.id,
+            role: user.account?.role || 'EMPLOYEE',
+            iat: Math.floor(Date.now() / 1000),
+        };
+        
+        const accessToken = this.jwtService.sign(payload);
+        
+        // Calculate expires_in in seconds based on JWT_ACCESS_EXPIRE
+        const expiresIn = this.getExpiresInSeconds();
+        
+        return {
+            access_token: accessToken,
+            token_type: 'Bearer',
+            expires_in: expiresIn,
+            user: {
+                id: user.id,
+                email: user.email,
+                fullName: user.fullName,
+                role: user.account?.role || 'EMPLOYEE'
+            }
+        };
+    }
 
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) throw new UnauthorizedException('Sai mật khẩu');
+    private getExpiresInSeconds(): number {
+        const expiresIn = this.configService.get<string>('JWT_ACCESS_EXPIRE') || '1h';
+        
+        // Convert time string to seconds
+        const timeValue = parseInt(expiresIn);
+        const timeUnit = expiresIn.replace(timeValue.toString(), '');
+        
+        switch (timeUnit) {
+            case 's':
+            case 'sec':
+            case 'second':
+            case 'seconds':
+                return timeValue;
+            case 'm':
+            case 'min':
+            case 'minute':
+            case 'minutes':
+                return timeValue * 60;
+            case 'h':
+            case 'hr':
+            case 'hour':
+            case 'hours':
+                return timeValue * 3600;
+            case 'd':
+            case 'day':
+            case 'days':
+                return timeValue * 86400;
+            default:
+                // Default to 1 hour if format is not recognized
+                return 3600;
+        }
+    }
 
-    const payload = { sub: user.id, username: user.username, role: user.role };
-
-    const token = this.jwtService.sign(payload);
-
-    return {
-      access_token: token,
-      user: {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-        employee: user.employee,
-      },
-    };
-  }
-
-  // 🧩 Validate user (dùng trong JwtStrategy)
-  async validateUser(payload: any) {
-    return this.prisma.account.findUnique({ where: { id: payload.sub } });
-  }
 }

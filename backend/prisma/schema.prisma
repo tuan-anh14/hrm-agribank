@@ -7,7 +7,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Enums
+// ====================== ENUMS ======================
 enum Role {
   ADMIN
   HR
@@ -39,7 +39,7 @@ enum RewardPenaltyType {
   PENALTY
 }
 
-// Account / Employee
+// ====================== ACCOUNT / EMPLOYEE ======================
 model Account {
   id         String    @id @default(uuid())
   username   String    @unique
@@ -48,6 +48,7 @@ model Account {
   employee   Employee? @relation(fields: [employeeId], references: [id])
   employeeId String?   @unique
   isActive   Boolean   @default(true)
+  lastLogin  DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 }
@@ -84,7 +85,7 @@ model Employee {
   updatedAt DateTime @updatedAt
 }
 
-// Department / Position
+// ====================== DEPARTMENT / POSITION ======================
 model Department {
   id          String     @id @default(uuid())
   name        String
@@ -99,12 +100,13 @@ model Position {
   title      String
   baseSalary Float
   allowance  Float?     @default(0)
+  gradeLevel Int? // thêm cấp bậc chức vụ
   employees  Employee[]
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
 }
 
-// Shift / WorkSchedule / Attendance
+// ====================== SHIFT / WORK SCHEDULE / ATTENDANCE ======================
 model Shift {
   id        String         @id @default(uuid())
   name      String
@@ -122,9 +124,9 @@ model WorkSchedule {
   date         DateTime
   status       RequestStatus @default(PENDING)
   approvedById String?
+  approvedDate DateTime?
   note         String?
 
-  // relations
   employee   Employee  @relation(fields: [employeeId], references: [id])
   shift      Shift     @relation(fields: [shiftId], references: [id])
   approvedBy Employee? @relation("ScheduleApprovedBy", fields: [approvedById], references: [id])
@@ -136,6 +138,7 @@ model WorkSchedule {
 model Attendance {
   id           String           @id @default(uuid())
   employeeId   String
+  date         DateTime         @default(now())
   checkInTime  DateTime?
   checkOutTime DateTime?
   status       AttendanceStatus @default(ON_TIME)
@@ -146,7 +149,7 @@ model Attendance {
   updatedAt DateTime @updatedAt
 }
 
-// Payroll / RewardPenalty
+// ====================== PAYROLL / REWARD / PAYMENT ======================
 model Payroll {
   id          String  @id @default(uuid())
   employeeId  String
@@ -158,9 +161,21 @@ model Payroll {
   totalSalary Float
   status      String? @default("pending")
 
-  employee  Employee @relation(fields: [employeeId], references: [id])
+  employee  Employee  @relation(fields: [employeeId], references: [id])
+  payments  Payment[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Payment {
+  id        String   @id @default(uuid())
+  payrollId String
+  paidDate  DateTime @default(now())
+  amount    Float
+  note      String?
+
+  payroll   Payroll  @relation(fields: [payrollId], references: [id])
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model RewardPenalty {
@@ -175,12 +190,14 @@ model RewardPenalty {
   updatedAt DateTime @updatedAt
 }
 
-// Request / RequestType
+// ====================== REQUEST / REQUEST TYPE ======================
 model Request {
   id            String        @id @default(uuid())
   employeeId    String
   requestTypeId String
   reason        String?
+  startDate     DateTime?
+  endDate       DateTime?
   status        RequestStatus @default(PENDING)
   approvedById  String?
   approvedDate  DateTime?
@@ -201,7 +218,7 @@ model RequestType {
   updatedAt   DateTime  @updatedAt
 }
 
-// Notification
+// ====================== NOTIFICATION ======================
 model Notification {
   id         String           @id @default(uuid())
   employeeId String
