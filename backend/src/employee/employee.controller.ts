@@ -8,14 +8,14 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
-import { EmployeeService } from './employee.service';
-import { CreateEmployeeDto } from './dto/create-employee.dto';
-import { UpdateEmployeeDto } from './dto/update-employee.dto';
+import { EmployeeService } from '@/employee/employee.service';
+import { CreateEmployeeDto } from '@/employee/dto/create-employee.dto';
+import { UpdateEmployeeDto } from '@/employee/dto/update-employee.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
-import { RolesGuard } from 'src/auth/guards/roles.guard';
-import { Roles } from 'src/auth/decorator/roles.decorator';
-import { UserRole } from 'src/auth/constants/roles.constants';
+import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
+import { RolesGuard } from '@/auth/guards/roles.guard';
+import { Roles } from '@/auth/decorator/roles.decorator';
+import { UserRole } from '@/auth/constants/roles.constants';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)

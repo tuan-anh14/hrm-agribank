@@ -6,8 +6,8 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ROLES_KEY } from '../decorator/roles.decorator';
-import { UserRole } from '../constants/roles.constants';
+import { ROLES_KEY } from '@/auth/decorator/roles.decorator';
+import { UserRole } from '@/auth/constants/roles.constants';  
 
 /**
  * RolesGuard - Guard để kiểm tra quyền truy cập dựa trên role của user

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { Employee, Account, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
