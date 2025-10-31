@@ -1,9 +1,10 @@
-import { Body, Controller, Post, HttpCode, HttpStatus } from '@nestjs/common';
+import { Body, Controller, Post, HttpCode, HttpStatus, Get, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { Public } from '../decorator/customize';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ActivateAccountDto } from './dto/activate-account.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -100,5 +101,26 @@ export class AuthController {
   })
   async login(@Body() data: LoginDto) {
     return this.authService.login(data);
+  }
+
+  @Post('activate')
+  @Public()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Kích hoạt tài khoản nhân sự' })
+  async activate(@Body() data: ActivateAccountDto) {
+    return this.authService.activate(data);
+  }
+
+  @Get('account')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Lấy thông tin tài khoản hiện tại' })
+  async account(@Req() req: any) {
+    return {
+      user: {
+        id: req.user?.id,
+        email: req.user?.username,
+        role: req.user?.role,
+      }
+    };
   }
 }

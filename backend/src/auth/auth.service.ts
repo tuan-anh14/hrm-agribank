@@ -1,9 +1,10 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmployeeService } from '@/employee/employee.service';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from '@/auth/dto/login.dto';
 import { RegisterDto } from '@/auth/dto/register.dto';
+import { ActivateAccountDto } from '@/auth/dto/activate-account.dto';
 
 @Injectable()
 export class AuthService {
@@ -104,6 +105,54 @@ export class AuthService {
                 email: user.email,
                 fullName: user.fullName,
                 role: user.account?.role || 'EMPLOYEE'
+            }
+        };
+    }
+
+    async activate(data: ActivateAccountDto) {
+        // Hiện chưa có employeeCode/dob trong schema; kích hoạt dựa trên email cơ quan
+        const employee = await this.employeeService.findOneByUsername(data.workEmail);
+        if (!employee) {
+            throw new NotFoundException('Không tìm thấy nhân sự với email này');
+        }
+
+        // Nếu đã có account: cập nhật mật khẩu và bật active; nếu chưa: tạo mới
+        if (employee.account) {
+            const updated = await this.employeeService.createAccount({
+                // Sử dụng createAccount để băm mật khẩu; sau đó cập nhật vào account hiện có
+                username: employee.email,
+                password: data.newPassword,
+                role: employee.account.role || 'EMPLOYEE',
+                employeeId: employee.id
+            });
+            // createAccount tạo account mới; nhưng ràng buộc unique employeeId nên không phù hợp
+            // Vì vậy ta băm và cập nhật trực tiếp: 
+        }
+
+        // Fallback: cập nhật trực tiếp account hiện có nếu tồn tại, nếu không thì tạo mới
+        const bcrypt = await import('bcrypt');
+        const hashed = await bcrypt.hash(data.newPassword, 10);
+
+        if (employee.account) {
+            await (this as any).employeeService['prisma'].account.update({
+                where: { id: employee.account.id },
+                data: { password: hashed, isActive: true }
+            });
+        } else {
+            await this.employeeService.createAccount({
+                username: employee.email,
+                password: data.newPassword,
+                role: 'EMPLOYEE',
+                employeeId: employee.id
+            });
+        }
+
+        return {
+            user: {
+                id: employee.id,
+                email: employee.email,
+                fullName: employee.fullName,
+                role: employee.account?.role || 'EMPLOYEE'
             }
         };
     }

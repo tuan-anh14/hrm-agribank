@@ -14,6 +14,9 @@ async function bootstrap() {
   const reflector = app.get(Reflector);
   app.useGlobalGuards(new JwtAuthGuard(reflector));
 
+  // Global API prefix to match frontend calls
+  app.setGlobalPrefix('api/v1');
+
   app.useStaticAssets(join(__dirname, '..', 'public')); //js, css, images
   app.setBaseViewsDir(join(__dirname, '..', 'views')); //view 
   app.setViewEngine('ejs');
