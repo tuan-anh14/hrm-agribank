@@ -116,36 +116,12 @@ export class AuthService {
             throw new NotFoundException('Không tìm thấy nhân sự với email này');
         }
 
-        // Nếu đã có account: cập nhật mật khẩu và bật active; nếu chưa: tạo mới
-        if (employee.account) {
-            const updated = await this.employeeService.createAccount({
-                // Sử dụng createAccount để băm mật khẩu; sau đó cập nhật vào account hiện có
-                username: employee.email,
-                password: data.newPassword,
-                role: employee.account.role || 'EMPLOYEE',
-                employeeId: employee.id
-            });
-            // createAccount tạo account mới; nhưng ràng buộc unique employeeId nên không phù hợp
-            // Vì vậy ta băm và cập nhật trực tiếp: 
-        }
-
-        // Fallback: cập nhật trực tiếp account hiện có nếu tồn tại, nếu không thì tạo mới
-        const bcrypt = await import('bcrypt');
-        const hashed = await bcrypt.hash(data.newPassword, 10);
-
-        if (employee.account) {
-            await (this as any).employeeService['prisma'].account.update({
-                where: { id: employee.account.id },
-                data: { password: hashed, isActive: true }
-            });
-        } else {
-            await this.employeeService.createAccount({
-                username: employee.email,
-                password: data.newPassword,
-                role: 'EMPLOYEE',
-                employeeId: employee.id
-            });
-        }
+        await this.employeeService.upsertAccountForEmployee(
+            employee.id,
+            employee.email as string,
+            data.newPassword,
+            employee.account?.role || 'EMPLOYEE'
+        );
 
         return {
             user: {
@@ -154,6 +130,30 @@ export class AuthService {
                 fullName: employee.fullName,
                 role: employee.account?.role || 'EMPLOYEE'
             }
+        };
+    }
+
+    async getAccountInfo(userId: string) {
+        const employee = await this.employeeService.getEmployeeWithAccountByUserId(userId);
+        if (!employee) {
+            throw new NotFoundException('Không tìm thấy thông tin người dùng');
+        }
+
+        return {
+            id: employee.id,
+            email: employee.email,
+            phone: employee.phone,
+            fullName: employee.fullName,
+            role: employee.account?.role || 'EMPLOYEE',
+            avatar: null, // Will be added when avatar is implemented
+            department: employee.department ? {
+                id: employee.department.id,
+                name: employee.department.name,
+            } : null,
+            position: employee.position ? {
+                id: employee.position.id,
+                title: employee.position.title,
+            } : null,
         };
     }
 

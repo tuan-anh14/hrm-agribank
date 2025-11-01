@@ -11,6 +11,14 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
   
+  // Enable CORS
+  app.enableCors({
+    origin: true, // Allow all origins in development
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
+  
   const reflector = app.get(Reflector);
   app.useGlobalGuards(new JwtAuthGuard(reflector));
 
@@ -38,13 +46,13 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api-docs', app, document);
 
   const port = configService.get<string>('PORT');
   await app.listen(Number(port));
 
   console.log(`🚀 Server running at http://localhost:${port}`);
-  console.log(`📘 Swagger UI available at http://localhost:${port}/api`);
+  console.log(`📘 Swagger UI available at http://localhost:${port}/api-docs`);
 }
 
 bootstrap().catch((error) => {

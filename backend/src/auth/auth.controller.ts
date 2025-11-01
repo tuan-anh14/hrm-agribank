@@ -115,12 +115,9 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Lấy thông tin tài khoản hiện tại' })
   async account(@Req() req: any) {
+    const employee = await this.authService.getAccountInfo(req.user?.id);
     return {
-      user: {
-        id: req.user?.id,
-        email: req.user?.username,
-        role: req.user?.role,
-      }
+      user: employee
     };
   }
 }

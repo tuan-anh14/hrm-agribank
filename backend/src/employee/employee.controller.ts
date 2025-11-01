@@ -11,6 +11,7 @@ import {
 import { EmployeeService } from '@/employee/employee.service';
 import { CreateEmployeeDto } from '@/employee/dto/create-employee.dto';
 import { UpdateEmployeeDto } from '@/employee/dto/update-employee.dto';
+import { CreateEmployeeWithAccountDto } from '@/employee/dto/create-employee-with-account.dto';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
@@ -49,6 +50,30 @@ export class EmployeeController {
   @ApiResponse({ status: 403, description: 'Không có quyền tạo nhân viên' })
   async create(@Body() data: CreateEmployeeDto) {
     return this.employeeService.create(data);
+  }
+
+  @Post('with-account')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Tạo nhân viên và tài khoản (chỉ ADMIN)' })
+  @ApiResponse({ status: 201, description: 'Tạo nhân viên và tài khoản thành công' })
+  @ApiResponse({ status: 403, description: 'Chỉ ADMIN mới có quyền tạo tài khoản' })
+  async createWithAccount(@Body() data: CreateEmployeeWithAccountDto) {
+    const result = await this.employeeService.createEmployeeWithAccount(data);
+    return {
+      message: 'Tạo nhân viên và tài khoản thành công',
+      employee: {
+        id: result.employee.id,
+        fullName: result.employee.fullName,
+        email: result.employee.email,
+        phone: result.employee.phone,
+      },
+      account: {
+        id: result.account.id,
+        username: result.account.username,
+        role: result.account.role,
+        isActive: result.account.isActive,
+      },
+    };
   }
 
   @Put(':id')

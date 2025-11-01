@@ -11,24 +11,49 @@ import EmployeePage from '@/pages/client/employee';
 import AboutPage from 'pages/client/about';
 import LoginPage from 'pages/client/auth/login';
 import RegisterPage from 'pages/client/auth/register';
+import CreateEmployeePage from 'pages/admin/create-employee';
 import 'styles/global.scss';
 import HomePage from 'pages/client/home';
 import { App } from 'antd'
 import { AppProvider } from 'components/context/app.context';
+import ProtectedRoute from '@/components/guards/ProtectedRoute';
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Layout></Layout>,
     children: [
-      { index: true, element: <HomePage></HomePage> },
+      { 
+        index: true, 
+        element: (
+          <ProtectedRoute>
+            <HomePage></HomePage>
+          </ProtectedRoute>
+        )
+      },
       {
         path: "/employee",
-        element: <EmployeePage></EmployeePage>,
+        element: (
+          <ProtectedRoute>
+            <EmployeePage></EmployeePage>
+          </ProtectedRoute>
+        ),
       },
       {
         path: "/about",
-        element: <AboutPage></AboutPage>,
+        element: (
+          <ProtectedRoute>
+            <AboutPage></AboutPage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/admin/create-employee",
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN']}>
+            <CreateEmployeePage></CreateEmployeePage>
+          </ProtectedRoute>
+        ),
       },
     ]
   },

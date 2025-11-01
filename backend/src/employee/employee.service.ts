@@ -109,4 +109,96 @@ export class EmployeeService {
       }
     });
   }
+
+  async getAccountByEmployeeId(employeeId: string): Promise<Account | null> {
+    return this.prisma.account.findUnique({ where: { employeeId } });
+  }
+
+  async updateAccountPasswordAndActivate(accountId: string, newPlainPassword: string): Promise<Account> {
+    const hashedPassword = await bcrypt.hash(newPlainPassword, 10);
+    return this.prisma.account.update({
+      where: { id: accountId },
+      data: { password: hashedPassword, isActive: true }
+    });
+  }
+
+  async upsertAccountForEmployee(employeeId: string, username: string, password: string, role: string = 'EMPLOYEE'): Promise<Account> {
+    const existing = await this.getAccountByEmployeeId(employeeId);
+    if (existing) {
+      return this.updateAccountPasswordAndActivate(existing.id, password);
+    }
+    return this.createAccount({ username, password, role, employeeId });
+  }
+
+  async createEmployeeWithAccount(data: {
+    fullName: string;
+    email: string;
+    password: string;
+    role?: string;
+    gender?: string;
+    phone?: string;
+    address?: string;
+    dateOfBirth?: string;
+    departmentId?: string;
+    positionId?: string;
+    status?: string;
+  }): Promise<{ employee: Employee; account: Account }> {
+    // Check if email already exists
+    const existing = await this.findOneByUsername(data.email);
+    if (existing) {
+      throw new ConflictException('Email đã được sử dụng');
+    }
+
+    try {
+      // Create employee and account in transaction
+      return await this.prisma.$transaction(async (tx) => {
+        // Create employee
+        const employee = await tx.employee.create({
+          data: {
+            fullName: data.fullName,
+            email: data.email,
+            gender: data.gender,
+            phone: data.phone,
+            address: data.address,
+            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+            departmentId: data.departmentId,
+            positionId: data.positionId,
+            status: data.status || 'working',
+          },
+        });
+
+        // Create account
+        const hashedPassword = await bcrypt.hash(data.password, 10);
+        const account = await tx.account.create({
+          data: {
+            username: data.email,
+            password: hashedPassword,
+            role: (data.role as any) || 'EMPLOYEE',
+            isActive: true,
+            employeeId: employee.id,
+          },
+        });
+
+        return { employee, account };
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException('Email hoặc tài khoản đã tồn tại');
+        }
+      }
+      throw new BadRequestException('Không thể tạo nhân viên và tài khoản');
+    }
+  }
+
+  async getEmployeeWithAccountByUserId(userId: string): Promise<EmployeeWithAccount | null> {
+    return this.prisma.employee.findUnique({
+      where: { id: userId },
+      include: {
+        account: true,
+        department: true,
+        position: true,
+      },
+    });
+  }
 }

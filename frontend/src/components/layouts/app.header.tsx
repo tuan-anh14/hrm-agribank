@@ -1,5 +1,5 @@
-import { Avatar, Badge, Input, Layout, Space, Typography, Dropdown, Menu } from "antd";
-import { ShoppingCartOutlined, UserOutlined, LogoutOutlined, ProfileOutlined } from "@ant-design/icons";
+import { Avatar, Layout, Space, Typography, Dropdown, Menu } from "antd";
+import { UserOutlined, LogoutOutlined, ProfileOutlined, UserAddOutlined, HomeOutlined } from "@ant-design/icons";
 import { useCurrentApp } from "components/context/app.context";
 import { Link, useNavigate } from "react-router-dom";
 import "./app.header.scss";
@@ -8,21 +8,28 @@ const { Header } = Layout;
 const { Text } = Typography;
 
 const AppHeader = () => {
-    const { user, setIsAuthenticated, setUser } = useCurrentApp();
+    const { user, setIsAuthenticated } = useCurrentApp();
     const navigate = useNavigate();
 
     const handleLogout = () => {
         localStorage.removeItem("access_token");
-        // setUser(null);
         setIsAuthenticated(false);
         navigate("/login");
     };
 
     const menu = (
         <Menu>
+            <Menu.Item key="home" icon={<HomeOutlined />}>
+                <Link to="/">Trang chủ</Link>
+            </Menu.Item>
             <Menu.Item key="profile" icon={<ProfileOutlined />}>
                 <Link to="/profile">Hồ sơ cá nhân</Link>
             </Menu.Item>
+            {user?.role === 'ADMIN' && (
+                <Menu.Item key="create-employee" icon={<UserAddOutlined />}>
+                    <Link to="/admin/create-employee">Tạo tài khoản nhân viên</Link>
+                </Menu.Item>
+            )}
             <Menu.Divider />
             <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
                 Đăng xuất
@@ -31,36 +38,33 @@ const AppHeader = () => {
     );
 
     return (
-        <Header className="app-header">
+        <Header className="app-header" style={{ backgroundColor: '#001529', padding: '0 24px' }}>
             {/* Logo */}
             <div className="logo">
-                <Link to="/">
-                    <img src="/src/assets/logo.webp" alt="Tuan Anh" className="logo-img" />
+                <Link to="/" style={{ color: '#fff', fontSize: '18px', fontWeight: 'bold' }}>
+                    HRM Agribank
                 </Link>
             </div>
 
-            {/* Thanh tìm kiếm */}
-            <Input.Search
-                placeholder="Bạn tìm gì hôm nay"
-                className="search-box"
-                allowClear
-            />
+            {/* Navigation */}
+            <Space size="large" style={{ flex: 1, justifyContent: 'flex-end' }}>
+                <Link to="/" style={{ color: '#fff' }}>Trang chủ</Link>
+                {user?.role === 'ADMIN' && (
+                    <Link to="/admin/create-employee" style={{ color: '#fff' }}>Tạo nhân viên</Link>
+                )}
+            </Space>
 
-            {/* Giỏ hàng + Avatar User */}
+            {/* User Section */}
             <Space size="large" className="user-section">
-                <Badge count={10} size="small" className="cart-badge">
-                    <ShoppingCartOutlined className="cart-icon" />
-                </Badge>
-
-                <Dropdown overlay={menu} trigger={['click']}>
-                    <Space className="user-info">
+                <Dropdown menu={menu} trigger={['click']} placement="bottomRight">
+                    <Space className="user-info" style={{ cursor: 'pointer' }}>
                         <Avatar
-                            src={`/uploads/${user?.avatar}`}
+                            src={user?.avatar}
                             alt={user?.fullName}
                             size={32}
                             icon={<UserOutlined />}
                         />
-                        <Text>{user?.fullName || "Guest"}</Text>
+                        <Text style={{ color: '#fff' }}>{user?.fullName || "Guest"}</Text>
                     </Space>
                 </Dropdown>
             </Space>

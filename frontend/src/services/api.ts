@@ -32,3 +32,31 @@ export const logoutAPI = () => {
     const urlBackend = "/api/v1/auth/logout";
     return axios.post<IBackendRes<{ success: boolean }>>(urlBackend, {});
 }
+
+// Employee APIs
+export const createEmployeeWithAccountAPI = (payload: {
+    fullName: string;
+    email: string;
+    password: string;
+    role?: string;
+    gender?: string;
+    phone?: string;
+    address?: string;
+    dateOfBirth?: string;
+    departmentId?: string;
+    positionId?: string;
+    status?: string;
+}) => {
+    const urlBackend = "/api/v1/employee/with-account";
+    return axios.post<IBackendRes<{ message: string; employee: any; account: any }>>(urlBackend, payload);
+}
+
+export const getAllDepartmentsAPI = () => {
+    const urlBackend = "/api/v1/department";
+    return axios.get<IBackendRes<any[]>>(urlBackend);
+}
+
+export const getAllPositionsAPI = () => {
+    const urlBackend = "/api/v1/position";
+    return axios.get<IBackendRes<any[]>>(urlBackend);
+}

@@ -1,11 +1,12 @@
 import axios from "axios";
 
+// Get backend URL from environment variable or use default
+const backend = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
+console.log(">>check backend:", backend);
 
-const backend = import.meta.env.VITE_BACKEND_URL
-console.log(">>check backend:", backend)
 const instance = axios.create({
     baseURL: backend,
-  });
+});
 
 // Add a request interceptor
 instance.interceptors.request.use(function (config) {

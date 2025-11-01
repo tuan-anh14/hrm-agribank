@@ -5,15 +5,31 @@ import { fetchAccountAPI } from "@/services/api";
 import { useCurrentApp } from "@/components/context/app.context";
 
 const Layout = () => {
-    const { setUser, isAppLoading, setIsAppLoading } = useCurrentApp()
+    const { setUser, isAppLoading, setIsAppLoading, setIsAuthenticated } = useCurrentApp()
 
     useEffect(() => {
         const fetchAccount = async () => {
-            const res = await fetchAccountAPI();
-            if (res.data) {
-                setUser(res.data.user)
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                setIsAppLoading(false);
+                return;
             }
-            setIsAppLoading(false)
+
+            try {
+                const res = await fetchAccountAPI();
+                if (res?.data) {
+                    setUser(res.data.user);
+                    setIsAuthenticated(true);
+                } else {
+                    localStorage.removeItem('access_token');
+                    setIsAuthenticated(false);
+                }
+            } catch (error) {
+                localStorage.removeItem('access_token');
+                setIsAuthenticated(false);
+            } finally {
+                setIsAppLoading(false);
+            }
         };
         fetchAccount();
     }, []);
