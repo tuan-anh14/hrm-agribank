@@ -37,12 +37,17 @@ const AppLayout = () => {
             setIsAppLoading(true);
 
             try {
-                const res = await fetchAccountAPI();
-                if (res?.data?.user) {
+                const res: any = await fetchAccountAPI();
+                console.log('Fetch account response:', res);
+                
+                if (res?.user) {
+                    setUser(res.user);
+                    setIsAuthenticated(true);
+                } else if (res?.data?.user) {
                     setUser(res.data.user);
                     setIsAuthenticated(true);
                 } else {
-                    console.warn('Failed to fetch account: no user data');
+                    console.warn('Failed to fetch account: no user data', res);
                     setIsAuthenticated(false);
                 }
             } catch (error: any) {
