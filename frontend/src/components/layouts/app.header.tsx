@@ -1,7 +1,7 @@
-import { Avatar, Layout, Space, Typography, Dropdown, Menu } from "antd";
-import { UserOutlined, LogoutOutlined, ProfileOutlined, UserAddOutlined, HomeOutlined } from "@ant-design/icons";
+import { Avatar, Layout, Space, Typography, Dropdown, Menu, Button } from "antd";
+import { UserOutlined, LogoutOutlined, ProfileOutlined, QuestionCircleOutlined, SettingOutlined } from "@ant-design/icons";
 import { useCurrentApp } from "components/context/app.context";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "./app.header.scss";
 
 const { Header } = Layout;
@@ -17,19 +17,11 @@ const AppHeader = () => {
         navigate("/login");
     };
 
-    const menu = (
+    const userMenu = (
         <Menu>
-            <Menu.Item key="home" icon={<HomeOutlined />}>
-                <Link to="/">Trang chủ</Link>
-            </Menu.Item>
             <Menu.Item key="profile" icon={<ProfileOutlined />}>
-                <Link to="/profile">Hồ sơ cá nhân</Link>
+                Hồ sơ cá nhân
             </Menu.Item>
-            {user?.role === 'ADMIN' && (
-                <Menu.Item key="create-employee" icon={<UserAddOutlined />}>
-                    <Link to="/admin/create-employee">Tạo tài khoản nhân viên</Link>
-                </Menu.Item>
-            )}
             <Menu.Divider />
             <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
                 Đăng xuất
@@ -38,33 +30,30 @@ const AppHeader = () => {
     );
 
     return (
-        <Header className="app-header" style={{ backgroundColor: '#001529', padding: '0 24px' }}>
-            {/* Logo */}
-            <div className="logo">
-                <Link to="/" style={{ color: '#fff', fontSize: '18px', fontWeight: 'bold' }}>
-                    HRM Agribank
-                </Link>
+        <Header style={{
+            background: '#fff',
+            padding: '0 24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: '0 1px 4px rgba(0,21,41,.08)',
+        }}>
+            <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
+                HRM Agribank
             </div>
 
-            {/* Navigation */}
-            <Space size="large" style={{ flex: 1, justifyContent: 'flex-end' }}>
-                <Link to="/" style={{ color: '#fff' }}>Trang chủ</Link>
-                {user?.role === 'ADMIN' && (
-                    <Link to="/admin/create-employee" style={{ color: '#fff' }}>Tạo nhân viên</Link>
-                )}
-            </Space>
-
-            {/* User Section */}
-            <Space size="large" className="user-section">
-                <Dropdown menu={menu} trigger={['click']} placement="bottomRight">
-                    <Space className="user-info" style={{ cursor: 'pointer' }}>
+            <Space size="large">
+                <Button type="text" icon={<QuestionCircleOutlined />} />
+                <Button type="text" icon={<SettingOutlined />} />
+                <Dropdown menu={userMenu} trigger={['click']} placement="bottomRight">
+                    <Space style={{ cursor: 'pointer' }}>
                         <Avatar
                             src={user?.avatar && user.avatar.trim() ? user.avatar : undefined}
                             alt={user?.fullName}
                             size={32}
                             icon={<UserOutlined />}
                         />
-                        <Text style={{ color: '#fff' }}>{user?.fullName || "Guest"}</Text>
+                        <Text>{user?.fullName || "Guest"}</Text>
                     </Space>
                 </Dropdown>
             </Space>

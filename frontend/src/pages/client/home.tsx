@@ -1,135 +1,205 @@
-import { Card, Row, Col, Typography, Space, Statistic } from 'antd';
-import { UserOutlined, TeamOutlined, BankOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Card, Row, Col, Typography, Statistic, Progress } from 'antd';
+import {
+    UserOutlined,
+    TeamOutlined,
+    UsergroupAddOutlined,
+    RiseOutlined,
+    BankOutlined,
+    TrophyOutlined,
+} from '@ant-design/icons';
 import { useCurrentApp } from '@/components/context/app.context';
-import { useEffect, useState } from 'react';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 const HomePage = () => {
     const { user } = useCurrentApp();
-    const [currentTime, setCurrentTime] = useState(new Date());
 
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, []);
-
-    const formatTime = (date: Date) => {
-        return date.toLocaleTimeString('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-        });
-    };
-
-    const formatDate = (date: Date) => {
-        return date.toLocaleDateString('vi-VN', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-        });
+    // Mock data - sẽ thay thế bằng API calls sau
+    const stats = {
+        totalEmployees: 156,
+        newHires: 12,
+        turnoverRate: 8.5,
+        attendanceRate: 95.2,
     };
 
     return (
-        <div style={{ padding: '24px' }}>
-            <Space direction="vertical" size="large" style={{ width: '100%' }}>
-                <div>
-                    <Title level={2}>Chào mừng, {user?.fullName || 'Người dùng'}!</Title>
-                    <Text type="secondary">Hệ thống quản lý nhân sự Agribank</Text>
-                </div>
+        <div>
+            {/* Welcome Header */}
+            <div style={{ marginBottom: '24px' }}>
+                <Title level={3} style={{ margin: 0 }}>
+                    Chào mừng, {user?.fullName || 'Người dùng'}!
+                </Title>
+                <Typography.Text type="secondary">
+                    Hệ thống quản lý nhân sự Agribank
+                </Typography.Text>
+            </div>
 
-                <Row gutter={[16, 16]}>
-                    <Col xs={24} sm={12} lg={6}>
-                        <Card>
-                            <Statistic
-                                title="Thời gian hiện tại"
-                                value={formatTime(currentTime)}
-                                prefix={<BankOutlined />}
+            {/* Summary Cards */}
+            <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card>
+                        <Statistic
+                            title="Tổng nhân viên"
+                            value={stats.totalEmployees}
+                            prefix={<TeamOutlined />}
+                            valueStyle={{ color: '#1890ff' }}
+                        />
+                        <div style={{ marginTop: '8px', fontSize: '14px', color: '#999' }}>
+                            Đang hoạt động
+                        </div>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card>
+                        <Statistic
+                            title="Tuyển dụng tháng này"
+                            value={stats.newHires}
+                            prefix={<UsergroupAddOutlined />}
+                            valueStyle={{ color: '#52c41a' }}
+                        />
+                        <div style={{ marginTop: '8px', fontSize: '14px', color: '#999' }}>
+                            Nhân viên mới
+                        </div>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card>
+                        <Statistic
+                            title="Tỷ lệ nghỉ việc"
+                            value={stats.turnoverRate}
+                            suffix="%"
+                            prefix={<RiseOutlined />}
+                            valueStyle={{ color: '#ff4d4f' }}
+                        />
+                        <div style={{ marginTop: '8px', fontSize: '14px', color: '#999' }}>
+                            Tháng này
+                        </div>
+                    </Card>
+                </Col>
+                <Col xs={24} sm={12} lg={6}>
+                    <Card>
+                        <Statistic
+                            title="Tỷ lệ chấm công"
+                            value={stats.attendanceRate}
+                            suffix="%"
+                            prefix={<UserOutlined />}
+                            valueStyle={{ color: '#722ed1' }}
+                        />
+                        <div style={{ marginTop: '8px' }}>
+                            <Progress
+                                percent={stats.attendanceRate}
+                                size="small"
+                                strokeColor="#722ed1"
+                                showInfo={false}
                             />
-                        </Card>
-                    </Col>
-                    <Col xs={24} sm={12} lg={6}>
-                        <Card>
-                            <Statistic
-                                title="Ngày"
-                                value={formatDate(currentTime)}
-                                prefix={<CheckCircleOutlined />}
-                            />
-                        </Card>
-                    </Col>
-                    <Col xs={24} sm={12} lg={6}>
-                        <Card>
-                            <Statistic
-                                title="Vai trò"
-                                value={user?.role === 'ADMIN' ? 'Quản trị viên' : user?.role === 'HR' ? 'Nhân sự' : 'Nhân viên'}
-                                prefix={<UserOutlined />}
-                            />
-                        </Card>
-                    </Col>
-                    <Col xs={24} sm={12} lg={6}>
-                        <Card>
-                            <Statistic
-                                title="Email"
-                                value={user?.email || 'N/A'}
-                                prefix={<TeamOutlined />}
-                            />
-                        </Card>
-                    </Col>
-                </Row>
+                        </div>
+                    </Card>
+                </Col>
+            </Row>
 
-                <Row gutter={[16, 16]}>
-                    <Col xs={24} lg={12}>
-                        <Card title="Thông tin cá nhân" variant="outlined">
-                            <Space direction="vertical" style={{ width: '100%' }}>
-                                <div>
-                                    <Text strong>Họ và tên: </Text>
-                                    <Text>{user?.fullName || 'Chưa có'}</Text>
+            {/* Personal Info and Quick Stats */}
+            <Row gutter={[16, 16]}>
+                <Col xs={24} lg={12}>
+                    <Card title="Thông tin cá nhân" variant="outlined">
+                        <Row gutter={[16, 16]}>
+                            <Col span={12}>
+                                <Typography.Text type="secondary">Họ và tên</Typography.Text>
+                                <div style={{ marginTop: '4px', fontWeight: 500 }}>
+                                    {user?.fullName || 'Chưa có'}
                                 </div>
-                                <div>
-                                    <Text strong>Email: </Text>
-                                    <Text>{user?.email || 'Chưa có'}</Text>
+                            </Col>
+                            <Col span={12}>
+                                <Typography.Text type="secondary">Email</Typography.Text>
+                                <div style={{ marginTop: '4px', fontWeight: 500 }}>
+                                    {user?.email || 'Chưa có'}
                                 </div>
-                                <div>
-                                    <Text strong>Số điện thoại: </Text>
-                                    <Text>{user?.phone || 'Chưa có'}</Text>
+                            </Col>
+                            <Col span={12}>
+                                <Typography.Text type="secondary">Số điện thoại</Typography.Text>
+                                <div style={{ marginTop: '4px', fontWeight: 500 }}>
+                                    {user?.phone || 'Chưa có'}
                                 </div>
-                                <div>
-                                    <Text strong>Phòng ban: </Text>
-                                    <Text>{(user as any)?.department?.name || 'Chưa phân công'}</Text>
+                            </Col>
+                            <Col span={12}>
+                                <Typography.Text type="secondary">Vai trò</Typography.Text>
+                                <div style={{ marginTop: '4px', fontWeight: 500 }}>
+                                    {user?.role === 'ADMIN' ? 'Quản trị viên' : user?.role === 'HR' ? 'Nhân sự' : 'Nhân viên'}
                                 </div>
-                                <div>
-                                    <Text strong>Chức vụ: </Text>
-                                    <Text>{(user as any)?.position?.title || 'Chưa phân công'}</Text>
+                            </Col>
+                            <Col span={12}>
+                                <Typography.Text type="secondary">Phòng ban</Typography.Text>
+                                <div style={{ marginTop: '4px', fontWeight: 500 }}>
+                                    {(user as any)?.department?.name || 'Chưa phân công'}
                                 </div>
-                            </Space>
-                        </Card>
-                    </Col>
-                    <Col xs={24} lg={12}>
-                        <Card title="Hướng dẫn sử dụng" variant="outlined">
-                            <Space direction="vertical" style={{ width: '100%' }}>
-                                <Text>• Sử dụng menu trên để điều hướng</Text>
-                                {user?.role === 'ADMIN' && (
-                                    <>
-                                        <Text>• Tạo tài khoản nhân viên từ menu Admin</Text>
-                                        <Text>• Quản lý nhân viên, phòng ban, chức vụ</Text>
-                                    </>
-                                )}
-                                {user?.role === 'HR' && (
-                                    <>
-                                        <Text>• Quản lý nhân viên và phòng ban</Text>
-                                        <Text>• Xem và cập nhật thông tin nhân sự</Text>
-                                    </>
-                                )}
-                                <Text>• Cập nhật thông tin cá nhân từ menu Profile</Text>
-                            </Space>
-                        </Card>
-                    </Col>
-                </Row>
-            </Space>
+                            </Col>
+                            <Col span={12}>
+                                <Typography.Text type="secondary">Chức vụ</Typography.Text>
+                                <div style={{ marginTop: '4px', fontWeight: 500 }}>
+                                    {(user as any)?.position?.title || 'Chưa phân công'}
+                                </div>
+                            </Col>
+                        </Row>
+                    </Card>
+                </Col>
+                <Col xs={24} lg={12}>
+                    <Card title="Hoạt động nhanh" variant="outlined">
+                        <Row gutter={[16, 16]}>
+                            {user?.role === 'ADMIN' && (
+                                <>
+                                    <Col span={24}>
+                                        <Card
+                                            size="small"
+                                            style={{ backgroundColor: '#f0f5ff', border: '1px solid #adc6ff' }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <div>
+                                                    <Typography.Text strong>Tạo nhân viên mới</Typography.Text>
+                                                    <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                                                        Thêm tài khoản nhân viên vào hệ thống
+                                                    </div>
+                                                </div>
+                                                <BankOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
+                                            </div>
+                                        </Card>
+                                    </Col>
+                                    <Col span={24}>
+                                        <Card
+                                            size="small"
+                                            style={{ backgroundColor: '#fff7e6', border: '1px solid #ffd591' }}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <div>
+                                                    <Typography.Text strong>Quản lý phòng ban</Typography.Text>
+                                                    <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                                                        Xem và quản lý các phòng ban
+                                                    </div>
+                                                </div>
+                                                <TeamOutlined style={{ fontSize: '24px', color: '#faad14' }} />
+                                            </div>
+                                        </Card>
+                                    </Col>
+                                </>
+                            )}
+                            <Col span={24}>
+                                <Card
+                                    size="small"
+                                    style={{ backgroundColor: '#f6ffed', border: '1px solid #b7eb8f' }}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div>
+                                            <Typography.Text strong>Xem chấm công</Typography.Text>
+                                            <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                                                Xem lịch sử chấm công của bạn
+                                            </div>
+                                        </div>
+                                        <TrophyOutlined style={{ fontSize: '24px', color: '#52c41a' }} />
+                                    </div>
+                                </Card>
+                            </Col>
+                        </Row>
+                    </Card>
+                </Col>
+            </Row>
         </div>
     );
 };

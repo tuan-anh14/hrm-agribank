@@ -1,30 +1,31 @@
 import { Outlet } from "react-router";
+import { Layout } from "antd";
 import AppHeader from "@/components/layouts/app.header";
+import AppSidebar from "@/components/layouts/app.sidebar";
 import { useEffect } from "react";
 import { fetchAccountAPI } from "@/services/api";
 import { useCurrentApp } from "@/components/context/app.context";
 
-const Layout = () => {
+const { Content } = Layout;
+
+const AppLayout = () => {
     const { user, setUser, setIsAppLoading, isAuthenticated, setIsAuthenticated } = useCurrentApp()
 
     useEffect(() => {
         const fetchAccount = async () => {
             const token = localStorage.getItem('access_token');
             
-            // Nếu không có token, không cần fetch
             if (!token) {
                 setIsAppLoading(false);
                 setIsAuthenticated(false);
                 return;
             }
 
-            // Nếu đã có user và authenticated từ login, không cần fetch lại
             if (user && isAuthenticated) {
                 setIsAppLoading(false);
                 return;
             }
 
-            // Set loading state
             setIsAppLoading(true);
 
             try {
@@ -33,18 +34,15 @@ const Layout = () => {
                     setUser(res.data.user);
                     setIsAuthenticated(true);
                 } else {
-                    // Nếu không có data.user, có thể token không hợp lệ
                     console.warn('Failed to fetch account: no user data');
                     setIsAuthenticated(false);
                 }
             } catch (error: any) {
                 console.error('Error fetching account:', error);
-                // Chỉ xóa token nếu lỗi 401 Unauthorized
                 if (error?.response?.status === 401 || error?.statusCode === 401) {
                     localStorage.removeItem('access_token');
                     setIsAuthenticated(false);
                 } else {
-                    // Lỗi network hoặc lỗi khác, giữ token nhưng set authenticated = false
                     setIsAuthenticated(false);
                 }
             } finally {
@@ -55,11 +53,23 @@ const Layout = () => {
     }, []);
 
     return (
-        <>
-            <AppHeader></AppHeader>
-            <Outlet></Outlet>
-        </>
+        <Layout style={{ minHeight: '100vh' }}>
+            <AppHeader />
+            <Layout>
+                <AppSidebar />
+                <Layout style={{ padding: '24px' }}>
+                    <Content style={{
+                        background: '#fff',
+                        padding: '24px',
+                        margin: 0,
+                        minHeight: 280,
+                    }}>
+                        <Outlet />
+                    </Content>
+                </Layout>
+            </Layout>
+        </Layout>
     )
 }
 
-export default Layout;
+export default AppLayout;

@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 // import './index.css'
-import Layout from '@/layout'
+import AppLayout from '@/layout'
 
 import {
   createBrowserRouter,
@@ -20,7 +20,7 @@ import ProtectedRoute from '@/components/guards/ProtectedRoute';
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <Layout></Layout>,
+    element: <AppLayout></AppLayout>,
     children: [
       { 
         index: true, 
