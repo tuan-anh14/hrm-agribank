@@ -10,7 +10,6 @@ import {
 import EmployeePage from '@/pages/client/employee';
 import AboutPage from 'pages/client/about';
 import LoginPage from 'pages/client/auth/login';
-import RegisterPage from 'pages/client/auth/register';
 import CreateEmployeePage from 'pages/admin/create-employee';
 import 'styles/global.scss';
 import HomePage from 'pages/client/home';
@@ -57,14 +56,10 @@ const router = createBrowserRouter([
       },
     ]
   },
-  {
-    path: "/login",
-    element: <LoginPage></LoginPage>,
-  },
-  {
-    path: "/register",
-    element: <RegisterPage></RegisterPage>,
-  },
+      {
+        path: "/login",
+        element: <LoginPage></LoginPage>,
+      },
 
 ]);
 

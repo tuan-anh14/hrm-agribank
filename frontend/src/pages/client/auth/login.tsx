@@ -1,7 +1,7 @@
 import { App, Button, Divider, Form, Input } from 'antd';
 import type { FormProps } from 'antd';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import './login.scss';
 import { loginAPI } from '@/services/api';
 import { useCurrentApp } from '@/components/context/app.context';
@@ -147,18 +147,13 @@ const LoginPage = () => {
                             </Form.Item>
 
                             <Form.Item>
-                                <Button type='primary' htmlType='submit' loading={isSubmit}>
+                                <Button type='primary' htmlType='submit' loading={isSubmit} block>
                                     Đăng nhập
                                 </Button>
                             </Form.Item>
 
-                            <Divider>Or</Divider>
-
-                            <p className='text text-normal' style={{ textAlign: "center" }}>
-                                Chưa có tài khoản? {" "}
-                                <Link to="/register" className='text-link'>
-                                    Đăng ký ngay
-                                </Link>
+                            <p className='text text-normal' style={{ textAlign: "center", marginTop: '16px', color: '#666' }}>
+                                Tài khoản được quản lý bởi hệ thống HRM Agribank
                             </p>
                         </Form>
                     </section>
