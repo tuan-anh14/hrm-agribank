@@ -83,7 +83,7 @@ const HomePage = () => {
 
                 <Row gutter={[16, 16]}>
                     <Col xs={24} lg={12}>
-                        <Card title="Thông tin cá nhân" bordered={false}>
+                        <Card title="Thông tin cá nhân" variant="outlined">
                             <Space direction="vertical" style={{ width: '100%' }}>
                                 <div>
                                     <Text strong>Họ và tên: </Text>
@@ -109,7 +109,7 @@ const HomePage = () => {
                         </Card>
                     </Col>
                     <Col xs={24} lg={12}>
-                        <Card title="Hướng dẫn sử dụng" bordered={false}>
+                        <Card title="Hướng dẫn sử dụng" variant="outlined">
                             <Space direction="vertical" style={{ width: '100%' }}>
                                 <Text>• Sử dụng menu trên để điều hướng</Text>
                                 {user?.role === 'ADMIN' && (

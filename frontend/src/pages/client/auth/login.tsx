@@ -21,11 +21,16 @@ const LoginPage = () => {
         const { username, password } = values;
         setIsSubmit(true);
 
-        setTimeout(async () => {
-            const res = await loginAPI(username, password);
+        try {
+            const res: any = await loginAPI(username, password);
+            console.log('Login response:', res);
 
-            if (res?.data) {
-                if (res.data.mfa_required) {
+            // Axios interceptor đã trả về response.data
+            // Backend trả về trực tiếp: { access_token, token_type, expires_in, user }
+            // Không wrap trong IBackendRes format
+            if (res?.access_token && res?.user) {
+                // Check MFA nếu có
+                if (res.mfa_required) {
                     notification.info({
                         message: "Yêu cầu xác thực 2 bước",
                         description: "Tài khoản của bạn cần nhập mã OTP để hoàn tất đăng nhập.",
@@ -35,26 +40,79 @@ const LoginPage = () => {
                     return;
                 }
 
+                // Lưu token và user info
+                localStorage.setItem('access_token', res.access_token);
                 setIsAuthenticated(true);
-                setUser(res.data.user as any);
-
-                const access = res.data.tokens?.accessToken || (res.data as any).access_token;
-                if (access) {
-                    localStorage.setItem('access_token', access);
-                }
+                setUser({
+                    id: res.user.id,
+                    email: res.user.email,
+                    fullName: res.user.fullName,
+                    role: res.user.role,
+                    phone: res.user.phone || '',
+                    avatar: res.user.avatar || '',
+                });
 
                 message.success("Đăng nhập thành công.");
                 navigate("/");
+            } else if (res?.data) {
+                // Fallback: Nếu backend wrap trong data object (format khác)
+                const data = res.data;
+                if (data.access_token && data.user) {
+                    localStorage.setItem('access_token', data.access_token);
+                    setIsAuthenticated(true);
+                    setUser({
+                        id: data.user.id,
+                        email: data.user.email,
+                        fullName: data.user.fullName,
+                        role: data.user.role,
+                        phone: data.user.phone || '',
+                        avatar: data.user.avatar || '',
+                    });
+                    message.success("Đăng nhập thành công.");
+                    navigate("/");
+                } else {
+                    throw new Error('Định dạng response không hợp lệ');
+                }
             } else {
+                // Error response từ backend
+                const errorMsg = res?.message 
+                    ? (Array.isArray(res.message) ? res.message[0] : res.message)
+                    : 'Vui lòng kiểm tra lại thông tin đăng nhập';
+                
                 notification.error({
                     message: "Đăng nhập thất bại",
-                    description: res.message && Array.isArray(res.message) ? res.message[0] : res.message,
+                    description: errorMsg,
                     duration: 5
                 });
             }
+        } catch (error: any) {
+            console.error('Login error:', error);
+            
+            let errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra lại kết nối mạng.';
+            
+            if (error?.response?.data) {
+                // Server trả về error response
+                const errorData = error.response.data;
+                errorMessage = errorData?.message 
+                    ? (Array.isArray(errorData.message) ? errorData.message[0] : errorData.message)
+                    : 'Đăng nhập thất bại';
+            } else if (error?.message) {
+                // Network error hoặc axios error
+                if (error.message.includes('Network Error') || error.code === 'ERR_NETWORK' || error.code === 'ERR_FAILED') {
+                    errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra backend có đang chạy không.';
+                } else {
+                    errorMessage = error.message;
+                }
+            }
 
+            notification.error({
+                message: "Đăng nhập thất bại",
+                description: errorMessage,
+                duration: 5
+            });
+        } finally {
             setIsSubmit(false);
-        }, 2000);
+        }
     };
     return (
         <div className='login-page'>

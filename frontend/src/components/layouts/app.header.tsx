@@ -59,7 +59,7 @@ const AppHeader = () => {
                 <Dropdown menu={menu} trigger={['click']} placement="bottomRight">
                     <Space className="user-info" style={{ cursor: 'pointer' }}>
                         <Avatar
-                            src={user?.avatar}
+                            src={user?.avatar && user.avatar.trim() ? user.avatar : undefined}
                             alt={user?.fullName}
                             size={32}
                             icon={<UserOutlined />}

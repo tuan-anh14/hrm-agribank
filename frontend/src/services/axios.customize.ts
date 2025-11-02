@@ -29,13 +29,22 @@ instance.interceptors.response.use(function (response) {
     } 
     return response;
 }, function (error) {
-    if(error?.response?.data) return error?.response?.data;
-    // Any status codes that falls outside the range of 2xx cause this function to trigger
-    // Do something with response error
-    if(error && error.response && error.response.data){
-        return error.response.data
+    // Handle network errors (no response from server)
+    if (!error.response) {
+        // Network error - server không phản hồi
+        const networkError = new Error('Network Error');
+        (networkError as any).code = error.code || 'ERR_NETWORK';
+        (networkError as any).message = error.message || 'Không thể kết nối đến server';
+        return Promise.reject(networkError);
     }
+
+    // Server responded with error status
+    if(error?.response?.data) {
+        return Promise.reject(error);
+    }
+    
+    // Any status codes that falls outside the range of 2xx cause this function to trigger
     return Promise.reject(error);
-    });
+});
 
 export default instance;

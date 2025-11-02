@@ -2,11 +2,7 @@ import axios from 'services/axios.customize'
 
 export const loginAPI = (username: string, password: string) => {
     const urlBackend = "/api/v1/auth/login"
-    return axios.post<IBackendRes<ILoginHRM>>(urlBackend, {username, password}, {
-        headers: {
-            delay: 2000
-        }
-    })
+    return axios.post<IBackendRes<ILoginHRM>>(urlBackend, {username, password})
 }
 
 export const activateAccountAPI = (payload: IActivateAccountReq) => {
