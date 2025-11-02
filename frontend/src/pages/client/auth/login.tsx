@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import './login.scss';
 import { loginAPI } from '@/services/api';
 import { useCurrentApp } from '@/components/context/app.context';
+import { saveToken } from '@/utils/token.util';
 
 type FieldType = {
     username: string;
@@ -15,7 +16,7 @@ const LoginPage = () => {
     const [isSubmit, setIsSubmit] = useState(false);
     const { message, notification } = App.useApp();
     const navigate = useNavigate();
-    const { setIsAuthenticated, setUser } = useCurrentApp()
+    const { setIsAuthenticated, setUser } = useCurrentApp();
 
     const onFinish: FormProps<FieldType>['onFinish'] = async (values) => {
         const { username, password } = values;
@@ -25,11 +26,7 @@ const LoginPage = () => {
             const res: any = await loginAPI(username, password);
             console.log('Login response:', res);
 
-            // Axios interceptor đã trả về response.data
-            // Backend trả về trực tiếp: { access_token, token_type, expires_in, user }
-            // Không wrap trong IBackendRes format
             if (res?.access_token && res?.user) {
-                // Check MFA nếu có
                 if (res.mfa_required) {
                     notification.info({
                         message: "Yêu cầu xác thực 2 bước",
@@ -40,8 +37,7 @@ const LoginPage = () => {
                     return;
                 }
 
-                // Lưu token và user info
-                localStorage.setItem('access_token', res.access_token);
+                saveToken(res.access_token);
                 setIsAuthenticated(true);
                 setUser({
                     id: res.user.id,
@@ -55,10 +51,9 @@ const LoginPage = () => {
                 message.success("Đăng nhập thành công.");
                 navigate("/");
             } else if (res?.data) {
-                // Fallback: Nếu backend wrap trong data object (format khác)
                 const data = res.data;
                 if (data.access_token && data.user) {
-                    localStorage.setItem('access_token', data.access_token);
+                    saveToken(data.access_token);
                     setIsAuthenticated(true);
                     setUser({
                         id: data.user.id,
@@ -74,7 +69,6 @@ const LoginPage = () => {
                     throw new Error('Định dạng response không hợp lệ');
                 }
             } else {
-                // Error response từ backend
                 const errorMsg = res?.message 
                     ? (Array.isArray(res.message) ? res.message[0] : res.message)
                     : 'Vui lòng kiểm tra lại thông tin đăng nhập';
@@ -91,13 +85,11 @@ const LoginPage = () => {
             let errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra lại kết nối mạng.';
             
             if (error?.response?.data) {
-                // Server trả về error response
                 const errorData = error.response.data;
                 errorMessage = errorData?.message 
                     ? (Array.isArray(errorData.message) ? errorData.message[0] : errorData.message)
                     : 'Đăng nhập thất bại';
             } else if (error?.message) {
-                // Network error hoặc axios error
                 if (error.message.includes('Network Error') || error.code === 'ERR_NETWORK' || error.code === 'ERR_FAILED') {
                     errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra backend có đang chạy không.';
                 } else {

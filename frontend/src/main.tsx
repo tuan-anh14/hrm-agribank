@@ -16,6 +16,7 @@ import HomePage from 'pages/client/home';
 import { App } from 'antd'
 import { AppProvider } from 'components/context/app.context';
 import ProtectedRoute from '@/components/guards/ProtectedRoute';
+import PublicRoute from '@/components/guards/PublicRoute';
 
 const router = createBrowserRouter([
   {
@@ -58,7 +59,11 @@ const router = createBrowserRouter([
   },
       {
         path: "/login",
-        element: <LoginPage></LoginPage>,
+        element: (
+          <PublicRoute>
+            <LoginPage></LoginPage>
+          </PublicRoute>
+        ),
       },
 
 ]);

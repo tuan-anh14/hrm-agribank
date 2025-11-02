@@ -5,6 +5,7 @@ import AppSidebar from "@/components/layouts/app.sidebar";
 import { useEffect } from "react";
 import { fetchAccountAPI } from "@/services/api";
 import { useCurrentApp } from "@/components/context/app.context";
+import { getToken, isValidToken, removeToken } from "@/utils/token.util";
 
 const { Content } = Layout;
 
@@ -13,9 +14,16 @@ const AppLayout = () => {
 
     useEffect(() => {
         const fetchAccount = async () => {
-            const token = localStorage.getItem('access_token');
+            const token = getToken();
             
             if (!token) {
+                setIsAppLoading(false);
+                setIsAuthenticated(false);
+                return;
+            }
+
+            if (!isValidToken()) {
+                removeToken();
                 setIsAppLoading(false);
                 setIsAuthenticated(false);
                 return;
@@ -40,7 +48,7 @@ const AppLayout = () => {
             } catch (error: any) {
                 console.error('Error fetching account:', error);
                 if (error?.response?.status === 401 || error?.statusCode === 401) {
-                    localStorage.removeItem('access_token');
+                    removeToken();
                     setIsAuthenticated(false);
                 } else {
                     setIsAuthenticated(false);

@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { getToken, isValidToken } from "@/utils/token.util";
 
 interface IAppContext {
     isAuthenticated: boolean;
@@ -17,9 +18,27 @@ type TProps = {
 };
 
 export const AppProvider = (props: TProps) => {
-    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+        const token = getToken();
+        return token ? isValidToken() : false;
+    });
     const [user, setUser] = useState<IUser | null>(null);
-    const [isAppLoading, setIsAppLoading] = useState<boolean>(false);
+    const [isAppLoading, setIsAppLoading] = useState<boolean>(true);
+
+    useEffect(() => {
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === 'access_token') {
+                const token = getToken();
+                setIsAuthenticated(token ? isValidToken() : false);
+                if (!token) {
+                    setUser(null);
+                }
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        return () => window.removeEventListener('storage', handleStorageChange);
+    }, []);
 
     return (
         <CurrentAppContext.Provider value={{

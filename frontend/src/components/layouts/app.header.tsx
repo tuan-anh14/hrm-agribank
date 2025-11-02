@@ -2,6 +2,7 @@ import { Avatar, Layout, Space, Typography, Dropdown, Menu, Button } from "antd"
 import { UserOutlined, LogoutOutlined, ProfileOutlined, QuestionCircleOutlined, SettingOutlined } from "@ant-design/icons";
 import { useCurrentApp } from "components/context/app.context";
 import { useNavigate } from "react-router-dom";
+import { removeToken } from "@/utils/token.util";
 import "./app.header.scss";
 
 const { Header } = Layout;
@@ -12,9 +13,9 @@ const AppHeader = () => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
-        localStorage.removeItem("access_token");
+        removeToken();
         setIsAuthenticated(false);
-        navigate("/login");
+        navigate("/login", { replace: true });
     };
 
     const userMenu = (
