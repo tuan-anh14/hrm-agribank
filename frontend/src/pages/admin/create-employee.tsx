@@ -88,13 +88,14 @@ const CreateEmployeePage = () => {
     };
 
     return (
-        <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
-            <h2 style={{ marginBottom: '24px' }}>Tạo tài khoản nhân viên</h2>
+        <div style={{ padding: '16px', maxWidth: '800px', margin: '0 auto' }}>
+            <h2 style={{ marginBottom: '24px', fontSize: 'clamp(18px, 4vw, 24px)' }}>Tạo tài khoản nhân viên</h2>
             <Form
                 name="create-employee"
                 onFinish={onFinish}
                 autoComplete="off"
                 layout="vertical"
+                size="middle"
             >
                 <Form.Item<FieldType>
                     label="Họ và tên"

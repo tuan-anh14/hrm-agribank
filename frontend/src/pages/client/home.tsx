@@ -23,13 +23,13 @@ const HomePage = () => {
     };
 
     return (
-        <div>
+        <div style={{ padding: '0' }}>
             {/* Welcome Header */}
             <div style={{ marginBottom: '24px' }}>
-                <Title level={3} style={{ margin: 0 }}>
+                <Title level={3} style={{ margin: 0, fontSize: 'clamp(18px, 4vw, 24px)' }}>
                     Chào mừng, {user?.fullName || 'Người dùng'}!
                 </Title>
-                <Typography.Text type="secondary">
+                <Typography.Text type="secondary" style={{ fontSize: 'clamp(12px, 2vw, 14px)' }}>
                     Hệ thống quản lý nhân sự Agribank
                 </Typography.Text>
             </div>
@@ -102,37 +102,37 @@ const HomePage = () => {
                 <Col xs={24} lg={12}>
                     <Card title="Thông tin cá nhân" variant="outlined">
                         <Row gutter={[16, 16]}>
-                            <Col span={12}>
+                            <Col xs={24} sm={12}>
                                 <Typography.Text type="secondary">Họ và tên</Typography.Text>
                                 <div style={{ marginTop: '4px', fontWeight: 500 }}>
                                     {user?.fullName || 'Chưa có'}
                                 </div>
                             </Col>
-                            <Col span={12}>
+                            <Col xs={24} sm={12}>
                                 <Typography.Text type="secondary">Email</Typography.Text>
                                 <div style={{ marginTop: '4px', fontWeight: 500 }}>
                                     {user?.email || 'Chưa có'}
                                 </div>
                             </Col>
-                            <Col span={12}>
+                            <Col xs={24} sm={12}>
                                 <Typography.Text type="secondary">Số điện thoại</Typography.Text>
                                 <div style={{ marginTop: '4px', fontWeight: 500 }}>
                                     {user?.phone || 'Chưa có'}
                                 </div>
                             </Col>
-                            <Col span={12}>
+                            <Col xs={24} sm={12}>
                                 <Typography.Text type="secondary">Vai trò</Typography.Text>
                                 <div style={{ marginTop: '4px', fontWeight: 500 }}>
                                     {user?.role === 'ADMIN' ? 'Quản trị viên' : user?.role === 'HR' ? 'Nhân sự' : 'Nhân viên'}
                                 </div>
                             </Col>
-                            <Col span={12}>
+                            <Col xs={24} sm={12}>
                                 <Typography.Text type="secondary">Phòng ban</Typography.Text>
                                 <div style={{ marginTop: '4px', fontWeight: 500 }}>
                                     {(user as any)?.department?.name || 'Chưa phân công'}
                                 </div>
                             </Col>
-                            <Col span={12}>
+                            <Col xs={24} sm={12}>
                                 <Typography.Text type="secondary">Chức vụ</Typography.Text>
                                 <div style={{ marginTop: '4px', fontWeight: 500 }}>
                                     {(user as any)?.position?.title || 'Chưa phân công'}
@@ -151,15 +151,15 @@ const HomePage = () => {
                                             size="small"
                                             style={{ backgroundColor: '#f0f5ff', border: '1px solid #adc6ff' }}
                                         >
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                <div>
-                                                    <Typography.Text strong>Tạo nhân viên mới</Typography.Text>
-                                                    <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
-                                                        Thêm tài khoản nhân viên vào hệ thống
-                                                    </div>
-                                                </div>
-                                                <BankOutlined style={{ fontSize: '24px', color: '#1890ff' }} />
-                                            </div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <Typography.Text strong>Tạo nhân viên mới</Typography.Text>
+                                        <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                                            Thêm tài khoản nhân viên vào hệ thống
+                                        </div>
+                                    </div>
+                                    <BankOutlined style={{ fontSize: '24px', color: '#1890ff', flexShrink: 0 }} />
+                                </div>
                                         </Card>
                                     </Col>
                                     <Col span={24}>
@@ -167,15 +167,15 @@ const HomePage = () => {
                                             size="small"
                                             style={{ backgroundColor: '#fff7e6', border: '1px solid #ffd591' }}
                                         >
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                                <div>
-                                                    <Typography.Text strong>Quản lý phòng ban</Typography.Text>
-                                                    <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
-                                                        Xem và quản lý các phòng ban
-                                                    </div>
-                                                </div>
-                                                <TeamOutlined style={{ fontSize: '24px', color: '#faad14' }} />
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                                        <div style={{ flex: 1 }}>
+                                            <Typography.Text strong>Quản lý phòng ban</Typography.Text>
+                                            <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
+                                                Xem và quản lý các phòng ban
                                             </div>
+                                        </div>
+                                        <TeamOutlined style={{ fontSize: '24px', color: '#faad14', flexShrink: 0 }} />
+                                    </div>
                                         </Card>
                                     </Col>
                                 </>
@@ -185,14 +185,14 @@ const HomePage = () => {
                                     size="small"
                                     style={{ backgroundColor: '#f6ffed', border: '1px solid #b7eb8f' }}
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <div>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                                        <div style={{ flex: 1 }}>
                                             <Typography.Text strong>Xem chấm công</Typography.Text>
                                             <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
                                                 Xem lịch sử chấm công của bạn
                                             </div>
                                         </div>
-                                        <TrophyOutlined style={{ fontSize: '24px', color: '#52c41a' }} />
+                                        <TrophyOutlined style={{ fontSize: '24px', color: '#52c41a', flexShrink: 0 }} />
                                     </div>
                                 </Card>
                             </Col>

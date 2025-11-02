@@ -1,4 +1,4 @@
-import { Layout, Menu } from 'antd';
+import { Layout, Menu, Drawer } from 'antd';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     DashboardOutlined,
@@ -10,7 +10,11 @@ import {
     DollarOutlined,
 } from '@ant-design/icons';
 import { useCurrentApp } from '@/components/context/app.context';
+import { useSidebar } from '@/components/context/sidebar.context';
+import { useIsMobile } from '@/hooks/useResponsive';
+import { SIDEBAR } from '@/utils/constants';
 import type { MenuProps } from 'antd';
+import { useEffect, useMemo, useCallback } from 'react';
 
 const { Sider } = Layout;
 
@@ -18,6 +22,14 @@ const AppSidebar = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { user } = useCurrentApp();
+    const { collapsed, setCollapsed } = useSidebar();
+    const isMobile = useIsMobile();
+
+    useEffect(() => {
+        if (isMobile) {
+            setCollapsed(true);
+        }
+    }, [isMobile, setCollapsed]);
 
     const menuItems: MenuProps['items'] = [
         {
@@ -70,24 +82,22 @@ const AppSidebar = () => {
         return true;
     });
 
-    const handleMenuClick = ({ key }: { key: string }) => {
-        if (key && key !== location.pathname) {
+    const handleMenuClick = useCallback<NonNullable<MenuProps['onClick']>>((info) => {
+        const { key } = info;
+        if (key && typeof key === 'string' && key !== location.pathname) {
             navigate(key);
+            if (isMobile) {
+                setCollapsed(true);
+            }
         }
-    };
+    }, [navigate, location.pathname, isMobile, setCollapsed]);
 
-    const selectedKeys = [location.pathname];
+    const selectedKeys = useMemo(() => [location.pathname], [location.pathname]);
 
-    return (
-        <Sider
-            width={200}
-            style={{
-                background: '#fff',
-                boxShadow: '2px 0 8px 0 rgba(29,35,41,.05)',
-            }}
-        >
+    const sidebarContent = (
+        <>
             <div style={{
-                height: '64px',
+                height: `${SIDEBAR.headerHeight}px`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -95,6 +105,7 @@ const AppSidebar = () => {
                 fontWeight: 'bold',
                 fontSize: '16px',
                 color: '#1890ff',
+                padding: '0 12px',
             }}>
                 HRM System
             </div>
@@ -104,10 +115,44 @@ const AppSidebar = () => {
                 items={menuItems}
                 onClick={handleMenuClick}
                 style={{
-                    height: 'calc(100vh - 64px)',
+                    height: `calc(100vh - ${SIDEBAR.headerHeight}px)`,
                     borderRight: 0,
                 }}
             />
+        </>
+    );
+
+    if (isMobile) {
+        return (
+            <Drawer
+                title={null}
+                placement="left"
+                onClose={() => setCollapsed(true)}
+                open={!collapsed}
+                styles={{ body: { padding: 0 } }}
+                width={SIDEBAR.mobileWidth}
+                closable={false}
+                style={{ zIndex: 1000 }}
+            >
+                {sidebarContent}
+            </Drawer>
+        );
+    }
+
+    return (
+        <Sider
+            width={SIDEBAR.width}
+            breakpoint="lg"
+            collapsed={collapsed}
+            collapsedWidth={SIDEBAR.collapsedWidth}
+            collapsible={true}
+            trigger={null}
+            style={{
+                background: '#fff',
+                boxShadow: '2px 0 8px 0 rgba(29,35,41,.05)',
+            }}
+        >
+            {!collapsed && sidebarContent}
         </Sider>
     );
 };

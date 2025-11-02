@@ -57,6 +57,16 @@ declare global {
     branchCode?: string;
     departmentCode?: string;
     employmentStatus?: 'active' | 'inactive' | 'on_leave' | 'terminated';
+    department?: {
+      id: string;
+      name: string;
+      code?: string;
+    };
+    position?: {
+      id: string;
+      title: string;
+      code?: string;
+    };
   }
 
   interface IAuthTokens {

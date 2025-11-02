@@ -4,6 +4,7 @@
     align-items: center;
     min-height: 100vh;
     background: #f9f9f9;
+    padding: 16px;
 
     .main {
         width: 100%;
@@ -12,15 +13,31 @@
         padding: 30px;
         border-radius: 12px;
         box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+
+        @media (max-width: 576px) {
+            padding: 24px 16px;
+        }
     }
 
     .heading {
         margin-bottom: 20px;
 
         .text-large {
-            font-size: 26px;
+            font-size: 20px;
             font-weight: bold;
             color: #000;
+
+            @media (min-width: 576px) {
+                font-size: 22px;
+            }
+
+            @media (min-width: 768px) {
+                font-size: 24px;
+            }
+
+            @media (min-width: 992px) {
+                font-size: 26px;
+            }
         }
     }
 
@@ -31,6 +48,11 @@
     .ant-form-item-label label {
         font-weight: bold;
         color: #444;
+        font-size: 13px;
+
+        @media (min-width: 576px) {
+            font-size: 14px;
+        }
     }
 
     .ant-input,
@@ -38,6 +60,11 @@
         border-radius: 6px;
         height: 40px;
         font-size: 14px;
+
+        @media (max-width: 576px) {
+            height: 44px;
+            font-size: 16px;
+        }
     }
 
     .ant-btn-primary {
@@ -48,11 +75,19 @@
         background: #4c6ef5;
         border: none;
         transition: 0.3s ease-in-out;
+
+        @media (max-width: 576px) {
+            height: 44px;
+        }
     }
 
     .text-normal {
-        font-size: 14px;
+        font-size: 12px;
         color: #666;
+
+        @media (min-width: 576px) {
+            font-size: 14px;
+        }
     }
 
     .text-link {
