@@ -56,3 +56,10 @@ export const getAllPositionsAPI = () => {
     const urlBackend = "/api/v1/position";
     return axios.get<IBackendRes<any[]>>(urlBackend);
 }
+
+// Employees
+export const getAllEmployeesAPI = () => {
+    const urlBackend = "/api/v1/employee";
+    // Backend returns a plain array (not wrapped in IBackendRes)
+    return axios.get<any[]>(urlBackend);
+}
