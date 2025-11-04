@@ -1,4 +1,5 @@
-import axios from 'services/axios.customize'
+import axios from 'services/axios.customize';
+import type { Employee, CreateEmployeePayload, UpdateEmployeePayload, CreateEmployeeWithAccountPayload } from '@/types/employee';
 
 export const loginAPI = (username: string, password: string) => {
     const urlBackend = "/api/v1/auth/login"
@@ -30,21 +31,9 @@ export const logoutAPI = () => {
 }
 
 // Employee APIs
-export const createEmployeeWithAccountAPI = (payload: {
-    fullName: string;
-    email: string;
-    password: string;
-    role?: string;
-    gender?: string;
-    phone?: string;
-    address?: string;
-    dateOfBirth?: string;
-    departmentId?: string;
-    positionId?: string;
-    status?: string;
-}) => {
+export const createEmployeeWithAccountAPI = (payload: CreateEmployeeWithAccountPayload) => {
     const urlBackend = "/api/v1/employee/with-account";
-    return axios.post<IBackendRes<{ message: string; employee: any; account: any }>>(urlBackend, payload);
+    return axios.post<IBackendRes<{ message: string; employee: Employee; account: any }>>(urlBackend, payload);
 }
 
 export const getAllDepartmentsAPI = () => {
@@ -57,9 +46,29 @@ export const getAllPositionsAPI = () => {
     return axios.get<IBackendRes<any[]>>(urlBackend);
 }
 
-// Employees
+// Employees - CRUD Operations
 export const getAllEmployeesAPI = () => {
     const urlBackend = "/api/v1/employee";
     // Backend returns a plain array (not wrapped in IBackendRes)
-    return axios.get<any[]>(urlBackend);
+    return axios.get<Employee[]>(urlBackend);
+}
+
+export const getEmployeeByIdAPI = (id: string) => {
+    const urlBackend = `/api/v1/employee/${id}`;
+    return axios.get<IBackendRes<Employee>>(urlBackend);
+}
+
+export const createEmployeeAPI = (payload: CreateEmployeePayload) => {
+    const urlBackend = "/api/v1/employee";
+    return axios.post<IBackendRes<Employee>>(urlBackend, payload);
+}
+
+export const updateEmployeeAPI = (id: string, payload: UpdateEmployeePayload) => {
+    const urlBackend = `/api/v1/employee/${id}`;
+    return axios.put<IBackendRes<Employee>>(urlBackend, payload);
+}
+
+export const deleteEmployeeAPI = (id: string) => {
+    const urlBackend = `/api/v1/employee/${id}`;
+    return axios.delete<IBackendRes<Employee>>(urlBackend);
 }

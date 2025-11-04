@@ -1,24 +1,30 @@
-import { Button, Form, Input, Select, message, Card, Typography, Space } from "antd";
+import { Button, Form, Input, Select, message, Card, Typography, Space, Spin, Alert } from "antd";
 import type { FormProps } from "antd";
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { createEmployeeWithAccountAPI, getAllDepartmentsAPI, getAllPositionsAPI } from "@/services/api";
-import type { CreateEmployeeWithAccountPayload } from "@/types/employee";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+    getEmployeeByIdAPI,
+    updateEmployeeAPI,
+    getAllDepartmentsAPI,
+    getAllPositionsAPI,
+} from "@/services/api";
+import type { UpdateEmployeePayload } from "@/types/employee";
+import type { Employee } from "@/types/employee";
 
 const { Title } = Typography;
 const { Option } = Select;
 
 type FieldType = {
     fullName: string;
-    email: string;
-    password: string;
-    role: string;
+    email?: string;
     gender?: string;
     phone?: string;
     address?: string;
     dateOfBirth?: string;
     departmentId?: string;
     positionId?: string;
+    status?: string;
+    startDate?: string;
 };
 
 interface Department {
@@ -31,24 +37,57 @@ interface Position {
     title: string;
 }
 
-const CreateEmployeePage: React.FC = () => {
+const UpdateEmployeePage: React.FC = () => {
+    const { id } = useParams<{ id: string }>();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [departments, setDepartments] = useState<Department[]>([]);
     const [positions, setPositions] = useState<Position[]>([]);
     const [loadingDepartments, setLoadingDepartments] = useState(false);
     const [loadingPositions, setLoadingPositions] = useState(false);
+    const [employee, setEmployee] = useState<Employee | null>(null);
     const navigate = useNavigate();
     const [form] = Form.useForm();
 
     useEffect(() => {
         const fetchData = async () => {
+            if (!id) {
+                setError("Không tìm thấy ID nhân viên");
+                setLoading(false);
+                return;
+            }
+
+            setLoading(true);
+            setError(null);
             setLoadingDepartments(true);
             setLoadingPositions(true);
+
             try {
-                const [deptRes, posRes] = await Promise.all([
+                const [employeeRes, deptRes, posRes] = await Promise.all([
+                    getEmployeeByIdAPI(id),
                     getAllDepartmentsAPI(),
                     getAllPositionsAPI(),
                 ]);
+
+                if (employeeRes?.data) {
+                    const emp = employeeRes.data;
+                    setEmployee(emp);
+                    form.setFieldsValue({
+                        fullName: emp.fullName,
+                        email: emp.email,
+                        gender: emp.gender,
+                        phone: emp.phone,
+                        address: emp.address,
+                        dateOfBirth: emp.dateOfBirth ? emp.dateOfBirth.split("T")[0] : undefined,
+                        departmentId: emp.departmentId,
+                        positionId: emp.positionId,
+                        status: emp.status,
+                        startDate: emp.startDate ? emp.startDate.split("T")[0] : undefined,
+                    });
+                } else {
+                    setError("Không tìm thấy thông tin nhân viên");
+                }
 
                 if (deptRes?.data) {
                     setDepartments(deptRes.data);
@@ -56,39 +95,44 @@ const CreateEmployeePage: React.FC = () => {
                 if (posRes?.data) {
                     setPositions(posRes.data);
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error fetching data:", error);
-                message.error("Không thể tải danh sách phòng ban và chức vụ");
+                setError(error?.response?.data?.message || "Không thể tải thông tin nhân viên");
             } finally {
+                setLoading(false);
                 setLoadingDepartments(false);
                 setLoadingPositions(false);
             }
         };
 
         fetchData();
-    }, []);
+    }, [id, form]);
 
     const onFinish: FormProps<FieldType>["onFinish"] = async (values) => {
+        if (!id) {
+            message.error("Không tìm thấy ID nhân viên");
+            return;
+        }
+
         setIsSubmitting(true);
         try {
-            const payload: CreateEmployeeWithAccountPayload = {
+            const payload: UpdateEmployeePayload = {
                 fullName: values.fullName,
                 email: values.email,
-                password: values.password,
-                role: values.role || "EMPLOYEE",
                 gender: values.gender,
                 phone: values.phone,
                 address: values.address,
                 dateOfBirth: values.dateOfBirth || undefined,
                 departmentId: values.departmentId,
                 positionId: values.positionId,
+                status: values.status,
+                startDate: values.startDate || undefined,
             };
 
-            const res = await createEmployeeWithAccountAPI(payload);
+            const res = await updateEmployeeAPI(id, payload);
 
             if (res?.data) {
-                message.success("Tạo nhân viên và tài khoản thành công!");
-                form.resetFields();
+                message.success("Cập nhật nhân viên thành công!");
                 setTimeout(() => {
                     navigate("/admin/employees");
                 }, 1500);
@@ -96,23 +140,55 @@ const CreateEmployeePage: React.FC = () => {
                 message.error(res?.message || "Có lỗi xảy ra");
             }
         } catch (error: any) {
-            message.error(error?.response?.data?.message || "Có lỗi xảy ra khi tạo nhân viên");
+            message.error(error?.response?.data?.message || "Có lỗi xảy ra khi cập nhật nhân viên");
         } finally {
             setIsSubmitting(false);
         }
     };
+
+    if (loading) {
+        return (
+            <div style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>
+                <Card>
+                    <Space direction="vertical" style={{ width: "100%", textAlign: "center" }}>
+                        <Spin size="large" />
+                        <Typography.Text>Đang tải thông tin nhân viên...</Typography.Text>
+                    </Space>
+                </Card>
+            </div>
+        );
+    }
+
+    if (error && !employee) {
+        return (
+            <div style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>
+                <Card>
+                    <Alert
+                        type="error"
+                        message="Lỗi"
+                        description={error}
+                        action={
+                            <Button size="small" onClick={() => navigate("/admin/employees")}>
+                                Quay lại
+                            </Button>
+                        }
+                    />
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>
             <Card>
                 <Space direction="vertical" size={24} style={{ width: "100%" }}>
                     <Title level={2} style={{ margin: 0 }}>
-                        Tạo tài khoản nhân viên
+                        Cập nhật thông tin nhân viên
                     </Title>
 
                     <Form
                         form={form}
-                        name="create-employee"
+                        name="update-employee"
                         onFinish={onFinish}
                         autoComplete="off"
                         layout="vertical"
@@ -127,37 +203,11 @@ const CreateEmployeePage: React.FC = () => {
                         </Form.Item>
 
                         <Form.Item<FieldType>
-                            label="Email (sẽ dùng làm username)"
+                            label="Email"
                             name="email"
-                            rules={[
-                                { required: true, message: "Vui lòng nhập email!" },
-                                { type: "email", message: "Email không hợp lệ!" },
-                            ]}
+                            rules={[{ type: "email", message: "Email không hợp lệ!" }]}
                         >
                             <Input placeholder="a.nguyen@agribank.vn" />
-                        </Form.Item>
-
-                        <Form.Item<FieldType>
-                            label="Mật khẩu"
-                            name="password"
-                            rules={[
-                                { required: true, message: "Vui lòng nhập mật khẩu!" },
-                                { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự!" },
-                            ]}
-                        >
-                            <Input.Password placeholder="Mật khẩu tạm thời" />
-                        </Form.Item>
-
-                        <Form.Item<FieldType>
-                            label="Vai trò"
-                            name="role"
-                            initialValue="EMPLOYEE"
-                        >
-                            <Select>
-                                <Option value="EMPLOYEE">Nhân viên</Option>
-                                <Option value="HR">HR</Option>
-                                <Option value="ADMIN">Admin</Option>
-                            </Select>
                         </Form.Item>
 
                         <Form.Item<FieldType>
@@ -179,10 +229,10 @@ const CreateEmployeePage: React.FC = () => {
                         </Form.Item>
 
                         <Form.Item<FieldType>
-                            label="Ngày sinh (YYYY-MM-DD)"
+                            label="Ngày sinh"
                             name="dateOfBirth"
                         >
-                            <Input placeholder="1990-01-01" type="date" />
+                            <Input type="date" />
                         </Form.Item>
 
                         <Form.Item<FieldType>
@@ -201,6 +251,7 @@ const CreateEmployeePage: React.FC = () => {
                                 loading={loadingDepartments}
                                 showSearch
                                 optionFilterProp="children"
+                                allowClear
                                 filterOption={(input, option) =>
                                     (option?.children as unknown as string)
                                         ?.toLowerCase()
@@ -224,6 +275,7 @@ const CreateEmployeePage: React.FC = () => {
                                 loading={loadingPositions}
                                 showSearch
                                 optionFilterProp="children"
+                                allowClear
                                 filterOption={(input, option) =>
                                     (option?.children as unknown as string)
                                         ?.toLowerCase()
@@ -238,10 +290,28 @@ const CreateEmployeePage: React.FC = () => {
                             </Select>
                         </Form.Item>
 
+                        <Form.Item<FieldType>
+                            label="Trạng thái"
+                            name="status"
+                        >
+                            <Select placeholder="Chọn trạng thái">
+                                <Option value="working">Đang làm việc</Option>
+                                <Option value="on_leave">Nghỉ phép</Option>
+                                <Option value="inactive">Không hoạt động</Option>
+                            </Select>
+                        </Form.Item>
+
+                        <Form.Item<FieldType>
+                            label="Ngày bắt đầu làm việc"
+                            name="startDate"
+                        >
+                            <Input type="date" />
+                        </Form.Item>
+
                         <Form.Item>
                             <Space>
                                 <Button type="primary" htmlType="submit" loading={isSubmitting}>
-                                    Tạo tài khoản
+                                    Cập nhật
                                 </Button>
                                 <Button onClick={() => navigate("/admin/employees")}>
                                     Hủy
@@ -255,4 +325,5 @@ const CreateEmployeePage: React.FC = () => {
     );
 };
 
-export default CreateEmployeePage;
+export default UpdateEmployeePage;
+

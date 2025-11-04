@@ -7,10 +7,12 @@ import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
-import EmployeePage from '@/pages/admin/employees/employee';
+import ListEmployeePage from '@/pages/admin/employees';
+import CreateEmployeePage from '@/pages/admin/employees/create-employee';
+import UpdateEmployeePage from '@/pages/admin/employees/update-employee';
+import ViewEmployeePage from '@/pages/admin/employees/view-employee';
 import AboutPage from 'pages/client/about';
 import LoginPage from '@/pages/auth/login';
-import CreateEmployeePage from '@/pages/admin/employees/create-employee';
 import 'styles/global.scss';
 import HomePage from 'pages/client/home';
 import { App } from 'antd'
@@ -32,10 +34,34 @@ const router = createBrowserRouter([
         )
       },
       {
-        path: "/employee",
+        path: "/admin/employees",
         element: (
-          <ProtectedRoute>
-            <EmployeePage></EmployeePage>
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <ListEmployeePage></ListEmployeePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/admin/employees/create",
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN']}>
+            <CreateEmployeePage></CreateEmployeePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/admin/employees/:id",
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <ViewEmployeePage></ViewEmployeePage>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "/admin/employees/:id/edit",
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <UpdateEmployeePage></UpdateEmployeePage>
           </ProtectedRoute>
         ),
       },
@@ -44,14 +70,6 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <AboutPage></AboutPage>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: "/admin/create-employee",
-        element: (
-          <ProtectedRoute requiredRole={['ADMIN']}>
-            <CreateEmployeePage></CreateEmployeePage>
           </ProtectedRoute>
         ),
       },
