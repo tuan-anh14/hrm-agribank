@@ -7,10 +7,10 @@ import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
-import EmployeePage from '@/pages/client/employee';
+import EmployeePage from '@/pages/admin/employees/employee';
 import AboutPage from 'pages/client/about';
-import LoginPage from 'pages/client/auth/login';
-import CreateEmployeePage from 'pages/admin/create-employee';
+import LoginPage from '@/pages/auth/login';
+import CreateEmployeePage from '@/pages/admin/employees/create-employee';
 import 'styles/global.scss';
 import HomePage from 'pages/client/home';
 import { App } from 'antd'
