@@ -3,13 +3,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
     DashboardOutlined,
     UserOutlined,
-    TeamOutlined,
     BankOutlined,
     FileTextOutlined,
     CalendarOutlined,
     DollarOutlined,
 } from '@ant-design/icons';
-import { useCurrentApp } from '@/components/context/app.context';
 import { useSidebar } from '@/components/context/sidebar.context';
 import { useIsMobile } from '@/hooks/useResponsive';
 import { SIDEBAR } from '@/utils/constants';
@@ -21,7 +19,6 @@ const { Sider } = Layout;
 const AppSidebar = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user } = useCurrentApp();
     const { collapsed, setCollapsed } = useSidebar();
     const isMobile = useIsMobile();
 
@@ -43,18 +40,6 @@ const AppSidebar = () => {
             label: 'Nhân viên',
         },
         {
-            key: 'admin',
-            icon: <TeamOutlined />,
-            label: 'Quản trị',
-            children: user?.role === 'ADMIN' ? [
-                {
-                    key: '/admin/create-employee',
-                    icon: <UserOutlined />,
-                    label: 'Tạo nhân viên',
-                },
-            ] : [],
-        },
-        {
             key: '/department',
             icon: <BankOutlined />,
             label: 'Phòng ban',
@@ -74,13 +59,7 @@ const AppSidebar = () => {
             icon: <DollarOutlined />,
             label: 'Lương',
         },
-    ].filter(item => {
-        // Filter admin menu if not ADMIN
-        if (item.key === 'admin' && user?.role !== 'ADMIN') {
-            return false;
-        }
-        return true;
-    });
+    ];
 
     const handleMenuClick = useCallback<NonNullable<MenuProps['onClick']>>((info) => {
         const { key } = info;
