@@ -60,5 +60,6 @@ export interface CreateEmployeeWithAccountPayload {
     departmentId?: string;
     positionId?: string;
     status?: string;
+    startDate?: string;
 }
 

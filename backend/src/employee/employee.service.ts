@@ -13,6 +13,24 @@ type EmployeeWithAccount = Employee & {
 export class EmployeeService {
   constructor(private prisma: PrismaService) {}
 
+  private normalizeEmployeeDates<T extends { dateOfBirth?: string | Date | null; startDate?: string | Date | null }>(data: T): T {
+    const normalized: any = { ...data };
+
+    if (normalized.dateOfBirth === '' || normalized.dateOfBirth === null) {
+      delete normalized.dateOfBirth;
+    } else if (normalized.dateOfBirth) {
+      normalized.dateOfBirth = new Date(normalized.dateOfBirth);
+    }
+
+    if (normalized.startDate === '' || normalized.startDate === null) {
+      delete normalized.startDate;
+    } else if (normalized.startDate) {
+      normalized.startDate = new Date(normalized.startDate);
+    }
+
+    return normalized;
+  }
+
   async getAll(): Promise<Employee[]> {
     return this.prisma.employee.findMany({
       include: { department: true, position: true },
@@ -35,8 +53,9 @@ export class EmployeeService {
 
   async create(data: any): Promise<Employee> {
     try {
+      const normalizedData = this.normalizeEmployeeDates(data);
       return await this.prisma.employee.create({
-        data,
+        data: normalizedData,
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -50,9 +69,10 @@ export class EmployeeService {
 
   async update(id: string, data: any): Promise<Employee> {
     try {
+      const normalizedData = this.normalizeEmployeeDates(data);
       return await this.prisma.employee.update({
         where: { id },
-        data,
+        data: normalizedData,
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -142,6 +162,7 @@ export class EmployeeService {
     departmentId?: string;
     positionId?: string;
     status?: string;
+    startDate?: string;
   }): Promise<{ employee: Employee; account: Account }> {
     // Check if email already exists
     const existing = await this.findOneByUsername(data.email);
@@ -154,17 +175,18 @@ export class EmployeeService {
       return await this.prisma.$transaction(async (tx) => {
         // Create employee
         const employee = await tx.employee.create({
-          data: {
+          data: this.normalizeEmployeeDates({
             fullName: data.fullName,
             email: data.email,
             gender: data.gender,
             phone: data.phone,
             address: data.address,
-            dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+            dateOfBirth: data.dateOfBirth,
             departmentId: data.departmentId,
             positionId: data.positionId,
             status: data.status || 'working',
-          },
+            startDate: data.startDate,
+          }),
         });
 
         // Create account

@@ -158,13 +158,28 @@ const UpdateEmployeePage: React.FC = () => {
 
             const res = await updateEmployeeAPI(id, payload);
 
-            if (res?.data) {
+            let updatedEmployee: Employee | null = null;
+            if (res && typeof res === "object") {
+                if ("data" in res && res.data) {
+                    updatedEmployee = res.data as Employee;
+                } else if ("id" in res && "fullName" in res && !("data" in res)) {
+                    updatedEmployee = res as unknown as Employee;
+                }
+            }
+
+            if (updatedEmployee) {
                 message.success("Cập nhật nhân viên thành công!");
                 setTimeout(() => {
                     navigate("/admin/employees");
                 }, 1500);
             } else {
-                message.error(res?.message || "Có lỗi xảy ra");
+                const errorMsg =
+                    (res as any)?.message
+                        ? Array.isArray((res as any).message)
+                            ? (res as any).message[0]
+                            : (res as any).message
+                        : "Có lỗi xảy ra";
+                message.error(errorMsg);
             }
         } catch (error: any) {
             message.error(error?.response?.data?.message || "Có lỗi xảy ra khi cập nhật nhân viên");
@@ -263,6 +278,13 @@ const UpdateEmployeePage: React.FC = () => {
                         </Form.Item>
 
                         <Form.Item<FieldType>
+                            label="Ngày bắt đầu làm việc"
+                            name="startDate"
+                        >
+                            <Input type="date" />
+                        </Form.Item>
+
+                        <Form.Item<FieldType>
                             label="Địa chỉ"
                             name="address"
                         >
@@ -326,13 +348,6 @@ const UpdateEmployeePage: React.FC = () => {
                                 <Option value="on_leave">Nghỉ phép</Option>
                                 <Option value="inactive">Không hoạt động</Option>
                             </Select>
-                        </Form.Item>
-
-                        <Form.Item<FieldType>
-                            label="Ngày bắt đầu làm việc"
-                            name="startDate"
-                        >
-                            <Input type="date" />
                         </Form.Item>
 
                         <Form.Item>

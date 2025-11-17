@@ -19,6 +19,7 @@ type FieldType = {
     dateOfBirth?: string;
     departmentId?: string;
     positionId?: string;
+    startDate?: string;
 };
 
 interface Department {
@@ -88,6 +89,7 @@ const CreateEmployeePage: React.FC = () => {
                 dateOfBirth: values.dateOfBirth || undefined,
                 departmentId: values.departmentId,
                 positionId: values.positionId,
+                startDate: values.startDate || undefined,
             };
 
             const res = await createEmployeeWithAccountAPI(payload);
@@ -189,6 +191,13 @@ const CreateEmployeePage: React.FC = () => {
                             name="dateOfBirth"
                         >
                             <Input placeholder="1990-01-01" type="date" />
+                        </Form.Item>
+
+                        <Form.Item<FieldType>
+                            label="Ngày bắt đầu làm việc"
+                            name="startDate"
+                        >
+                            <Input type="date" />
                         </Form.Item>
 
                         <Form.Item<FieldType>

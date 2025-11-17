@@ -86,4 +86,13 @@ export class CreateEmployeeDto {
   @IsOptional()
   @IsString({ message: 'Địa chỉ phải là chuỗi' })
   address?: string;
+
+  @ApiProperty({
+    example: '2024-05-01',
+    description: 'Ngày bắt đầu làm việc',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'Ngày bắt đầu làm việc phải là định dạng ngày hợp lệ' })
+  startDate?: string;
 }

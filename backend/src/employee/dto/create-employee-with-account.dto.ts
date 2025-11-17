@@ -102,5 +102,14 @@ export class CreateEmployeeWithAccountDto {
   @IsOptional()
   @IsString({ message: 'Trạng thái phải là chuỗi' })
   status?: string;
+
+  @ApiProperty({
+    example: '2024-05-01',
+    description: 'Ngày bắt đầu làm việc',
+    required: false,
+  })
+  @IsOptional()
+  @IsDateString({}, { message: 'Ngày bắt đầu làm việc không hợp lệ' })
+  startDate?: string;
 }
 
