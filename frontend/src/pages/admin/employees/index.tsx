@@ -405,7 +405,7 @@ const ListEmployeePage: React.FC = () => {
                     }}
                     onChange={onTableChange}
                     sortDirections={["ascend", "descend"]}
-                    scroll={{ x: 1200 }}
+                    scroll={{ x: 'max-content' }}
                 />
             </Card>
 

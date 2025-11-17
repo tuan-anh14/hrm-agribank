@@ -248,7 +248,21 @@ const ListDepartmentPage: React.FC = () => {
                 dataIndex: "description",
                 key: "description",
                 responsive: ["md", "lg"],
-                render: (text: string) => text || "-",
+                render: (text: string) => (
+                    <span
+                        style={{
+                            display: "inline-block",
+                            maxWidth: 260,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            verticalAlign: "middle",
+                        }}
+                        title={text || "-"}
+                    >
+                        {text || "-"}
+                    </span>
+                ),
             },
             {
                 title: "Số nhân viên",
@@ -369,7 +383,7 @@ const ListDepartmentPage: React.FC = () => {
                     }}
                     onChange={onTableChange}
                     sortDirections={["ascend", "descend"]}
-                    scroll={{ x: 1200 }}
+                    scroll={{ x: 'max-content' }}
                 />
             </Card>
 
