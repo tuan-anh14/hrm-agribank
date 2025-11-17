@@ -325,6 +325,7 @@ const ListEmployeePage: React.FC = () => {
                             icon={<EditOutlined />}
                             onClick={() => navigate(`/admin/employees/${record.id}/edit`)}
                             size="small"
+                            style={{ color: '#faad14' }}
                         >
                             Sửa
                         </Button>

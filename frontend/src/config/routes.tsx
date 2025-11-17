@@ -14,8 +14,14 @@ import ListEmployeePage from '@/pages/admin/employees';
 import CreateEmployeePage from '@/pages/admin/employees/create-employee';
 import UpdateEmployeePage from '@/pages/admin/employees/update-employee';
 import ViewEmployeePage from '@/pages/admin/employees/view-employee';
-import DepartmentPage from '@/pages/admin/departments';
-import PositionPage from '@/pages/admin/positions';
+import ListDepartmentPage from '@/pages/admin/departments';
+import CreateDepartmentPage from '@/pages/admin/departments/create-department';
+import UpdateDepartmentPage from '@/pages/admin/departments/update-department';
+import ViewDepartmentPage from '@/pages/admin/departments/view-department';
+import ListPositionPage from '@/pages/admin/positions';
+import CreatePositionPage from '@/pages/admin/positions/create-position';
+import UpdatePositionPage from '@/pages/admin/positions/update-position';
+import ViewPositionPage from '@/pages/admin/positions/view-position';
 
 // Layout
 import AppLayout from '@/layout';
@@ -100,7 +106,31 @@ export const routes: RouteObject[] = [
         path: '/department',
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
-            <DepartmentPage />
+            <ListDepartmentPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/department/create',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <CreateDepartmentPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/department/:id',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <ViewDepartmentPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/department/:id/edit',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <UpdateDepartmentPage />
           </ProtectedRoute>
         ),
       },
@@ -109,7 +139,31 @@ export const routes: RouteObject[] = [
         path: '/position',
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
-            <PositionPage />
+            <ListPositionPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/position/create',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <CreatePositionPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/position/:id',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <ViewPositionPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/position/:id/edit',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <UpdatePositionPage />
           </ProtectedRoute>
         ),
       },

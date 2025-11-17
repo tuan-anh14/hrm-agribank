@@ -50,11 +50,17 @@ const CreateEmployeePage: React.FC = () => {
                     getAllPositionsAPI(),
                 ]);
 
-                if (deptRes?.data) {
-                    setDepartments(deptRes.data);
+                // getAllDepartmentsAPI and getAllPositionsAPI return arrays directly
+                if (Array.isArray(deptRes)) {
+                    setDepartments(deptRes);
+                } else if (Array.isArray((deptRes as any)?.data)) {
+                    setDepartments((deptRes as any).data);
                 }
-                if (posRes?.data) {
-                    setPositions(posRes.data);
+
+                if (Array.isArray(posRes)) {
+                    setPositions(posRes);
+                } else if (Array.isArray((posRes as any)?.data)) {
+                    setPositions((posRes as any).data);
                 }
             } catch (error) {
                 console.error("Error fetching data:", error);

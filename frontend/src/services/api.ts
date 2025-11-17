@@ -1,5 +1,7 @@
 import axios from 'services/axios.customize';
 import type { Employee, CreateEmployeePayload, UpdateEmployeePayload, CreateEmployeeWithAccountPayload } from '@/types/employee';
+import type { Department, CreateDepartmentPayload, UpdateDepartmentPayload } from '@/types/department';
+import type { Position, CreatePositionPayload, UpdatePositionPayload } from '@/types/position';
 
 export const loginAPI = (username: string, password: string) => {
     const urlBackend = "/api/v1/auth/login"
@@ -36,14 +38,58 @@ export const createEmployeeWithAccountAPI = (payload: CreateEmployeeWithAccountP
     return axios.post<IBackendRes<{ message: string; employee: Employee; account: any }>>(urlBackend, payload);
 }
 
+// Departments - CRUD Operations
 export const getAllDepartmentsAPI = () => {
     const urlBackend = "/api/v1/department";
-    return axios.get<IBackendRes<any[]>>(urlBackend);
+    // Backend returns a plain array (not wrapped in IBackendRes)
+    return axios.get<Department[]>(urlBackend);
 }
 
+export const getDepartmentByIdAPI = (id: string) => {
+    const urlBackend = `/api/v1/department/${id}`;
+    return axios.get<IBackendRes<Department>>(urlBackend);
+}
+
+export const createDepartmentAPI = (payload: CreateDepartmentPayload) => {
+    const urlBackend = "/api/v1/department";
+    return axios.post<IBackendRes<Department>>(urlBackend, payload);
+}
+
+export const updateDepartmentAPI = (id: string, payload: UpdateDepartmentPayload) => {
+    const urlBackend = `/api/v1/department/${id}`;
+    return axios.put<IBackendRes<Department>>(urlBackend, payload);
+}
+
+export const deleteDepartmentAPI = (id: string) => {
+    const urlBackend = `/api/v1/department/${id}`;
+    return axios.delete<IBackendRes<Department>>(urlBackend);
+}
+
+// Positions - CRUD Operations
 export const getAllPositionsAPI = () => {
     const urlBackend = "/api/v1/position";
-    return axios.get<IBackendRes<any[]>>(urlBackend);
+    // Backend returns a plain array (not wrapped in IBackendRes)
+    return axios.get<Position[]>(urlBackend);
+}
+
+export const getPositionByIdAPI = (id: string) => {
+    const urlBackend = `/api/v1/position/${id}`;
+    return axios.get<IBackendRes<Position>>(urlBackend);
+}
+
+export const createPositionAPI = (payload: CreatePositionPayload) => {
+    const urlBackend = "/api/v1/position";
+    return axios.post<IBackendRes<Position>>(urlBackend, payload);
+}
+
+export const updatePositionAPI = (id: string, payload: UpdatePositionPayload) => {
+    const urlBackend = `/api/v1/position/${id}`;
+    return axios.put<IBackendRes<Position>>(urlBackend, payload);
+}
+
+export const deletePositionAPI = (id: string) => {
+    const urlBackend = `/api/v1/position/${id}`;
+    return axios.delete<IBackendRes<Position>>(urlBackend);
 }
 
 // Employees - CRUD Operations

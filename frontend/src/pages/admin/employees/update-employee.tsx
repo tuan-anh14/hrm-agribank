@@ -107,14 +107,17 @@ const UpdateEmployeePage: React.FC = () => {
                 }
 
                 // Handle departments and positions
-                const departmentsData = deptRes?.data || deptRes;
-                if (Array.isArray(departmentsData)) {
-                    setDepartments(departmentsData);
+                // getAllDepartmentsAPI and getAllPositionsAPI return arrays directly
+                if (Array.isArray(deptRes)) {
+                    setDepartments(deptRes);
+                } else if (Array.isArray((deptRes as any)?.data)) {
+                    setDepartments((deptRes as any).data);
                 }
 
-                const positionsData = posRes?.data || posRes;
-                if (Array.isArray(positionsData)) {
-                    setPositions(positionsData);
+                if (Array.isArray(posRes)) {
+                    setPositions(posRes);
+                } else if (Array.isArray((posRes as any)?.data)) {
+                    setPositions((posRes as any).data);
                 }
             } catch (error: any) {
                 console.error("Error fetching data:", error);

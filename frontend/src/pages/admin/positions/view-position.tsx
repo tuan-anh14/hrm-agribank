@@ -2,22 +2,22 @@ import { Button, Card, Typography, Space, Spin, Alert, Descriptions, Tag } from 
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { EditOutlined, ArrowLeftOutlined } from "@ant-design/icons";
-import { getEmployeeByIdAPI } from "@/services/api";
-import type { Employee } from "@/types/employee";
+import { getPositionByIdAPI } from "@/services/api";
+import type { Position } from "@/types/position";
 
 const { Title, Text } = Typography;
 
-const ViewEmployeePage: React.FC = () => {
+const ViewPositionPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [employee, setEmployee] = useState<Employee | null>(null);
+    const [position, setPosition] = useState<Position | null>(null);
     const navigate = useNavigate();
 
     useEffect(() => {
-        const fetchEmployee = async () => {
+        const fetchPosition = async () => {
             if (!id) {
-                setError("Không tìm thấy ID nhân viên");
+                setError("Không tìm thấy ID chức vụ");
                 setLoading(false);
                 return;
             }
@@ -26,43 +26,46 @@ const ViewEmployeePage: React.FC = () => {
             setError(null);
 
             try {
-                const res = await getEmployeeByIdAPI(id);
+                const res = await getPositionByIdAPI(id);
                 // Axios interceptor unwraps response.data
-                // Backend returns Employee directly, so res might be Employee or IBackendRes<Employee>
-                let employeeData: Employee | null = null;
+                let positionData: Position | null = null;
                 
                 if (res && typeof res === 'object') {
-                    // Check if res is IBackendRes (has data field)
                     if ('data' in res && res.data) {
-                        employeeData = res.data as Employee;
-                    }
-                    // Check if res is Employee directly (has id and fullName, but not data field)
-                    else if ('id' in res && 'fullName' in res && !('data' in res)) {
-                        employeeData = res as unknown as Employee;
+                        positionData = res.data as Position;
+                    } else if ('id' in res && 'title' in res && !('data' in res)) {
+                        positionData = res as unknown as Position;
                     }
                 }
                 
-                if (employeeData) {
-                    setEmployee(employeeData);
+                if (positionData) {
+                    setPosition(positionData);
                 } else {
                     const errorMsg = (res as any)?.message 
                         ? (Array.isArray((res as any).message) ? (res as any).message[0] : (res as any).message)
-                        : "Không tìm thấy thông tin nhân viên";
+                        : "Không tìm thấy thông tin chức vụ";
                     setError(errorMsg);
                 }
             } catch (error: any) {
-                console.error("Error fetching employee:", error);
+                console.error("Error fetching position:", error);
                 const errorMessage = error?.response?.data?.message 
                     || error?.message 
-                    || "Không thể tải thông tin nhân viên";
+                    || "Không thể tải thông tin chức vụ";
                 setError(errorMessage);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchEmployee();
+        fetchPosition();
     }, [id]);
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND',
+        }).format(amount);
+    };
 
     if (loading) {
         return (
@@ -70,23 +73,23 @@ const ViewEmployeePage: React.FC = () => {
                 <Card>
                     <Space direction="vertical" style={{ width: "100%", textAlign: "center" }}>
                         <Spin size="large" />
-                        <Text>Đang tải thông tin nhân viên...</Text>
+                        <Text>Đang tải thông tin chức vụ...</Text>
                     </Space>
                 </Card>
             </div>
         );
     }
 
-    if (error || !employee) {
+    if (error || !position) {
         return (
             <div style={{ padding: "24px", maxWidth: "1000px", margin: "0 auto" }}>
                 <Card>
                     <Alert
                         type="error"
                         message="Lỗi"
-                        description={error || "Không tìm thấy thông tin nhân viên"}
+                        description={error || "Không tìm thấy thông tin chức vụ"}
                         action={
-                            <Button size="small" onClick={() => navigate("/admin/employees")}>
+                            <Button size="small" onClick={() => navigate("/position")}>
                                 Quay lại
                             </Button>
                         }
@@ -102,19 +105,19 @@ const ViewEmployeePage: React.FC = () => {
                 <Space direction="vertical" size={24} style={{ width: "100%" }}>
                     <Space style={{ width: "100%", justifyContent: "space-between", flexWrap: "wrap" }}>
                         <Title level={2} style={{ margin: 0 }}>
-                            Chi tiết nhân viên
+                            Chi tiết chức vụ
                         </Title>
                         <Space>
                             <Button
                                 icon={<ArrowLeftOutlined />}
-                                onClick={() => navigate("/admin/employees")}
+                                onClick={() => navigate("/position")}
                             >
                                 Quay lại
                             </Button>
                             <Button
                                 type="primary"
                                 icon={<EditOutlined />}
-                                onClick={() => navigate(`/admin/employees/${id}/edit`)}
+                                onClick={() => navigate(`/position/${id}/edit`)}
                                 style={{ backgroundColor: '#faad14', borderColor: '#faad14' }}
                             >
                                 Chỉnh sửa
@@ -127,38 +130,25 @@ const ViewEmployeePage: React.FC = () => {
                         column={{ xxl: 2, xl: 2, lg: 2, md: 1, sm: 1, xs: 1 }}
                         size="middle"
                     >
-                        <Descriptions.Item label="Họ và tên">{employee.fullName}</Descriptions.Item>
-                        <Descriptions.Item label="Email">{employee.email || "-"}</Descriptions.Item>
-                        <Descriptions.Item label="Số điện thoại">{employee.phone || "-"}</Descriptions.Item>
-                        <Descriptions.Item label="Giới tính">{employee.gender || "-"}</Descriptions.Item>
-                        <Descriptions.Item label="Ngày sinh">
-                            {employee.dateOfBirth
-                                ? new Date(employee.dateOfBirth).toLocaleDateString("vi-VN")
-                                : "-"}
+                        <Descriptions.Item label="Tên chức vụ">{position.title}</Descriptions.Item>
+                        <Descriptions.Item label="Lương cơ bản">
+                            {formatCurrency(position.baseSalary)}
                         </Descriptions.Item>
-                        <Descriptions.Item label="Địa chỉ">{employee.address || "-"}</Descriptions.Item>
-                        <Descriptions.Item label="Phòng ban">
-                            {employee.department?.name || "-"}
+                        <Descriptions.Item label="Phụ cấp">
+                            {position.allowance ? formatCurrency(position.allowance) : "-"}
                         </Descriptions.Item>
-                        <Descriptions.Item label="Chức vụ">
-                            {employee.position?.title || "-"}
+                        <Descriptions.Item label="Cấp bậc">
+                            {position.gradeLevel ? <Tag color="purple">Cấp {position.gradeLevel}</Tag> : "-"}
                         </Descriptions.Item>
-                        <Descriptions.Item label="Trạng thái">
-                            <Tag color={String(employee.status).toLowerCase() === "working" ? "green" : "default"}>
-                                {employee.status || "-"}
-                            </Tag>
-                        </Descriptions.Item>
-                        <Descriptions.Item label="Ngày bắt đầu làm việc">
-                            {employee.startDate
-                                ? new Date(employee.startDate).toLocaleDateString("vi-VN")
-                                : "-"}
+                        <Descriptions.Item label="Số nhân viên">
+                            <Tag color="blue">{position._count?.employees || 0}</Tag>
                         </Descriptions.Item>
                         <Descriptions.Item label="Ngày tạo">
-                            {new Date(employee.createdAt).toLocaleDateString("vi-VN")}
+                            {new Date(position.createdAt).toLocaleDateString("vi-VN")}
                         </Descriptions.Item>
                         <Descriptions.Item label="Ngày cập nhật">
-                            {employee.updatedAt
-                                ? new Date(employee.updatedAt).toLocaleDateString("vi-VN")
+                            {position.updatedAt
+                                ? new Date(position.updatedAt).toLocaleDateString("vi-VN")
                                 : "-"}
                         </Descriptions.Item>
                     </Descriptions>
@@ -168,5 +158,5 @@ const ViewEmployeePage: React.FC = () => {
     );
 };
 
-export default ViewEmployeePage;
+export default ViewPositionPage;
 
