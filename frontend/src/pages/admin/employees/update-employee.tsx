@@ -70,34 +70,58 @@ const UpdateEmployeePage: React.FC = () => {
                     getAllPositionsAPI(),
                 ]);
 
-                if (employeeRes?.data) {
-                    const emp = employeeRes.data;
-                    setEmployee(emp);
+                // Axios interceptor unwraps response.data
+                // Backend returns Employee directly, so res might be Employee or IBackendRes<Employee>
+                let employeeData: Employee | null = null;
+                
+                if (employeeRes && typeof employeeRes === 'object') {
+                    // Check if res is IBackendRes (has data field)
+                    if ('data' in employeeRes && employeeRes.data) {
+                        employeeData = employeeRes.data as Employee;
+                    }
+                    // Check if res is Employee directly (has id and fullName, but not data field)
+                    else if ('id' in employeeRes && 'fullName' in employeeRes && !('data' in employeeRes)) {
+                        employeeData = employeeRes as unknown as Employee;
+                    }
+                }
+                
+                if (employeeData) {
+                    setEmployee(employeeData);
                     form.setFieldsValue({
-                        fullName: emp.fullName,
-                        email: emp.email,
-                        gender: emp.gender,
-                        phone: emp.phone,
-                        address: emp.address,
-                        dateOfBirth: emp.dateOfBirth ? emp.dateOfBirth.split("T")[0] : undefined,
-                        departmentId: emp.departmentId,
-                        positionId: emp.positionId,
-                        status: emp.status,
-                        startDate: emp.startDate ? emp.startDate.split("T")[0] : undefined,
+                        fullName: employeeData.fullName,
+                        email: employeeData.email,
+                        gender: employeeData.gender,
+                        phone: employeeData.phone,
+                        address: employeeData.address,
+                        dateOfBirth: employeeData.dateOfBirth ? (employeeData.dateOfBirth as string).split("T")[0] : undefined,
+                        departmentId: employeeData.departmentId,
+                        positionId: employeeData.positionId,
+                        status: employeeData.status,
+                        startDate: employeeData.startDate ? (employeeData.startDate as string).split("T")[0] : undefined,
                     });
                 } else {
-                    setError("Không tìm thấy thông tin nhân viên");
+                    const errorMsg = (employeeRes as any)?.message 
+                        ? (Array.isArray((employeeRes as any).message) ? (employeeRes as any).message[0] : (employeeRes as any).message)
+                        : "Không tìm thấy thông tin nhân viên";
+                    setError(errorMsg);
                 }
 
-                if (deptRes?.data) {
-                    setDepartments(deptRes.data);
+                // Handle departments and positions
+                const departmentsData = deptRes?.data || deptRes;
+                if (Array.isArray(departmentsData)) {
+                    setDepartments(departmentsData);
                 }
-                if (posRes?.data) {
-                    setPositions(posRes.data);
+
+                const positionsData = posRes?.data || posRes;
+                if (Array.isArray(positionsData)) {
+                    setPositions(positionsData);
                 }
             } catch (error: any) {
                 console.error("Error fetching data:", error);
-                setError(error?.response?.data?.message || "Không thể tải thông tin nhân viên");
+                const errorMessage = error?.response?.data?.message 
+                    || error?.message 
+                    || "Không thể tải thông tin nhân viên";
+                setError(errorMessage);
             } finally {
                 setLoading(false);
                 setLoadingDepartments(false);

@@ -27,14 +27,35 @@ const ViewEmployeePage: React.FC = () => {
 
             try {
                 const res = await getEmployeeByIdAPI(id);
-                if (res?.data) {
-                    setEmployee(res.data);
+                // Axios interceptor unwraps response.data
+                // Backend returns Employee directly, so res might be Employee or IBackendRes<Employee>
+                let employeeData: Employee | null = null;
+                
+                if (res && typeof res === 'object') {
+                    // Check if res is IBackendRes (has data field)
+                    if ('data' in res && res.data) {
+                        employeeData = res.data as Employee;
+                    }
+                    // Check if res is Employee directly (has id and fullName, but not data field)
+                    else if ('id' in res && 'fullName' in res && !('data' in res)) {
+                        employeeData = res as unknown as Employee;
+                    }
+                }
+                
+                if (employeeData) {
+                    setEmployee(employeeData);
                 } else {
-                    setError("Không tìm thấy thông tin nhân viên");
+                    const errorMsg = (res as any)?.message 
+                        ? (Array.isArray((res as any).message) ? (res as any).message[0] : (res as any).message)
+                        : "Không tìm thấy thông tin nhân viên";
+                    setError(errorMsg);
                 }
             } catch (error: any) {
                 console.error("Error fetching employee:", error);
-                setError(error?.response?.data?.message || "Không thể tải thông tin nhân viên");
+                const errorMessage = error?.response?.data?.message 
+                    || error?.message 
+                    || "Không thể tải thông tin nhân viên";
+                setError(errorMessage);
             } finally {
                 setLoading(false);
             }
