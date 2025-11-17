@@ -1,51 +1,55 @@
 .app-header {
+    background: #fff;
+    padding: 0 16px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    background: #f5f5f5;
-    padding: 10px 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    height: 60px;
+    justify-content: space-between;
+    box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
+    flex-wrap: wrap;
+    gap: 8px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 64px;
+    z-index: 1000;
 
-    .logo {
+    .header-left {
         display: flex;
         align-items: center;
-
-        .logo-img {
-            height: 40px;
-            object-fit: contain;
-        }
+        gap: 16px;
     }
 
-    .search-box {
-        width: 400px;
-    }
-
-    .user-section {
+    .menu-toggle-btn {
+        font-size: 18px;
         display: flex;
         align-items: center;
+        justify-content: center;
+    }
 
-        .cart-badge {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+    .header-title {
+        font-size: 18px;
+        color: #1890ff;
+        flex-shrink: 0;
 
-        .cart-icon {
-            font-size: 24px;
-            cursor: pointer;
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            gap: 8px;
-        }
-
-        .ant-typography {
+        @media (max-width: 768px) {
             font-size: 14px;
-            color: #333;
         }
+    }
+
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .user-dropdown {
+        cursor: pointer;
+    }
+
+    .profile-modal {
+        max-width: 600px;
     }
 }

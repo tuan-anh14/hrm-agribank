@@ -13,6 +13,7 @@ import { useIsMobile } from '@/hooks/useResponsive';
 import { SIDEBAR } from '@/utils/constants';
 import type { MenuProps } from 'antd';
 import { useEffect, useMemo, useCallback } from 'react';
+import './app.sidebar.scss';
 
 const { Sider } = Layout;
 
@@ -75,17 +76,7 @@ const AppSidebar = () => {
 
     const sidebarContent = (
         <>
-            <div style={{
-                height: `${SIDEBAR.headerHeight}px`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderBottom: '1px solid #f0f0f0',
-                fontWeight: 'bold',
-                fontSize: '16px',
-                color: '#1890ff',
-                padding: '0 12px',
-            }}>
+            <div className="sidebar-header">
                 HRM System
             </div>
             <Menu
@@ -93,10 +84,7 @@ const AppSidebar = () => {
                 selectedKeys={selectedKeys}
                 items={menuItems}
                 onClick={handleMenuClick}
-                style={{
-                    height: `calc(100vh - ${SIDEBAR.headerHeight}px)`,
-                    borderRight: 0,
-                }}
+                className="sidebar-menu"
             />
         </>
     );
@@ -111,7 +99,7 @@ const AppSidebar = () => {
                 styles={{ body: { padding: 0 } }}
                 width={SIDEBAR.mobileWidth}
                 closable={false}
-                style={{ zIndex: 1000 }}
+                className="app-sidebar-drawer"
             >
                 {sidebarContent}
             </Drawer>
@@ -126,12 +114,9 @@ const AppSidebar = () => {
             collapsedWidth={SIDEBAR.collapsedWidth}
             collapsible={true}
             trigger={null}
-            style={{
-                background: '#fff',
-                boxShadow: '2px 0 8px 0 rgba(29,35,41,.05)',
-            }}
+            className="app-sidebar"
         >
-            {!collapsed && sidebarContent}
+            {sidebarContent}
         </Sider>
     );
 };

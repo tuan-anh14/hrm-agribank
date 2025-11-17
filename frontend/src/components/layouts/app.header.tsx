@@ -52,38 +52,20 @@ const AppHeader = () => {
     ];
 
     return (
-        <Header style={{
-            background: '#fff',
-            padding: '0 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxShadow: '0 1px 4px rgba(0,21,41,.08)',
-            flexWrap: 'wrap',
-            gap: '8px',
-        }}>
-            <Space size="middle">
+        <Header className="app-header">
+            <div className="header-left">
                 <Button
                     type="text"
                     icon={<MenuOutlined />}
                     onClick={toggleSidebar}
-                    style={{
-                        fontSize: '18px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
+                    className="menu-toggle-btn"
                 />
-                <Typography.Text strong style={{ 
-                    fontSize: isMobile ? '14px' : '18px', 
-                    color: '#1890ff',
-                    flexShrink: 0,
-                }}>
+                <Typography.Text strong className="header-title">
                     HRM Agribank
                 </Typography.Text>
-            </Space>
+            </div>
 
-            <Space size="middle" wrap>
+            <div className="header-right">
                 {!isMobile && (
                     <>
                         <Button type="text" icon={<QuestionCircleOutlined />} />
@@ -91,7 +73,7 @@ const AppHeader = () => {
                     </>
                 )}
                 <Dropdown menu={{ items: userMenuItems, onClick: handleMenuClick }} trigger={['click']} placement="bottomRight">
-                    <Space style={{ cursor: 'pointer' }} size="small">
+                    <Space className="user-dropdown" size="small">
                         <Avatar
                             src={user?.avatar && user.avatar.trim() ? user.avatar : undefined}
                             alt={user?.fullName}
@@ -103,7 +85,7 @@ const AppHeader = () => {
                         )}
                     </Space>
                 </Dropdown>
-            </Space>
+            </div>
 
             <Modal
                 title="Thông tin tài khoản"
@@ -115,7 +97,7 @@ const AppHeader = () => {
                     </Button>
                 ]}
                 width="90%"
-                style={{ maxWidth: '600px' }}
+                className="profile-modal"
             >
                 <Descriptions column={1} bordered>
                     <Descriptions.Item label="Họ và tên">
