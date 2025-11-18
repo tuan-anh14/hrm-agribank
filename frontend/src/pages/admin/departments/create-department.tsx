@@ -1,9 +1,10 @@
-import { Button, Form, Input, message, Card, Typography, Space } from "antd";
+import { Button, Form, Input, Card, Typography, Space } from "antd";
 import type { FormProps } from "antd";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createDepartmentAPI } from "@/services/api";
 import type { CreateDepartmentPayload } from "@/types/department";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -28,33 +29,14 @@ const CreateDepartmentPage: React.FC = () => {
 
             const res = await createDepartmentAPI(payload);
 
-            // Handle response
-            let departmentData = null;
-            if (res && typeof res === 'object') {
-                if ('data' in res && res.data) {
-                    departmentData = res.data;
-                } else if ('id' in res && 'name' in res && !('data' in res)) {
-                    departmentData = res;
-                }
-            }
-
-            if (departmentData) {
-                message.success("Tạo phòng ban thành công!");
+            if (handleApiSuccess(res, "Tạo phòng ban thành công!", "Có lỗi xảy ra khi tạo phòng ban")) {
                 form.resetFields();
                 setTimeout(() => {
                     navigate("/department");
                 }, 1500);
-            } else {
-                const errorMsg = (res as any)?.message 
-                    ? (Array.isArray((res as any).message) ? (res as any).message[0] : (res as any).message)
-                    : "Có lỗi xảy ra";
-                message.error(errorMsg);
             }
         } catch (error: any) {
-            const errorMessage = error?.response?.data?.message 
-                || error?.message 
-                || "Có lỗi xảy ra khi tạo phòng ban";
-            message.error(errorMessage);
+            notifyError(error, "Có lỗi xảy ra khi tạo phòng ban");
         } finally {
             setIsSubmitting(false);
         }

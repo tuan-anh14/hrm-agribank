@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Card, Table, Input, Select, Typography, Space, Alert, Spin, Button, Popconfirm, message, Tag } from "antd";
+import { Card, Table, Input, Select, Typography, Space, Alert, Spin, Button, Popconfirm, Tag } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import type { SorterResult, FilterValue } from "antd/es/table/interface";
 import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { getAllPositionsAPI, deletePositionAPI } from "@/services/api";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 import type { Position } from "@/types/position";
 
 const { Title, Text } = Typography;
@@ -196,15 +197,11 @@ const ListPositionPage: React.FC = () => {
     const handleDelete = async (id: string) => {
         try {
             const res = await deletePositionAPI(id);
-            if (res?.data || res?.message) {
-                message.success("Xóa chức vụ thành công!");
+            if (handleApiSuccess(res, "Xóa chức vụ thành công!", "Có lỗi xảy ra khi xóa chức vụ")) {
                 actions.reload();
-            } else {
-                message.error(res?.message || "Có lỗi xảy ra khi xóa chức vụ");
             }
         } catch (error: any) {
-            const errorMessage = error?.response?.data?.message || "Có lỗi xảy ra khi xóa chức vụ";
-            message.error(errorMessage);
+            notifyError(error, "Có lỗi xảy ra khi xóa chức vụ");
         }
     };
 

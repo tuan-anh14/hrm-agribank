@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Card, Table, Select, Typography, Space, Alert, Spin, Button, Popconfirm, message, Tag, DatePicker } from "antd";
+import { Card, Table, Select, Typography, Space, Alert, Spin, Button, Popconfirm, Tag, DatePicker } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, CalendarOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
@@ -8,6 +8,7 @@ import { getAllAttendancesAPI, getMyAttendancesAPI, deleteAttendanceAPI, getAllE
 import type { Attendance } from "@/types/attendance";
 import type { Employee } from "@/types/employee";
 import { useCurrentApp } from "@/components/context/app.context";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -213,6 +214,7 @@ const ListAttendancePage: React.FC = () => {
                     setEmployees(list);
                 } catch (error) {
                     console.error("Error loading employees:", error);
+                    notifyError(error, "Không thể tải danh sách nhân viên");
                 }
             };
             loadEmployees();
@@ -222,15 +224,11 @@ const ListAttendancePage: React.FC = () => {
     const handleDelete = async (id: string) => {
         try {
             const res = await deleteAttendanceAPI(id);
-            if (res?.data || res?.message) {
-                message.success("Xóa chấm công thành công!");
+            if (handleApiSuccess(res, "Xóa chấm công thành công!", "Có lỗi xảy ra khi xóa chấm công")) {
                 actions.reload();
-            } else {
-                message.error(res?.message || "Có lỗi xảy ra khi xóa chấm công");
             }
         } catch (error: any) {
-            const errorMessage = error?.response?.data?.message || "Có lỗi xảy ra khi xóa chấm công";
-            message.error(errorMessage);
+            notifyError(error, "Có lỗi xảy ra khi xóa chấm công");
         }
     };
 

@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Card, Table, Input, Select, Tag, Typography, Space, Alert, Spin, Button, Popconfirm, message } from "antd";
+import { Card, Table, Input, Select, Tag, Typography, Space, Alert, Spin, Button, Popconfirm } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import type { SorterResult, FilterValue } from "antd/es/table/interface";
 import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { getAllEmployeesAPI, deleteEmployeeAPI } from "@/services/api";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 import type { Employee } from "@/types/employee";
 
 const { Title, Text } = Typography;
@@ -194,14 +195,11 @@ const ListEmployeePage: React.FC = () => {
     const handleDelete = async (id: string) => {
         try {
             const res = await deleteEmployeeAPI(id);
-            if (res?.data || res?.message) {
-                message.success("Xóa nhân viên thành công!");
+            if (handleApiSuccess(res, "Xóa nhân viên thành công!", "Có lỗi xảy ra khi xóa nhân viên")) {
                 actions.reload();
-            } else {
-                message.error(res?.message || "Có lỗi xảy ra khi xóa nhân viên");
             }
         } catch (error: any) {
-            message.error(error?.response?.data?.message || "Có lỗi xảy ra khi xóa nhân viên");
+            notifyError(error, "Có lỗi xảy ra khi xóa nhân viên");
         }
     };
 

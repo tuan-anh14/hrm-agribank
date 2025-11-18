@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Card,
     Table,
@@ -27,9 +27,10 @@ import {
     getAllEmployeesAPI,
     getAllShiftsAPI,
 } from "@/services/api";
-import type { WorkSchedule, WorkScheduleListResponse, WorkScheduleStatus } from "@/types/workschedule";
+import type { WorkSchedule, WorkScheduleListResponse, WorkScheduleStatus, ApproveWorkSchedulePayload } from "@/types/workschedule";
 import type { Employee } from "@/types/employee";
 import type { Shift } from "@/types/shift";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -164,20 +165,6 @@ function useWorkSchedules(initialLimit: number = 10) {
     };
 }
 
-const isSuccessResponse = (res: any) =>
-    res && typeof res === "object" && (("id" in res) || ("data" in res && res.data));
-
-const extractErrorMessage = (error: any, fallback: string) => {
-    let serverMessage = error?.response?.data?.message ?? error?.response?.data;
-    if (Array.isArray(serverMessage)) {
-        serverMessage = serverMessage[0];
-    }
-    if (typeof serverMessage === "string" && serverMessage.trim()) {
-        return serverMessage;
-    }
-    return error?.message || fallback;
-};
-
 const ListWorkSchedulePage: React.FC = () => {
     const { state, actions } = useWorkSchedules(10);
     const { data, total, page, limit, loading, error, employeeId, shiftId, status } = state;
@@ -230,14 +217,11 @@ const ListWorkSchedulePage: React.FC = () => {
         }
         try {
             const res = await deleteWorkScheduleAPI(id);
-            if (isSuccessResponse(res)) {
-                message.success("Xoá lịch làm việc thành công!");
+            if (handleApiSuccess(res, "Xoá lịch làm việc thành công!", "Có lỗi xảy ra khi xoá lịch làm việc")) {
                 actions.reload();
-            } else {
-                message.error(extractErrorMessage(res, "Có lỗi xảy ra khi xoá lịch làm việc"));
             }
         } catch (err: any) {
-            message.error(extractErrorMessage(err, "Có lỗi xảy ra khi xoá lịch làm việc"));
+            notifyError(err, "Có lỗi xảy ra khi xoá lịch làm việc");
         }
     };
 
@@ -256,16 +240,14 @@ const ListWorkSchedulePage: React.FC = () => {
                 note: form.getFieldValue("note")?.trim() || undefined,
             } satisfies ApproveWorkSchedulePayload;
             const res = await approveWorkScheduleAPI(selectedSchedule.id, payload);
-            if (isSuccessResponse(res)) {
-                message.success(approveStatus === "APPROVED" ? "Duyệt lịch thành công!" : "Từ chối lịch thành công!");
+            const successMsg = approveStatus === "APPROVED" ? "Duyệt lịch thành công!" : "Từ chối lịch thành công!";
+            if (handleApiSuccess(res, successMsg, "Có lỗi xảy ra khi cập nhật trạng thái")) {
                 setApproveModalOpen(false);
                 setSelectedSchedule(null);
                 actions.reload();
-            } else {
-                message.error(extractErrorMessage(res, "Có lỗi xảy ra khi cập nhật trạng thái"));
             }
         } catch (err: any) {
-            message.error(extractErrorMessage(err, "Có lỗi xảy ra khi cập nhật trạng thái"));
+            notifyError(err, "Có lỗi xảy ra khi cập nhật trạng thái");
         }
     };
 

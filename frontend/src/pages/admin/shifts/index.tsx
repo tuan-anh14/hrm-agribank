@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Card, Table, Input, Typography, Space, Alert, Spin, Button, Popconfirm, message, Tag } from "antd";
+import { Card, Table, Input, Typography, Space, Alert, Spin, Button, Popconfirm, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import { getAllShiftsAPI, deleteShiftAPI } from "@/services/api";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 import type { Shift, ShiftListResponse } from "@/types/shift";
 
 const { Title, Text } = Typography;
@@ -96,9 +97,6 @@ function useShifts(initialLimit: number = 10) {
     };
 }
 
-const isSuccessResponse = (res: any) =>
-    res && typeof res === "object" && (("id" in res) || ("data" in res && res.data));
-
 const ListShiftPage: React.FC = () => {
     const { state, actions } = useShifts(10);
     const { data, total, page, limit, loading, error } = state;
@@ -107,17 +105,11 @@ const ListShiftPage: React.FC = () => {
     const handleDelete = async (id: string) => {
         try {
             const res = await deleteShiftAPI(id);
-            if (isSuccessResponse(res)) {
-                message.success("Xoá ca làm việc thành công!");
+            if (handleApiSuccess(res, "Xoá ca làm việc thành công!", "Có lỗi xảy ra khi xoá ca làm việc")) {
                 actions.reload();
-            } else {
-                const errorMsg = (res as any)?.message || "Có lỗi xảy ra khi xoá ca làm việc";
-                message.error(errorMsg);
             }
         } catch (err: any) {
-            const errorMessage =
-                err?.response?.data?.message || err?.message || "Có lỗi xảy ra khi xoá ca làm việc";
-            message.error(errorMessage);
+            notifyError(err, "Có lỗi xảy ra khi xoá ca làm việc");
         }
     };
 

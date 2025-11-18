@@ -1,8 +1,9 @@
-import { Button, Form, Input, InputNumber, message, Card, Typography, Space, Spin, Alert } from "antd";
+import { Button, Form, Input, InputNumber, Card, Typography, Space, Spin, Alert } from "antd";
 import type { FormProps } from "antd";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getPositionByIdAPI, updatePositionAPI } from "@/services/api";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 import type { UpdatePositionPayload, Position } from "@/types/position";
 
 const { Title } = Typography;
@@ -76,7 +77,7 @@ const UpdatePositionPage: React.FC = () => {
 
     const onFinish: FormProps<FieldType>["onFinish"] = async (values) => {
         if (!id) {
-            message.error("Không tìm thấy ID chức vụ");
+            notifyError(new Error("Không tìm thấy ID chức vụ"), "Không tìm thấy ID chức vụ");
             return;
         }
 
@@ -91,31 +92,13 @@ const UpdatePositionPage: React.FC = () => {
 
             const res = await updatePositionAPI(id, payload);
 
-            let positionData = null;
-            if (res && typeof res === 'object') {
-                if ('data' in res && res.data) {
-                    positionData = res.data;
-                } else if ('id' in res && 'title' in res && !('data' in res)) {
-                    positionData = res;
-                }
-            }
-
-            if (positionData) {
-                message.success("Cập nhật chức vụ thành công!");
+            if (handleApiSuccess(res, "Cập nhật chức vụ thành công!", "Có lỗi xảy ra khi cập nhật chức vụ")) {
                 setTimeout(() => {
                     navigate("/position");
                 }, 1500);
-            } else {
-                const errorMsg = (res as any)?.message 
-                    ? (Array.isArray((res as any).message) ? (res as any).message[0] : (res as any).message)
-                    : "Có lỗi xảy ra";
-                message.error(errorMsg);
             }
         } catch (error: any) {
-            const errorMessage = error?.response?.data?.message 
-                || error?.message 
-                || "Có lỗi xảy ra khi cập nhật chức vụ";
-            message.error(errorMessage);
+            notifyError(error, "Có lỗi xảy ra khi cập nhật chức vụ");
         } finally {
             setIsSubmitting(false);
         }

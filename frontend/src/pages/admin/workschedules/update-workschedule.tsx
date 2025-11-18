@@ -12,6 +12,7 @@ import {
 import type { WorkSchedule, UpdateWorkSchedulePayload } from "@/types/workschedule";
 import type { Employee } from "@/types/employee";
 import type { Shift } from "@/types/shift";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -21,20 +22,6 @@ type FieldType = {
     shiftId?: string;
     date?: dayjs.Dayjs;
     note?: string;
-};
-
-const isSuccessResponse = (res: any) =>
-    res && typeof res === "object" && (("id" in res) || ("data" in res && res.data));
-
-const getErrorMessage = (error: any, fallback: string) => {
-    let messageFromServer = error?.response?.data?.message ?? error?.response?.data;
-    if (Array.isArray(messageFromServer)) {
-        messageFromServer = messageFromServer[0];
-    }
-    if (typeof messageFromServer === "string" && messageFromServer.trim()) {
-        return messageFromServer;
-    }
-    return error?.message || fallback;
 };
 
 const UpdateWorkSchedulePage: React.FC = () => {
@@ -148,17 +135,14 @@ const UpdateWorkSchedulePage: React.FC = () => {
             };
 
             const res = await updateWorkScheduleAPI(id, payload);
-            if (isSuccessResponse(res)) {
-                message.success("Cập nhật lịch làm việc thành công!");
+            if (handleApiSuccess(res, "Cập nhật lịch làm việc thành công!", "Có lỗi xảy ra khi cập nhật lịch")) {
                 setTimeout(() => navigate("/workschedule"), 1000);
-            } else {
-                message.error(getErrorMessage(res, "Có lỗi xảy ra khi cập nhật lịch"));
             }
         } catch (error: any) {
             if (error?.response?.status === 409) {
                 message.error("Nhân viên đã có lịch làm việc trong ngày này. Vui lòng chọn ngày khác hoặc cập nhật lịch cũ.");
             } else {
-                message.error(getErrorMessage(error, "Có lỗi xảy ra khi cập nhật lịch"));
+                notifyError(error, "Có lỗi xảy ra khi cập nhật lịch");
             }
         } finally {
             setIsSubmitting(false);

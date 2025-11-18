@@ -1,4 +1,4 @@
-import { Button, Form, Input, Select, message, Card, Typography, Space, Spin, Alert } from "antd";
+import { Button, Form, Input, Select, Card, Typography, Space, Spin, Alert } from "antd";
 import type { FormProps } from "antd";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -10,6 +10,7 @@ import {
 } from "@/services/api";
 import type { UpdateEmployeePayload } from "@/types/employee";
 import type { Employee } from "@/types/employee";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -137,7 +138,7 @@ const UpdateEmployeePage: React.FC = () => {
 
     const onFinish: FormProps<FieldType>["onFinish"] = async (values) => {
         if (!id) {
-            message.error("Không tìm thấy ID nhân viên");
+            notifyError(new Error("Không tìm thấy ID nhân viên"), "Không tìm thấy ID nhân viên");
             return;
         }
 
@@ -158,31 +159,13 @@ const UpdateEmployeePage: React.FC = () => {
 
             const res = await updateEmployeeAPI(id, payload);
 
-            let updatedEmployee: Employee | null = null;
-            if (res && typeof res === "object") {
-                if ("data" in res && res.data) {
-                    updatedEmployee = res.data as Employee;
-                } else if ("id" in res && "fullName" in res && !("data" in res)) {
-                    updatedEmployee = res as unknown as Employee;
-                }
-            }
-
-            if (updatedEmployee) {
-                message.success("Cập nhật nhân viên thành công!");
+            if (handleApiSuccess(res, "Cập nhật nhân viên thành công!", "Có lỗi xảy ra khi cập nhật nhân viên")) {
                 setTimeout(() => {
                     navigate("/admin/employees");
                 }, 1500);
-            } else {
-                const errorMsg =
-                    (res as any)?.message
-                        ? Array.isArray((res as any).message)
-                            ? (res as any).message[0]
-                            : (res as any).message
-                        : "Có lỗi xảy ra";
-                message.error(errorMsg);
             }
         } catch (error: any) {
-            message.error(error?.response?.data?.message || "Có lỗi xảy ra khi cập nhật nhân viên");
+            notifyError(error, "Có lỗi xảy ra khi cập nhật nhân viên");
         } finally {
             setIsSubmitting(false);
         }

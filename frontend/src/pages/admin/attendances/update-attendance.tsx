@@ -1,4 +1,4 @@
-import { Button, Form, Input, message, Card, Typography, Space, Spin, Alert, Select, DatePicker } from "antd";
+import { Button, Form, Input, Card, Typography, Space, Spin, Alert, Select, DatePicker } from "antd";
 import type { FormProps } from "antd";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -6,6 +6,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import { getAttendanceByIdAPI, updateAttendanceAPI, getAllEmployeesAPI } from "@/services/api";
 import type { UpdateAttendancePayload, Attendance } from "@/types/attendance";
 import type { Employee } from "@/types/employee";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -41,6 +42,7 @@ const UpdateAttendancePage: React.FC = () => {
                 setEmployees(list);
             } catch (error) {
                 console.error("Error loading employees:", error);
+                notifyError(error, "Không thể tải danh sách nhân viên");
             }
         };
         loadEmployees();
@@ -101,7 +103,7 @@ const UpdateAttendancePage: React.FC = () => {
 
     const onFinish: FormProps<FieldType>["onFinish"] = async (values) => {
         if (!id) {
-            message.error("Không tìm thấy ID chấm công");
+            notifyError(new Error("Không tìm thấy ID chấm công"), "Không tìm thấy ID chấm công");
             return;
         }
 
@@ -118,31 +120,13 @@ const UpdateAttendancePage: React.FC = () => {
 
             const res = await updateAttendanceAPI(id, payload);
 
-            let attendanceData = null;
-            if (res && typeof res === 'object') {
-                if ('data' in res && res.data) {
-                    attendanceData = res.data;
-                } else if ('id' in res && 'employeeId' in res && !('data' in res)) {
-                    attendanceData = res;
-                }
-            }
-
-            if (attendanceData) {
-                message.success("Cập nhật chấm công thành công!");
+            if (handleApiSuccess(res, "Cập nhật chấm công thành công!", "Có lỗi xảy ra khi cập nhật chấm công")) {
                 setTimeout(() => {
                     navigate("/attendance");
                 }, 1500);
-            } else {
-                const errorMsg = (res as any)?.message 
-                    ? (Array.isArray((res as any).message) ? (res as any).message[0] : (res as any).message)
-                    : "Có lỗi xảy ra";
-                message.error(errorMsg);
             }
         } catch (error: any) {
-            const errorMessage = error?.response?.data?.message 
-                || error?.message 
-                || "Có lỗi xảy ra khi cập nhật chấm công";
-            message.error(errorMessage);
+            notifyError(error, "Có lỗi xảy ra khi cập nhật chấm công");
         } finally {
             setIsSubmitting(false);
         }

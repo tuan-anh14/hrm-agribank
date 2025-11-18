@@ -1,4 +1,4 @@
-import { Button, Form, Input, message, Card, Typography, Space, Select, DatePicker } from "antd";
+import { Button, Form, Input, Card, Typography, Space, Select, DatePicker } from "antd";
 import type { FormProps } from "antd";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -6,6 +6,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import { createAttendanceAPI, getAllEmployeesAPI } from "@/services/api";
 import type { CreateAttendancePayload } from "@/types/attendance";
 import type { Employee } from "@/types/employee";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -37,7 +38,7 @@ const CreateAttendancePage: React.FC = () => {
                 setEmployees(list);
             } catch (error) {
                 console.error("Error loading employees:", error);
-                message.error("Không thể tải danh sách nhân viên");
+                notifyError(error, "Không thể tải danh sách nhân viên");
             }
         };
         loadEmployees();
@@ -57,33 +58,14 @@ const CreateAttendancePage: React.FC = () => {
 
             const res = await createAttendanceAPI(payload);
 
-            // Handle response
-            let attendanceData = null;
-            if (res && typeof res === 'object') {
-                if ('data' in res && res.data) {
-                    attendanceData = res.data;
-                } else if ('id' in res && 'employeeId' in res && !('data' in res)) {
-                    attendanceData = res;
-                }
-            }
-
-            if (attendanceData) {
-                message.success("Tạo chấm công thành công!");
+            if (handleApiSuccess(res, "Tạo chấm công thành công!", "Có lỗi xảy ra khi tạo chấm công")) {
                 form.resetFields();
                 setTimeout(() => {
                     navigate("/attendance");
                 }, 1500);
-            } else {
-                const errorMsg = (res as any)?.message 
-                    ? (Array.isArray((res as any).message) ? (res as any).message[0] : (res as any).message)
-                    : "Có lỗi xảy ra";
-                message.error(errorMsg);
             }
         } catch (error: any) {
-            const errorMessage = error?.response?.data?.message 
-                || error?.message 
-                || "Có lỗi xảy ra khi tạo chấm công";
-            message.error(errorMessage);
+            notifyError(error, "Có lỗi xảy ra khi tạo chấm công");
         } finally {
             setIsSubmitting(false);
         }

@@ -1,9 +1,10 @@
-import { Button, Form, Input, message, Card, Typography, Space, Spin, Alert } from "antd";
+import { Button, Form, Input, Card, Typography, Space, Spin, Alert } from "antd";
 import type { FormProps } from "antd";
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getDepartmentByIdAPI, updateDepartmentAPI } from "@/services/api";
 import type { UpdateDepartmentPayload, Department } from "@/types/department";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -73,7 +74,7 @@ const UpdateDepartmentPage: React.FC = () => {
 
     const onFinish: FormProps<FieldType>["onFinish"] = async (values) => {
         if (!id) {
-            message.error("Không tìm thấy ID phòng ban");
+            notifyError(new Error("Không tìm thấy ID phòng ban"), "Không tìm thấy ID phòng ban");
             return;
         }
 
@@ -86,31 +87,13 @@ const UpdateDepartmentPage: React.FC = () => {
 
             const res = await updateDepartmentAPI(id, payload);
 
-            let departmentData = null;
-            if (res && typeof res === 'object') {
-                if ('data' in res && res.data) {
-                    departmentData = res.data;
-                } else if ('id' in res && 'name' in res && !('data' in res)) {
-                    departmentData = res;
-                }
-            }
-
-            if (departmentData) {
-                message.success("Cập nhật phòng ban thành công!");
+            if (handleApiSuccess(res, "Cập nhật phòng ban thành công!", "Có lỗi xảy ra khi cập nhật phòng ban")) {
                 setTimeout(() => {
                     navigate("/department");
                 }, 1500);
-            } else {
-                const errorMsg = (res as any)?.message 
-                    ? (Array.isArray((res as any).message) ? (res as any).message[0] : (res as any).message)
-                    : "Có lỗi xảy ra";
-                message.error(errorMsg);
             }
         } catch (error: any) {
-            const errorMessage = error?.response?.data?.message 
-                || error?.message 
-                || "Có lỗi xảy ra khi cập nhật phòng ban";
-            message.error(errorMessage);
+            notifyError(error, "Có lỗi xảy ra khi cập nhật phòng ban");
         } finally {
             setIsSubmitting(false);
         }

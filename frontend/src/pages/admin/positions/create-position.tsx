@@ -1,9 +1,10 @@
-import { Button, Form, Input, InputNumber, message, Card, Typography, Space } from "antd";
+import { Button, Form, Input, InputNumber, Card, Typography, Space } from "antd";
 import type { FormProps } from "antd";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPositionAPI } from "@/services/api";
 import type { CreatePositionPayload } from "@/types/position";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title } = Typography;
 
@@ -31,33 +32,14 @@ const CreatePositionPage: React.FC = () => {
 
             const res = await createPositionAPI(payload);
 
-            // Handle response
-            let positionData = null;
-            if (res && typeof res === 'object') {
-                if ('data' in res && res.data) {
-                    positionData = res.data;
-                } else if ('id' in res && 'title' in res && !('data' in res)) {
-                    positionData = res;
-                }
-            }
-
-            if (positionData) {
-                message.success("Tạo chức vụ thành công!");
+            if (handleApiSuccess(res, "Tạo chức vụ thành công!", "Có lỗi xảy ra khi tạo chức vụ")) {
                 form.resetFields();
                 setTimeout(() => {
                     navigate("/position");
                 }, 1500);
-            } else {
-                const errorMsg = (res as any)?.message 
-                    ? (Array.isArray((res as any).message) ? (res as any).message[0] : (res as any).message)
-                    : "Có lỗi xảy ra";
-                message.error(errorMsg);
             }
         } catch (error: any) {
-            const errorMessage = error?.response?.data?.message 
-                || error?.message 
-                || "Có lỗi xảy ra khi tạo chức vụ";
-            message.error(errorMessage);
+            notifyError(error, "Có lỗi xảy ra khi tạo chức vụ");
         } finally {
             setIsSubmitting(false);
         }

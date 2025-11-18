@@ -1,10 +1,11 @@
-import { Button, Form, Input, message, Card, Typography, Space, TimePicker } from "antd";
+import { Button, Form, Card, Typography, Space, TimePicker } from "antd";
 import type { FormProps } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { createShiftAPI } from "@/services/api";
 import type { CreateShiftPayload } from "@/types/shift";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title } = Typography;
 
@@ -12,20 +13,6 @@ type FieldType = {
     name: string;
     startTime?: Dayjs;
     endTime?: Dayjs;
-};
-
-const isSuccessResponse = (res: any) =>
-    res && typeof res === "object" && (("id" in res) || ("data" in res && res.data));
-
-const getErrorMessage = (error: any, fallback: string) => {
-    let serverMessage = error?.response?.data?.message ?? error?.response?.data;
-    if (Array.isArray(serverMessage)) {
-        serverMessage = serverMessage[0];
-    }
-    if (typeof serverMessage === "string" && serverMessage.trim()) {
-        return serverMessage;
-    }
-    return error?.message || fallback;
 };
 
 const CreateShiftPage: React.FC = () => {
@@ -48,16 +35,12 @@ const CreateShiftPage: React.FC = () => {
             };
 
             const res = await createShiftAPI(payload);
-            if (isSuccessResponse(res)) {
-                message.success("Tạo ca làm việc thành công!");
+            if (handleApiSuccess(res, "Tạo ca làm việc thành công!", "Có lỗi xảy ra khi tạo ca làm việc")) {
                 form.resetFields();
                 setTimeout(() => navigate("/shift"), 1000);
-            } else {
-                const errorMsg = getErrorMessage(res, "Có lỗi xảy ra khi tạo ca làm việc");
-                message.error(errorMsg);
             }
         } catch (error: any) {
-            message.error(getErrorMessage(error, "Có lỗi xảy ra khi tạo ca làm việc"));
+            notifyError(error, "Có lỗi xảy ra khi tạo ca làm việc");
         } finally {
             setIsSubmitting(false);
         }

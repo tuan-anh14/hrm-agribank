@@ -1,9 +1,10 @@
-import { Button, Form, Input, message, Card, Typography, Space, Spin, Alert, TimePicker } from "antd";
+import { Button, Form, Input, Card, Typography, Space, Spin, Alert, TimePicker } from "antd";
 import type { FormProps } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import dayjs, { type Dayjs } from "dayjs";
 import { getShiftByIdAPI, updateShiftAPI } from "@/services/api";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 import type { Shift, UpdateShiftPayload } from "@/types/shift";
 
 const { Title, Text } = Typography;
@@ -12,20 +13,6 @@ type FieldType = {
     name: string;
     startTime?: Dayjs;
     endTime?: Dayjs;
-};
-
-const isSuccessResponse = (res: any) =>
-    res && typeof res === "object" && (("id" in res) || ("data" in res && res.data));
-
-const getErrorMessage = (error: any, fallback: string) => {
-    let serverMessage = error?.response?.data?.message ?? error?.response?.data;
-    if (Array.isArray(serverMessage)) {
-        serverMessage = serverMessage[0];
-    }
-    if (typeof serverMessage === "string" && serverMessage.trim()) {
-        return serverMessage;
-    }
-    return error?.message || fallback;
 };
 
 const UpdateShiftPage: React.FC = () => {
@@ -105,15 +92,11 @@ const UpdateShiftPage: React.FC = () => {
             };
 
             const res = await updateShiftAPI(id, payload);
-            if (isSuccessResponse(res)) {
-                message.success("Cập nhật ca làm việc thành công!");
+            if (handleApiSuccess(res, "Cập nhật ca làm việc thành công!", "Có lỗi xảy ra khi cập nhật ca làm việc")) {
                 setTimeout(() => navigate("/shift"), 1000);
-            } else {
-                const errorMsg = getErrorMessage(res, "Có lỗi xảy ra khi cập nhật ca làm việc");
-                message.error(errorMsg);
             }
         } catch (error: any) {
-            message.error(getErrorMessage(error, "Có lỗi xảy ra khi cập nhật ca làm việc"));
+            notifyError(error, "Có lỗi xảy ra khi cập nhật ca làm việc");
         } finally {
             setIsSubmitting(false);
         }

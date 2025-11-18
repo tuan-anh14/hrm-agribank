@@ -1,9 +1,10 @@
-import { Button, Form, Input, Select, message, Card, Typography, Space } from "antd";
+import { Button, Form, Input, Select, Card, Typography, Space } from "antd";
 import type { FormProps } from "antd";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { createEmployeeWithAccountAPI, getAllDepartmentsAPI, getAllPositionsAPI } from "@/services/api";
 import type { CreateEmployeeWithAccountPayload } from "@/types/employee";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -65,7 +66,7 @@ const CreateEmployeePage: React.FC = () => {
                 }
             } catch (error) {
                 console.error("Error fetching data:", error);
-                message.error("Không thể tải danh sách phòng ban và chức vụ");
+                notifyError(error, "Không thể tải danh sách phòng ban và chức vụ");
             } finally {
                 setLoadingDepartments(false);
                 setLoadingPositions(false);
@@ -94,17 +95,12 @@ const CreateEmployeePage: React.FC = () => {
 
             const res = await createEmployeeWithAccountAPI(payload);
 
-            if (res?.data) {
-                message.success("Tạo nhân viên và tài khoản thành công!");
+            if (handleApiSuccess(res, "Tạo nhân viên và tài khoản thành công!", "Có lỗi xảy ra khi tạo nhân viên")) {
                 form.resetFields();
-                setTimeout(() => {
-                    navigate("/admin/employees");
-                }, 1500);
-            } else {
-                message.error(res?.message || "Có lỗi xảy ra");
+                setTimeout(() => navigate("/admin/employees"), 1500);
             }
         } catch (error: any) {
-            message.error(error?.response?.data?.message || "Có lỗi xảy ra khi tạo nhân viên");
+            notifyError(error, "Có lỗi xảy ra khi tạo nhân viên");
         } finally {
             setIsSubmitting(false);
         }

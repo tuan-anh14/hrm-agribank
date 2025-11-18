@@ -7,6 +7,7 @@ import { getAllEmployeesAPI, getAllShiftsAPI, createWorkScheduleAPI } from "@/se
 import type { Employee } from "@/types/employee";
 import type { Shift } from "@/types/shift";
 import type { CreateWorkSchedulePayload } from "@/types/workschedule";
+import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -16,20 +17,6 @@ type FieldType = {
     shiftId?: string;
     date?: dayjs.Dayjs;
     note?: string;
-};
-
-const isSuccessResponse = (res: any) =>
-    res && typeof res === "object" && (("id" in res) || ("data" in res && res.data));
-
-const getErrorMessage = (error: any, fallback: string) => {
-    let messageFromServer = error?.response?.data?.message ?? error?.response?.data;
-    if (Array.isArray(messageFromServer)) {
-        messageFromServer = messageFromServer[0];
-    }
-    if (typeof messageFromServer === "string" && messageFromServer.trim()) {
-        return messageFromServer;
-    }
-    return error?.message || fallback;
 };
 
 const CreateWorkSchedulePage: React.FC = () => {
@@ -87,19 +74,15 @@ const CreateWorkSchedulePage: React.FC = () => {
             };
 
             const res = await createWorkScheduleAPI(payload);
-            if (isSuccessResponse(res)) {
-                message.success("Tạo lịch làm việc thành công!");
+            if (handleApiSuccess(res, "Tạo lịch làm việc thành công!", "Có lỗi xảy ra khi tạo lịch")) {
                 form.resetFields();
                 setTimeout(() => navigate("/workschedule"), 1000);
-            } else {
-                message.error(getErrorMessage(res, "Có lỗi xảy ra khi tạo lịch"));
             }
         } catch (error: any) {
             if (error?.response?.status === 409) {
                 message.error("Nhân viên đã có lịch làm việc trong ngày này. Vui lòng chọn ngày khác hoặc cập nhật lịch cũ.");
             } else {
-                const errorMessage = getErrorMessage(error, "Có lỗi xảy ra khi tạo lịch");
-                message.error(errorMessage);
+                notifyError(error, "Có lỗi xảy ra khi tạo lịch");
             }
         } finally {
             setIsSubmitting(false);
