@@ -1,0 +1,559 @@
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
+import { PrismaService } from '@/prisma/prisma.service';
+import { Attendance, AttendanceStatus, Prisma } from '@prisma/client';
+import { CreateAttendanceDto } from './dto/create-attendance.dto';
+import { UpdateAttendanceDto } from './dto/update-attendance.dto';
+import { QueryAttendanceDto } from './dto/query-attendance.dto';
+import { CheckInDto } from './dto/check-in.dto';
+import { CheckOutDto } from './dto/check-out.dto';
+
+@Injectable()
+export class AttendanceService {
+  constructor(private prisma: PrismaService) {}
+
+  /**
+   * Normalize date strings to Date objects for Prisma
+   */
+  private normalizeDates(data: {
+    date?: string | Date | null;
+    checkInTime?: string | Date | null;
+    checkOutTime?: string | Date | null;
+  }): {
+    date?: Date | null;
+    checkInTime?: Date | null;
+    checkOutTime?: Date | null;
+  } {
+    const normalized: any = {};
+
+    if (data.date === '' || data.date === null) {
+      normalized.date = null;
+    } else if (data.date) {
+      normalized.date = typeof data.date === 'string' ? new Date(data.date) : data.date;
+    }
+
+    if (data.checkInTime === '' || data.checkInTime === null) {
+      normalized.checkInTime = null;
+    } else if (data.checkInTime) {
+      normalized.checkInTime =
+        typeof data.checkInTime === 'string' ? new Date(data.checkInTime) : data.checkInTime;
+    }
+
+    if (data.checkOutTime === '' || data.checkOutTime === null) {
+      normalized.checkOutTime = null;
+    } else if (data.checkOutTime) {
+      normalized.checkOutTime =
+        typeof data.checkOutTime === 'string' ? new Date(data.checkOutTime) : data.checkOutTime;
+    }
+
+    return normalized;
+  }
+
+  /**
+   * Calculate attendance status based on check-in time
+   * Default: ON_TIME if check-in before 9:00 AM, LATE if after
+   */
+  private calculateStatus(checkInTime: Date | null): AttendanceStatus {
+    if (!checkInTime) {
+      return AttendanceStatus.ABSENT;
+    }
+
+    const checkInHour = checkInTime.getHours();
+    const checkInMinute = checkInTime.getMinutes();
+
+    // Consider late if check-in after 9:00 AM
+    if (checkInHour > 9 || (checkInHour === 9 && checkInMinute > 0)) {
+      return AttendanceStatus.LATE;
+    }
+
+    return AttendanceStatus.ON_TIME;
+  }
+
+  /**
+   * Get all attendance records with filters and pagination
+   */
+  async getAll(query: QueryAttendanceDto = {}): Promise<{
+    data: Attendance[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    const { employeeId, startDate, endDate, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.AttendanceWhereInput = {};
+
+    if (employeeId) {
+      where.employeeId = employeeId;
+    }
+
+    if (startDate || endDate) {
+      where.date = {};
+      if (startDate) {
+        where.date.gte = new Date(startDate);
+      }
+      if (endDate) {
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
+        where.date.lte = endDateTime;
+      }
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.attendance.findMany({
+        where,
+        include: {
+          employee: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              department: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+              position: {
+                select: {
+                  id: true,
+                  title: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { date: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.attendance.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Get attendance by ID
+   */
+  async getById(id: string): Promise<Attendance> {
+    const attendance = await this.prisma.attendance.findUnique({
+      where: { id },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+            department: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            position: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!attendance) {
+      throw new NotFoundException(`Attendance with ID ${id} not found`);
+    }
+
+    return attendance;
+  }
+
+  /**
+   * Get attendance records by employee ID
+   */
+  async getByEmployeeId(
+    employeeId: string,
+    query: QueryAttendanceDto = {},
+  ): Promise<{
+    data: Attendance[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
+    // Verify employee exists
+    const employee = await this.prisma.employee.findUnique({
+      where: { id: employeeId },
+    });
+
+    if (!employee) {
+      throw new NotFoundException(`Employee with ID ${employeeId} not found`);
+    }
+
+    return this.getAll({ ...query, employeeId });
+  }
+
+  /**
+   * Create new attendance record
+   */
+  async create(data: CreateAttendanceDto): Promise<Attendance> {
+    // Verify employee exists
+    const employee = await this.prisma.employee.findUnique({
+      where: { id: data.employeeId },
+    });
+
+    if (!employee) {
+      throw new NotFoundException(`Employee with ID ${data.employeeId} not found`);
+    }
+
+    const normalizedDates = this.normalizeDates({
+      date: data.date,
+      checkInTime: data.checkInTime,
+      checkOutTime: data.checkOutTime,
+    });
+
+    // Set default date to today if not provided
+    const attendanceDate = normalizedDates.date || new Date();
+    attendanceDate.setHours(0, 0, 0, 0);
+
+    // Check if attendance already exists for this employee on this date
+    const existing = await this.prisma.attendance.findFirst({
+      where: {
+        employeeId: data.employeeId,
+        date: {
+          gte: new Date(attendanceDate),
+          lt: new Date(new Date(attendanceDate).setDate(attendanceDate.getDate() + 1)),
+        },
+      },
+    });
+
+    if (existing) {
+      throw new ConflictException(
+        `Attendance record already exists for employee on ${attendanceDate.toISOString().split('T')[0]}`,
+      );
+    }
+
+    // Calculate status if not provided
+    let status = data.status;
+    if (!status && normalizedDates.checkInTime) {
+      status = this.calculateStatus(normalizedDates.checkInTime);
+    } else if (!status) {
+      status = AttendanceStatus.ABSENT;
+    }
+
+    try {
+      return await this.prisma.attendance.create({
+        data: {
+          employeeId: data.employeeId,
+          date: attendanceDate,
+          checkInTime: normalizedDates.checkInTime || null,
+          checkOutTime: normalizedDates.checkOutTime || null,
+          status,
+          note: data.note,
+        },
+        include: {
+          employee: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException('Attendance record already exists');
+        }
+      }
+      throw new BadRequestException('Failed to create attendance record');
+    }
+  }
+
+  /**
+   * Check-in for an employee (creates or updates attendance for today)
+   */
+  async checkIn(employeeId: string, data: CheckInDto = {}): Promise<Attendance> {
+    // Verify employee exists
+    const employee = await this.prisma.employee.findUnique({
+      where: { id: employeeId },
+    });
+
+    if (!employee) {
+      throw new NotFoundException(`Employee with ID ${employeeId} not found`);
+    }
+
+    const checkInTime = data.checkInTime ? new Date(data.checkInTime) : new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find existing attendance for today
+    const existing = await this.prisma.attendance.findFirst({
+      where: {
+        employeeId,
+        date: {
+          gte: today,
+          lt: new Date(new Date(today).setDate(today.getDate() + 1)),
+        },
+      },
+    });
+
+    if (existing) {
+      if (existing.checkInTime) {
+        throw new ConflictException('Already checked in today');
+      }
+
+      // Update existing record with check-in
+      const status = this.calculateStatus(checkInTime);
+      return await this.prisma.attendance.update({
+        where: { id: existing.id },
+        data: {
+          checkInTime,
+          status,
+          note: data.note || existing.note,
+        },
+        include: {
+          employee: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+            },
+          },
+        },
+      });
+    }
+
+    // Create new attendance record
+    const status = this.calculateStatus(checkInTime);
+    return await this.prisma.attendance.create({
+      data: {
+        employeeId,
+        date: today,
+        checkInTime,
+        status,
+        note: data.note,
+      },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Check-out for an employee (updates attendance for today)
+   */
+  async checkOut(employeeId: string, data: CheckOutDto = {}): Promise<Attendance> {
+    // Verify employee exists
+    const employee = await this.prisma.employee.findUnique({
+      where: { id: employeeId },
+    });
+
+    if (!employee) {
+      throw new NotFoundException(`Employee with ID ${employeeId} not found`);
+    }
+
+    const checkOutTime = data.checkOutTime ? new Date(data.checkOutTime) : new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find existing attendance for today
+    const existing = await this.prisma.attendance.findFirst({
+      where: {
+        employeeId,
+        date: {
+          gte: today,
+          lt: new Date(new Date(today).setDate(today.getDate() + 1)),
+        },
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundException('No attendance record found for today. Please check in first.');
+    }
+
+    if (existing.checkOutTime) {
+      throw new ConflictException('Already checked out today');
+    }
+
+    if (!existing.checkInTime) {
+      throw new BadRequestException('Cannot check out without checking in first');
+    }
+
+    // Validate check-out time is after check-in time
+    if (checkOutTime <= existing.checkInTime) {
+      throw new BadRequestException('Check-out time must be after check-in time');
+    }
+
+    // Update attendance with check-out
+    return await this.prisma.attendance.update({
+      where: { id: existing.id },
+      data: {
+        checkOutTime,
+        note: data.note || existing.note,
+      },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Update attendance record
+   */
+  async update(id: string, data: UpdateAttendanceDto): Promise<Attendance> {
+    const existing = await this.prisma.attendance.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`Attendance with ID ${id} not found`);
+    }
+
+    const normalizedDates = this.normalizeDates({
+      date: data.date,
+      checkInTime: data.checkInTime,
+      checkOutTime: data.checkOutTime,
+    });
+
+    // If employeeId is being updated, verify new employee exists
+    if (data.employeeId && data.employeeId !== existing.employeeId) {
+      const employee = await this.prisma.employee.findUnique({
+        where: { id: data.employeeId },
+      });
+
+      if (!employee) {
+        throw new NotFoundException(`Employee with ID ${data.employeeId} not found`);
+      }
+
+      // Check for duplicate attendance on the same date
+      const attendanceDate = normalizedDates.date || existing.date;
+      const dateStart = new Date(attendanceDate);
+      dateStart.setHours(0, 0, 0, 0);
+      const dateEnd = new Date(dateStart);
+      dateEnd.setDate(dateEnd.getDate() + 1);
+
+      const duplicate = await this.prisma.attendance.findFirst({
+        where: {
+          employeeId: data.employeeId,
+          date: {
+            gte: dateStart,
+            lt: dateEnd,
+          },
+          NOT: { id },
+        },
+      });
+
+      if (duplicate) {
+        throw new ConflictException(
+          `Attendance record already exists for employee on ${attendanceDate.toISOString().split('T')[0]}`,
+        );
+      }
+    }
+
+    // Calculate status if check-in time is updated
+    let status = data.status;
+    if (!status && normalizedDates.checkInTime) {
+      status = this.calculateStatus(normalizedDates.checkInTime);
+    }
+
+    // Validate check-out time is after check-in time
+    const finalCheckInTime = normalizedDates.checkInTime || existing.checkInTime;
+    const finalCheckOutTime = normalizedDates.checkOutTime || existing.checkOutTime;
+
+    if (finalCheckInTime && finalCheckOutTime && finalCheckOutTime <= finalCheckInTime) {
+      throw new BadRequestException('Check-out time must be after check-in time');
+    }
+
+    try {
+      const updateData: any = {
+        ...(data.employeeId && { employeeId: data.employeeId }),
+        ...(normalizedDates.date && { date: normalizedDates.date }),
+        ...(normalizedDates.checkInTime !== undefined && {
+          checkInTime: normalizedDates.checkInTime,
+        }),
+        ...(normalizedDates.checkOutTime !== undefined && {
+          checkOutTime: normalizedDates.checkOutTime,
+        }),
+        ...(status && { status }),
+        ...(data.note !== undefined && { note: data.note }),
+      };
+
+      return await this.prisma.attendance.update({
+        where: { id },
+        data: updateData,
+        include: {
+          employee: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(`Attendance with ID ${id} not found`);
+        }
+        if (error.code === 'P2002') {
+          throw new ConflictException('Attendance record already exists');
+        }
+      }
+      throw new BadRequestException('Failed to update attendance record');
+    }
+  }
+
+  /**
+   * Delete attendance record
+   */
+  async delete(id: string): Promise<Attendance> {
+    const attendance = await this.prisma.attendance.findUnique({
+      where: { id },
+    });
+
+    if (!attendance) {
+      throw new NotFoundException(`Attendance with ID ${id} not found`);
+    }
+
+    try {
+      return await this.prisma.attendance.delete({
+        where: { id },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2025') {
+          throw new NotFoundException(`Attendance with ID ${id} not found`);
+        }
+      }
+      throw new BadRequestException('Failed to delete attendance record');
+    }
+  }
+}

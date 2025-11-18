@@ -7,6 +7,7 @@ import { EmployeeModule } from '@/employee/employee.module';
 import { AuthModule } from '@/auth/auth.module';
 import { DepartmentModule } from '@/department/department.module';
 import { PositionModule } from './position/position.module';
+import { AttendanceModule } from './attendance/attendance.module';
 
 @Module({
   imports: [
@@ -16,7 +17,7 @@ import { PositionModule } from './position/position.module';
     PrismaModule, 
     EmployeeModule, 
     AuthModule, 
-    DepartmentModule, PositionModule
+    DepartmentModule, PositionModule, AttendanceModule
   ],
   controllers: [AppController],
   providers: [AppService],
