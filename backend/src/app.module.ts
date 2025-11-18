@@ -9,6 +9,7 @@ import { DepartmentModule } from '@/department/department.module';
 import { PositionModule } from './position/position.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { WorkscheduleModule } from './workschedule/workschedule.module';
+import { ShiftModule } from './shift/shift.module';
 
 @Module({
   imports: [
@@ -18,7 +19,11 @@ import { WorkscheduleModule } from './workschedule/workschedule.module';
     PrismaModule, 
     EmployeeModule, 
     AuthModule, 
-    DepartmentModule, PositionModule, AttendanceModule, WorkscheduleModule
+    DepartmentModule,
+    PositionModule,
+    AttendanceModule,
+    WorkscheduleModule,
+    ShiftModule,
   ],
   controllers: [AppController],
   providers: [AppService],

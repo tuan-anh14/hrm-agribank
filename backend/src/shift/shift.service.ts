@@ -1,0 +1,152 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from '@/prisma/prisma.service';
+import { CreateShiftDto } from './dto/create-shift.dto';
+import { UpdateShiftDto } from './dto/update-shift.dto';
+import { QueryShiftDto } from './dto/query-shift.dto';
+import { Prisma } from '@prisma/client';
+
+@Injectable()
+export class ShiftService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  private normalizeDateTime(value: string | Date): Date {
+    const date = typeof value === 'string' ? new Date(value) : value;
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException('Thời gian không hợp lệ');
+    }
+    return date;
+  }
+
+  private validateTimeRange(start: Date, end: Date) {
+    if (start >= end) {
+      throw new BadRequestException('Giờ kết thúc phải sau giờ bắt đầu');
+    }
+  }
+
+  async getAll(query: QueryShiftDto = {}) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.ShiftWhereInput = {};
+    if (query.search) {
+      where.name = {
+        contains: query.search,
+        mode: 'insensitive',
+      };
+    }
+
+    const [data, total] = await Promise.all([
+      this.prisma.shift.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.shift.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async getById(id: string) {
+    const shift = await this.prisma.shift.findUnique({ where: { id } });
+    if (!shift) {
+      throw new NotFoundException(`Không tìm thấy ca làm việc ID ${id}`);
+    }
+    return shift;
+  }
+
+  async create(dto: CreateShiftDto) {
+    const start = this.normalizeDateTime(dto.startTime);
+    const end = this.normalizeDateTime(dto.endTime);
+    this.validateTimeRange(start, end);
+
+    try {
+      return await this.prisma.shift.create({
+        data: {
+          name: dto.name.trim(),
+          startTime: start,
+          endTime: end,
+        },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException('Tên ca làm việc đã tồn tại');
+        }
+      }
+      throw new BadRequestException('Không thể tạo ca làm việc');
+    }
+  }
+
+  async update(id: string, dto: UpdateShiftDto) {
+    const shift = await this.prisma.shift.findUnique({ where: { id } });
+    if (!shift) {
+      throw new NotFoundException(`Không tìm thấy ca làm việc ID ${id}`);
+    }
+
+    const updateData: Prisma.ShiftUpdateInput = {};
+
+    if (dto.name !== undefined) {
+      updateData.name = dto.name.trim();
+    }
+
+    let start = shift.startTime;
+    let end = shift.endTime;
+
+    if (dto.startTime) {
+      start = this.normalizeDateTime(dto.startTime);
+      updateData.startTime = start;
+    }
+
+    if (dto.endTime) {
+      end = this.normalizeDateTime(dto.endTime);
+      updateData.endTime = end;
+    }
+
+    this.validateTimeRange(start, end);
+
+    try {
+      return await this.prisma.shift.update({
+        where: { id },
+        data: updateData,
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          throw new ConflictException('Tên ca làm việc đã tồn tại');
+        }
+      }
+      throw new BadRequestException('Không thể cập nhật ca làm việc');
+    }
+  }
+
+  async delete(id: string) {
+    const shift = await this.prisma.shift.findUnique({ where: { id } });
+    if (!shift) {
+      throw new NotFoundException(`Không tìm thấy ca làm việc ID ${id}`);
+    }
+
+    const workScheduleCount = await this.prisma.workSchedule.count({
+      where: { shiftId: id },
+    });
+
+    if (workScheduleCount > 0) {
+      throw new BadRequestException('Không thể xoá ca làm việc đang được sử dụng trong lịch làm việc');
+    }
+
+    return this.prisma.shift.delete({ where: { id } });
+  }
+}
