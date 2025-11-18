@@ -1,0 +1,313 @@
+.attendance-page {
+    padding: 24px;
+    max-width: 1400px;
+    margin: 0 auto;
+
+    .attendance-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        gap: 16px;
+        width: 100%;
+
+        .attendance-title {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .date-range {
+            white-space: nowrap;
+        }
+    }
+
+    .check-in-out-card {
+        .today-text {
+            display: block;
+        }
+
+        .check-in-btn {
+            background-color: #ff9a9e !important;
+            border-color: #ff9a9e !important;
+            min-width: 120px;
+
+            &:hover {
+                background-color: #ff7a80 !important;
+                border-color: #ff7a80 !important;
+            }
+        }
+
+        .check-out-btn {
+            background-color: #c44569 !important;
+            border-color: #c44569 !important;
+            min-width: 120px;
+
+            &:hover {
+                background-color: #b03a5a !important;
+                border-color: #b03a5a !important;
+            }
+        }
+    }
+
+    .attendance-calendar {
+        .calendar-header {
+            margin-bottom: 8px;
+
+            .calendar-header-cell {
+                text-align: center;
+                font-weight: 600;
+                padding: 8px 4px;
+                background: #f0f0f0;
+                border-radius: 4px;
+                font-size: 12px;
+            }
+        }
+
+        .calendar-body {
+            .calendar-day-card {
+                min-height: 120px;
+                transition: all 0.3s;
+                cursor: pointer;
+                padding: 8px 4px;
+
+                &:hover {
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+                    transform: translateY(-2px);
+                }
+
+                &.other-month {
+                    opacity: 0.4;
+                    background: #fafafa;
+                }
+
+                &.today {
+                    border: 2px solid #1890ff;
+                    background: #e6f7ff;
+                }
+
+                .calendar-day-content {
+                    display: flex;
+                    flex-direction: column;
+                    height: 100%;
+
+                    .day-number {
+                        font-size: 16px;
+                        font-weight: 600;
+                        margin-bottom: 4px;
+                        color: #333;
+                    }
+
+                    .attendance-info {
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 4px;
+                        font-size: 12px;
+
+                        .time-entry {
+                            color: #1890ff;
+                            font-weight: 500;
+                            line-height: 1.2;
+                        }
+
+                        .hours {
+                            color: #52c41a;
+                            font-weight: 600;
+                            font-size: 11px;
+                        }
+
+                        .status {
+                            margin-top: auto;
+                            
+                            .ant-tag {
+                                line-height: 1.2;
+                                white-space: nowrap;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                max-width: 100%;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Tablet
+    @media (max-width: 1024px) {
+        padding: 20px;
+
+        .attendance-header {
+            .attendance-title {
+                font-size: 18px;
+            }
+        }
+
+        .attendance-calendar {
+            .calendar-body {
+                .calendar-day-card {
+                    min-height: 100px;
+                    padding: 6px 4px;
+
+                    .calendar-day-content {
+                        .day-number {
+                            font-size: 15px;
+                        }
+
+                        .attendance-info {
+                            font-size: 11px;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Mobile
+    @media (max-width: 768px) {
+        padding: 12px;
+
+        .attendance-header {
+            flex-direction: column;
+            gap: 12px;
+
+            .attendance-title {
+                font-size: 16px;
+                width: 100%;
+            }
+
+            .date-range {
+                font-size: 13px;
+            }
+        }
+
+        .check-in-out-card {
+            .ant-card-body {
+                padding: 16px 12px;
+            }
+
+            .check-in-btn,
+            .check-out-btn {
+                min-width: 100%;
+                height: 44px;
+                font-size: 14px;
+            }
+        }
+
+        .attendance-calendar {
+            .calendar-header {
+                margin-bottom: 4px;
+
+                .calendar-header-cell {
+                    padding: 6px 2px;
+                    font-size: 11px;
+                }
+            }
+
+            .calendar-body {
+                .calendar-day-card {
+                    min-height: 70px;
+                    padding: 4px 2px;
+
+                    .calendar-day-content {
+                        .day-number {
+                            font-size: 13px;
+                            margin-bottom: 2px;
+                        }
+
+                        .attendance-info {
+                            font-size: 9px;
+                            gap: 2px;
+
+                            .time-entry {
+                                font-size: 9px;
+                                line-height: 1.1;
+                            }
+
+                            .hours {
+                                font-size: 9px;
+                            }
+
+                            .status {
+                                .ant-tag {
+                                    font-size: 9px;
+                                    padding: 0 4px;
+                                    line-height: 1.2;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Small Mobile
+    @media (max-width: 480px) {
+        padding: 8px;
+
+        .attendance-header {
+            .attendance-title {
+                font-size: 14px;
+            }
+
+            .date-range {
+                font-size: 12px;
+            }
+        }
+
+        .check-in-out-card {
+            .ant-card-body {
+                padding: 12px 8px;
+            }
+
+            .today-text {
+                font-size: 12px;
+            }
+
+            .check-in-btn,
+            .check-out-btn {
+                height: 40px;
+                font-size: 13px;
+            }
+        }
+
+        .attendance-calendar {
+            .calendar-header {
+                .calendar-header-cell {
+                    padding: 4px 1px;
+                    font-size: 10px;
+                }
+            }
+
+            .calendar-body {
+                .calendar-day-card {
+                    min-height: 60px;
+                    padding: 3px 1px;
+
+                    .calendar-day-content {
+                        .day-number {
+                            font-size: 12px;
+                        }
+
+                        .attendance-info {
+                            font-size: 8px;
+
+                            .time-entry {
+                                font-size: 8px;
+                            }
+
+                            .status {
+                                .ant-tag {
+                                    font-size: 8px;
+                                    padding: 0 2px;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

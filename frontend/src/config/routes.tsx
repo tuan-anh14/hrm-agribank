@@ -6,8 +6,8 @@ import PublicRoute from '@/components/guards/PublicRoute';
 import HomePage from '@/pages/client/home';
 import AboutPage from '@/pages/client/about';
 import LoginPage from '@/pages/auth/login';
-import AttendancePage from '@/pages/client/attendance';
 import PayrollPage from '@/pages/client/payroll';
+import AttendancePage from '@/pages/client/attendance';
 
 // Admin Pages
 import ListEmployeePage from '@/pages/admin/employees';
@@ -22,6 +22,10 @@ import ListPositionPage from '@/pages/admin/positions';
 import CreatePositionPage from '@/pages/admin/positions/create-position';
 import UpdatePositionPage from '@/pages/admin/positions/update-position';
 import ViewPositionPage from '@/pages/admin/positions/view-position';
+import ListAttendancePage from '@/pages/admin/attendance';
+import CreateAttendancePage from '@/pages/admin/attendance/create-attendance';
+import UpdateAttendancePage from '@/pages/admin/attendance/update-attendance';
+import ViewAttendancePage from '@/pages/admin/attendance/view-attendance';
 
 // Layout
 import AppLayout from '@/layout';
@@ -173,6 +177,38 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <AttendancePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/attendance/manage',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <ListAttendancePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/attendance/create',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <CreateAttendancePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/attendance/:id',
+        element: (
+          <ProtectedRoute>
+            <ViewAttendancePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/attendance/:id/edit',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <UpdateAttendancePage />
           </ProtectedRoute>
         ),
       },

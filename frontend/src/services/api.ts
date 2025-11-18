@@ -2,6 +2,7 @@ import axios from 'services/axios.customize';
 import type { Employee, CreateEmployeePayload, UpdateEmployeePayload, CreateEmployeeWithAccountPayload } from '@/types/employee';
 import type { Department, CreateDepartmentPayload, UpdateDepartmentPayload } from '@/types/department';
 import type { Position, CreatePositionPayload, UpdatePositionPayload } from '@/types/position';
+import type { Attendance, CreateAttendancePayload, UpdateAttendancePayload, QueryAttendanceParams, AttendanceListResponse, CheckInPayload, CheckOutPayload } from '@/types/attendance';
 
 export const loginAPI = (username: string, password: string) => {
     const urlBackend = "/api/v1/auth/login"
@@ -117,4 +118,50 @@ export const updateEmployeeAPI = (id: string, payload: UpdateEmployeePayload) =>
 export const deleteEmployeeAPI = (id: string) => {
     const urlBackend = `/api/v1/employee/${id}`;
     return axios.delete<IBackendRes<Employee>>(urlBackend);
+}
+
+// Attendance - CRUD Operations
+export const getAllAttendancesAPI = (params?: QueryAttendanceParams) => {
+    const urlBackend = "/api/v1/attendance";
+    return axios.get<AttendanceListResponse>(urlBackend, { params });
+}
+
+export const getAttendanceByIdAPI = (id: string) => {
+    const urlBackend = `/api/v1/attendance/${id}`;
+    return axios.get<IBackendRes<Attendance>>(urlBackend);
+}
+
+export const getAttendancesByEmployeeIdAPI = (employeeId: string, params?: QueryAttendanceParams) => {
+    const urlBackend = `/api/v1/attendance/employee/${employeeId}`;
+    return axios.get<AttendanceListResponse>(urlBackend, { params });
+}
+
+export const getMyAttendancesAPI = (params?: QueryAttendanceParams) => {
+    const urlBackend = "/api/v1/attendance/me";
+    return axios.get<AttendanceListResponse>(urlBackend, { params });
+}
+
+export const createAttendanceAPI = (payload: CreateAttendancePayload) => {
+    const urlBackend = "/api/v1/attendance";
+    return axios.post<IBackendRes<Attendance>>(urlBackend, payload);
+}
+
+export const updateAttendanceAPI = (id: string, payload: UpdateAttendancePayload) => {
+    const urlBackend = `/api/v1/attendance/${id}`;
+    return axios.put<IBackendRes<Attendance>>(urlBackend, payload);
+}
+
+export const deleteAttendanceAPI = (id: string) => {
+    const urlBackend = `/api/v1/attendance/${id}`;
+    return axios.delete<IBackendRes<Attendance>>(urlBackend);
+}
+
+export const checkInAPI = (payload: CheckInPayload = {}) => {
+    const urlBackend = "/api/v1/attendance/check-in";
+    return axios.post<IBackendRes<Attendance>>(urlBackend, payload);
+}
+
+export const checkOutAPI = (payload: CheckOutPayload = {}) => {
+    const urlBackend = "/api/v1/attendance/check-out";
+    return axios.post<IBackendRes<Attendance>>(urlBackend, payload);
 }
