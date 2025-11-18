@@ -4,6 +4,7 @@ import type { Department, CreateDepartmentPayload, UpdateDepartmentPayload } fro
 import type { Position, CreatePositionPayload, UpdatePositionPayload } from '@/types/position';
 import type { Attendance, CreateAttendancePayload, UpdateAttendancePayload, QueryAttendanceParams, AttendanceListResponse, CheckInPayload, CheckOutPayload } from '@/types/attendance';
 import type { Shift, ShiftListResponse, QueryShiftParams, CreateShiftPayload, UpdateShiftPayload } from '@/types/shift';
+import type { WorkSchedule, WorkScheduleListResponse, QueryWorkScheduleParams, CreateWorkSchedulePayload, UpdateWorkSchedulePayload, ApproveWorkSchedulePayload } from '@/types/workschedule';
 
 export const loginAPI = (username: string, password: string) => {
     const urlBackend = "/api/v1/auth/login"
@@ -191,4 +192,35 @@ export const updateShiftAPI = (id: string, payload: UpdateShiftPayload) => {
 export const deleteShiftAPI = (id: string) => {
     const urlBackend = `/api/v1/shift/${id}`;
     return axios.delete<IBackendRes<Shift>>(urlBackend);
+}
+
+// Work Schedule APIs
+export const getAllWorkSchedulesAPI = (params?: QueryWorkScheduleParams) => {
+    const urlBackend = "/api/v1/workschedule";
+    return axios.get<WorkScheduleListResponse>(urlBackend, { params });
+}
+
+export const getWorkScheduleByIdAPI = (id: string) => {
+    const urlBackend = `/api/v1/workschedule/${id}`;
+    return axios.get<IBackendRes<WorkSchedule>>(urlBackend);
+}
+
+export const createWorkScheduleAPI = (payload: CreateWorkSchedulePayload) => {
+    const urlBackend = "/api/v1/workschedule";
+    return axios.post<IBackendRes<WorkSchedule>>(urlBackend, payload);
+}
+
+export const updateWorkScheduleAPI = (id: string, payload: UpdateWorkSchedulePayload) => {
+    const urlBackend = `/api/v1/workschedule/${id}`;
+    return axios.put<IBackendRes<WorkSchedule>>(urlBackend, payload);
+}
+
+export const approveWorkScheduleAPI = (id: string, payload: ApproveWorkSchedulePayload) => {
+    const urlBackend = `/api/v1/workschedule/${id}/approve`;
+    return axios.patch<IBackendRes<WorkSchedule>>(urlBackend, payload);
+}
+
+export const deleteWorkScheduleAPI = (id: string) => {
+    const urlBackend = `/api/v1/workschedule/${id}`;
+    return axios.delete<IBackendRes<WorkSchedule>>(urlBackend);
 }

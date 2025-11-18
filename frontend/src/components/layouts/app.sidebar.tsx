@@ -8,6 +8,7 @@ import {
     CalendarOutlined,
     DollarOutlined,
     FieldTimeOutlined,
+    ScheduleOutlined,
 } from '@ant-design/icons';
 import { useSidebar } from '@/components/context/sidebar.context';
 import { useIsMobile } from '@/hooks/useResponsive';
@@ -55,6 +56,11 @@ const AppSidebar = () => {
             key: '/shift',
             icon: <FieldTimeOutlined />,
             label: 'Ca làm việc',
+        },
+        {
+            key: '/workschedule',
+            icon: <ScheduleOutlined />,
+            label: 'Lịch làm',
         },
         {
             key: '/attendance',

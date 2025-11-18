@@ -26,6 +26,10 @@ import ListShiftPage from '@/pages/admin/shifts';
 import CreateShiftPage from '@/pages/admin/shifts/create-shift';
 import UpdateShiftPage from '@/pages/admin/shifts/update-shift';
 import ViewShiftPage from '@/pages/admin/shifts/view-shift';
+import ListWorkSchedulePage from '@/pages/admin/workschedules';
+import CreateWorkSchedulePage from '@/pages/admin/workschedules/create-workschedule';
+import UpdateWorkSchedulePage from '@/pages/admin/workschedules/update-workschedule';
+import ViewWorkSchedulePage from '@/pages/admin/workschedules/view-workschedule';
 import ListAttendancePage from '@/pages/admin/attendances';
 import CreateAttendancePage from '@/pages/admin/attendances/create-attendance';
 import UpdateAttendancePage from '@/pages/admin/attendances/update-attendance';
@@ -205,6 +209,39 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
             <UpdateShiftPage />
+          </ProtectedRoute>
+        ),
+      },
+      // WorkSchedule routes
+      {
+        path: '/workschedule',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <ListWorkSchedulePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/workschedule/create',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <CreateWorkSchedulePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/workschedule/:id',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <ViewWorkSchedulePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/workschedule/:id/edit',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <UpdateWorkSchedulePage />
           </ProtectedRoute>
         ),
       },
