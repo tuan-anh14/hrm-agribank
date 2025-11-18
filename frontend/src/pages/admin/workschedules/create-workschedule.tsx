@@ -18,6 +18,20 @@ type FieldType = {
     note?: string;
 };
 
+const isSuccessResponse = (res: any) =>
+    res && typeof res === "object" && (("id" in res) || ("data" in res && res.data));
+
+const getErrorMessage = (error: any, fallback: string) => {
+    let messageFromServer = error?.response?.data?.message ?? error?.response?.data;
+    if (Array.isArray(messageFromServer)) {
+        messageFromServer = messageFromServer[0];
+    }
+    if (typeof messageFromServer === "string" && messageFromServer.trim()) {
+        return messageFromServer;
+    }
+    return error?.message || fallback;
+};
+
 const CreateWorkSchedulePage: React.FC = () => {
     const [form] = Form.useForm<FieldType>();
     const navigate = useNavigate();
@@ -73,18 +87,20 @@ const CreateWorkSchedulePage: React.FC = () => {
             };
 
             const res = await createWorkScheduleAPI(payload);
-            if (res?.data || res?.message) {
+            if (isSuccessResponse(res)) {
                 message.success("Tạo lịch làm việc thành công!");
                 form.resetFields();
                 setTimeout(() => navigate("/workschedule"), 1000);
             } else {
-                const errorMsg = (res as any)?.message || "Có lỗi xảy ra khi tạo lịch";
-                message.error(errorMsg);
+                message.error(getErrorMessage(res, "Có lỗi xảy ra khi tạo lịch"));
             }
         } catch (error: any) {
-            const errorMessage =
-                error?.response?.data?.message || error?.message || "Có lỗi xảy ra khi tạo lịch";
-            message.error(errorMessage);
+            if (error?.response?.status === 409) {
+                message.error("Nhân viên đã có lịch làm việc trong ngày này. Vui lòng chọn ngày khác hoặc cập nhật lịch cũ.");
+            } else {
+                const errorMessage = getErrorMessage(error, "Có lỗi xảy ra khi tạo lịch");
+                message.error(errorMessage);
+            }
         } finally {
             setIsSubmitting(false);
         }

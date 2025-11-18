@@ -96,6 +96,9 @@ function useShifts(initialLimit: number = 10) {
     };
 }
 
+const isSuccessResponse = (res: any) =>
+    res && typeof res === "object" && (("id" in res) || ("data" in res && res.data));
+
 const ListShiftPage: React.FC = () => {
     const { state, actions } = useShifts(10);
     const { data, total, page, limit, loading, error } = state;
@@ -104,7 +107,7 @@ const ListShiftPage: React.FC = () => {
     const handleDelete = async (id: string) => {
         try {
             const res = await deleteShiftAPI(id);
-            if (res?.data || res?.message) {
+            if (isSuccessResponse(res)) {
                 message.success("Xoá ca làm việc thành công!");
                 actions.reload();
             } else {

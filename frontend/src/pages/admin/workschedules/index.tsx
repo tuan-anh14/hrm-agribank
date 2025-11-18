@@ -164,6 +164,20 @@ function useWorkSchedules(initialLimit: number = 10) {
     };
 }
 
+const isSuccessResponse = (res: any) =>
+    res && typeof res === "object" && (("id" in res) || ("data" in res && res.data));
+
+const extractErrorMessage = (error: any, fallback: string) => {
+    let serverMessage = error?.response?.data?.message ?? error?.response?.data;
+    if (Array.isArray(serverMessage)) {
+        serverMessage = serverMessage[0];
+    }
+    if (typeof serverMessage === "string" && serverMessage.trim()) {
+        return serverMessage;
+    }
+    return error?.message || fallback;
+};
+
 const ListWorkSchedulePage: React.FC = () => {
     const { state, actions } = useWorkSchedules(10);
     const { data, total, page, limit, loading, error, employeeId, shiftId, status } = state;
@@ -216,17 +230,14 @@ const ListWorkSchedulePage: React.FC = () => {
         }
         try {
             const res = await deleteWorkScheduleAPI(id);
-            if (res?.data || res?.message) {
+            if (isSuccessResponse(res)) {
                 message.success("Xoá lịch làm việc thành công!");
                 actions.reload();
             } else {
-                const errorMsg = (res as any)?.message || "Có lỗi xảy ra khi xoá lịch làm việc";
-                message.error(errorMsg);
+                message.error(extractErrorMessage(res, "Có lỗi xảy ra khi xoá lịch làm việc"));
             }
         } catch (err: any) {
-            const errorMessage =
-                err?.response?.data?.message || err?.message || "Có lỗi xảy ra khi xoá lịch làm việc";
-            message.error(errorMessage);
+            message.error(extractErrorMessage(err, "Có lỗi xảy ra khi xoá lịch làm việc"));
         }
     };
 
@@ -245,19 +256,16 @@ const ListWorkSchedulePage: React.FC = () => {
                 note: form.getFieldValue("note")?.trim() || undefined,
             } satisfies ApproveWorkSchedulePayload;
             const res = await approveWorkScheduleAPI(selectedSchedule.id, payload);
-            if (res?.data || res?.message) {
+            if (isSuccessResponse(res)) {
                 message.success(approveStatus === "APPROVED" ? "Duyệt lịch thành công!" : "Từ chối lịch thành công!");
                 setApproveModalOpen(false);
                 setSelectedSchedule(null);
                 actions.reload();
             } else {
-                const errorMsg = (res as any)?.message || "Có lỗi xảy ra khi cập nhật trạng thái";
-                message.error(errorMsg);
+                message.error(extractErrorMessage(res, "Có lỗi xảy ra khi cập nhật trạng thái"));
             }
         } catch (err: any) {
-            const errorMessage =
-                err?.response?.data?.message || err?.message || "Có lỗi xảy ra khi cập nhật trạng thái";
-            message.error(errorMessage);
+            message.error(extractErrorMessage(err, "Có lỗi xảy ra khi cập nhật trạng thái"));
         }
     };
 

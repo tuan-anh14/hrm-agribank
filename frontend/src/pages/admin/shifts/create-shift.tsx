@@ -14,6 +14,20 @@ type FieldType = {
     endTime?: Dayjs;
 };
 
+const isSuccessResponse = (res: any) =>
+    res && typeof res === "object" && (("id" in res) || ("data" in res && res.data));
+
+const getErrorMessage = (error: any, fallback: string) => {
+    let serverMessage = error?.response?.data?.message ?? error?.response?.data;
+    if (Array.isArray(serverMessage)) {
+        serverMessage = serverMessage[0];
+    }
+    if (typeof serverMessage === "string" && serverMessage.trim()) {
+        return serverMessage;
+    }
+    return error?.message || fallback;
+};
+
 const CreateShiftPage: React.FC = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
@@ -34,17 +48,16 @@ const CreateShiftPage: React.FC = () => {
             };
 
             const res = await createShiftAPI(payload);
-            if (res?.data || res?.message) {
+            if (isSuccessResponse(res)) {
                 message.success("Tạo ca làm việc thành công!");
                 form.resetFields();
                 setTimeout(() => navigate("/shift"), 1000);
             } else {
-                const errorMsg = (res as any)?.message || "Có lỗi xảy ra khi tạo ca làm việc";
+                const errorMsg = getErrorMessage(res, "Có lỗi xảy ra khi tạo ca làm việc");
                 message.error(errorMsg);
             }
         } catch (error: any) {
-            const errorMessage = error?.response?.data?.message || error?.message || "Có lỗi xảy ra khi tạo ca làm việc";
-            message.error(errorMessage);
+            message.error(getErrorMessage(error, "Có lỗi xảy ra khi tạo ca làm việc"));
         } finally {
             setIsSubmitting(false);
         }
