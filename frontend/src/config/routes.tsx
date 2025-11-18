@@ -22,10 +22,14 @@ import ListPositionPage from '@/pages/admin/positions';
 import CreatePositionPage from '@/pages/admin/positions/create-position';
 import UpdatePositionPage from '@/pages/admin/positions/update-position';
 import ViewPositionPage from '@/pages/admin/positions/view-position';
-import ListAttendancePage from '@/pages/admin/attendance';
-import CreateAttendancePage from '@/pages/admin/attendance/create-attendance';
-import UpdateAttendancePage from '@/pages/admin/attendance/update-attendance';
-import ViewAttendancePage from '@/pages/admin/attendance/view-attendance';
+import ListShiftPage from '@/pages/admin/shifts';
+import CreateShiftPage from '@/pages/admin/shifts/create-shift';
+import UpdateShiftPage from '@/pages/admin/shifts/update-shift';
+import ViewShiftPage from '@/pages/admin/shifts/view-shift';
+import ListAttendancePage from '@/pages/admin/attendances';
+import CreateAttendancePage from '@/pages/admin/attendances/create-attendance';
+import UpdateAttendancePage from '@/pages/admin/attendances/update-attendance';
+import ViewAttendancePage from '@/pages/admin/attendances/view-attendance';
 
 // Layout
 import AppLayout from '@/layout';
@@ -168,6 +172,39 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
             <UpdatePositionPage />
+          </ProtectedRoute>
+        ),
+      },
+      // Shift routes
+      {
+        path: '/shift',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <ListShiftPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/shift/create',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <CreateShiftPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/shift/:id',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <ViewShiftPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/shift/:id/edit',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <UpdateShiftPage />
           </ProtectedRoute>
         ),
       },

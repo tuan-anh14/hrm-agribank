@@ -3,6 +3,7 @@ import type { Employee, CreateEmployeePayload, UpdateEmployeePayload, CreateEmpl
 import type { Department, CreateDepartmentPayload, UpdateDepartmentPayload } from '@/types/department';
 import type { Position, CreatePositionPayload, UpdatePositionPayload } from '@/types/position';
 import type { Attendance, CreateAttendancePayload, UpdateAttendancePayload, QueryAttendanceParams, AttendanceListResponse, CheckInPayload, CheckOutPayload } from '@/types/attendance';
+import type { Shift, ShiftListResponse, QueryShiftParams, CreateShiftPayload, UpdateShiftPayload } from '@/types/shift';
 
 export const loginAPI = (username: string, password: string) => {
     const urlBackend = "/api/v1/auth/login"
@@ -164,4 +165,30 @@ export const checkInAPI = (payload: CheckInPayload = {}) => {
 export const checkOutAPI = (payload: CheckOutPayload = {}) => {
     const urlBackend = "/api/v1/attendance/check-out";
     return axios.post<IBackendRes<Attendance>>(urlBackend, payload);
+}
+
+// Shifts - CRUD Operations
+export const getAllShiftsAPI = (params?: QueryShiftParams) => {
+    const urlBackend = "/api/v1/shift";
+    return axios.get<ShiftListResponse>(urlBackend, { params });
+}
+
+export const getShiftByIdAPI = (id: string) => {
+    const urlBackend = `/api/v1/shift/${id}`;
+    return axios.get<IBackendRes<Shift>>(urlBackend);
+}
+
+export const createShiftAPI = (payload: CreateShiftPayload) => {
+    const urlBackend = "/api/v1/shift";
+    return axios.post<IBackendRes<Shift>>(urlBackend, payload);
+}
+
+export const updateShiftAPI = (id: string, payload: UpdateShiftPayload) => {
+    const urlBackend = `/api/v1/shift/${id}`;
+    return axios.put<IBackendRes<Shift>>(urlBackend, payload);
+}
+
+export const deleteShiftAPI = (id: string) => {
+    const urlBackend = `/api/v1/shift/${id}`;
+    return axios.delete<IBackendRes<Shift>>(urlBackend);
 }

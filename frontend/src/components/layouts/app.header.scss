@@ -23,10 +23,10 @@
 
     .menu-toggle-btn {
         font-size: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
 
     .header-title {
         font-size: 18px;
@@ -36,20 +36,20 @@
         @media (max-width: 768px) {
             font-size: 14px;
         }
-    }
+        }
 
     .header-right {
-        display: flex;
-        align-items: center;
+            display: flex;
+            align-items: center;
         gap: 16px;
         flex-wrap: wrap;
     }
 
     .user-dropdown {
-        cursor: pointer;
-    }
+            cursor: pointer;
+        }
 
     .profile-modal {
         max-width: 600px;
+        }
     }
-}
