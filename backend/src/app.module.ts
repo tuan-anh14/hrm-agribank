@@ -8,6 +8,7 @@ import { AuthModule } from '@/auth/auth.module';
 import { DepartmentModule } from '@/department/department.module';
 import { PositionModule } from './position/position.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { WorkscheduleModule } from './workschedule/workschedule.module';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { AttendanceModule } from './attendance/attendance.module';
     PrismaModule, 
     EmployeeModule, 
     AuthModule, 
-    DepartmentModule, PositionModule, AttendanceModule
+    DepartmentModule, PositionModule, AttendanceModule, WorkscheduleModule
   ],
   controllers: [AppController],
   providers: [AppService],
