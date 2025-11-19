@@ -30,6 +30,8 @@ import ListWorkSchedulePage from '@/pages/admin/workschedules';
 import CreateWorkSchedulePage from '@/pages/admin/workschedules/create-workschedule';
 import UpdateWorkSchedulePage from '@/pages/admin/workschedules/update-workschedule';
 import ViewWorkSchedulePage from '@/pages/admin/workschedules/view-workschedule';
+import MyWorkSchedulePage from '@/pages/client/my-workschedule';
+import CreateMyWorkSchedulePage from '@/pages/client/create-my-workschedule';
 import ListAttendancePage from '@/pages/admin/attendances';
 import CreateAttendancePage from '@/pages/admin/attendances/create-attendance';
 import UpdateAttendancePage from '@/pages/admin/attendances/update-attendance';
@@ -242,6 +244,23 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
             <UpdateWorkSchedulePage />
+          </ProtectedRoute>
+        ),
+      },
+      // Employee Work Schedule routes
+      {
+        path: '/my-workschedule',
+        element: (
+          <ProtectedRoute>
+            <MyWorkSchedulePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/my-workschedule/create',
+        element: (
+          <ProtectedRoute>
+            <CreateMyWorkSchedulePage />
           </ProtectedRoute>
         ),
       },

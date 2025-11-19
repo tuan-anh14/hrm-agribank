@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Card, Typography, Space, Button, Spin, Alert, message, Tag, Row, Col } from "antd";
+import { Card, Typography, Space, Button, Spin, Alert, message, Tag, Row, Col, Modal, Badge } from "antd";
 import { LeftOutlined, RightOutlined, ClockCircleOutlined, TableOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import dayjs, { type Dayjs } from "dayjs";
@@ -90,6 +90,8 @@ const AttendancePage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [checkingIn, setCheckingIn] = useState(false);
     const [checkingOut, setCheckingOut] = useState(false);
+    const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null);
+    const [modalVisible, setModalVisible] = useState(false);
 
     // Lấy thông tin chấm công hôm nay
     const todayAttendance = useMemo(() => {
@@ -218,76 +220,93 @@ const AttendancePage: React.FC = () => {
 
     const weekDays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
 
+    const handlePrevMonth = () => {
+        setCurrentMonth(currentMonth.subtract(1, "month"));
+    };
+
+    const handleNextMonth = () => {
+        setCurrentMonth(currentMonth.add(1, "month"));
+    };
+
+    const handleToday = () => {
+        setCurrentMonth(dayjs());
+    };
+
+    const handleDateClick = (day: CalendarDay) => {
+        if (day.attendance) {
+            setSelectedDate(day.date);
+            setModalVisible(true);
+        }
+    };
+
+    const selectedDayAttendance = useMemo(() => {
+        if (!selectedDate) return null;
+        const dateStr = selectedDate.format("YYYY-MM-DD");
+        return attendances.find(
+            (att) => dayjs(att.date).format("YYYY-MM-DD") === dateStr
+        );
+    }, [selectedDate, attendances]);
+
     return (
-        <div className="attendance-page">
-            <Card>
-                <Space direction="vertical" size={24} style={{ width: "100%" }}>
-                    {/* Header */}
-                    <div className="attendance-header">
-                        <Title 
-                            level={isMobile ? 4 : 2} 
-                            className="attendance-title"
-                            style={{ margin: 0 }}
-                        >
-                            {isMobile 
-                                ? `CHẤM CÔNG ${currentMonth.format("MM/YYYY")}`
-                                : `BẢNG CHẤM CÔNG THÁNG ${currentMonth.format("MM, YYYY")}`
-                            }
+        <div style={{ padding: isMobile ? "12px" : "24px", maxWidth: "1400px", margin: "0 auto" }}>
+            <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                {/* Header */}
+                <Card>
+                    <Space
+                        direction={isMobile ? "vertical" : "horizontal"}
+                        style={{ width: "100%", justifyContent: "space-between" }}
+                        wrap
+                    >
+                        <Title level={3} style={{ margin: 0 }}>
+                            Chấm công
                         </Title>
-                        <Space 
-                            direction={isMobile ? "vertical" : "horizontal"}
-                            size={isMobile ? 8 : 16}
-                            style={{ width: isMobile ? "100%" : "auto" }}
-                            wrap
-                        >
-                            {!isEmployee && !isMobile && (
+                        <Space wrap>
+                            {!isEmployee && (
                                 <Button
                                     icon={<TableOutlined />}
                                     onClick={() => navigate("/attendance/manage")}
-                                    size={isMobile ? "small" : "middle"}
                                 >
-                                    Quản lý
+                                    {isMobile ? "Quản lý" : "Quản lý chấm công"}
                                 </Button>
                             )}
-                            <Space size={8}>
-                                <Button
-                                    icon={<LeftOutlined />}
-                                    onClick={() =>
-                                        setCurrentMonth((prev) => prev.subtract(1, "month"))
-                                    }
-                                    size={isMobile ? "small" : "middle"}
-                                />
-                                <Text strong className="date-range">
-                                    {isMobile 
-                                        ? currentMonth.format("MM/YYYY")
-                                        : `${currentMonth.startOf("month").format("DD/MM/YYYY")} - ${currentMonth.endOf("month").format("DD/MM/YYYY")}`
-                                    }
-                                </Text>
-                                <Button
-                                    icon={<RightOutlined />}
-                                    onClick={() =>
-                                        setCurrentMonth((prev) => prev.add(1, "month"))
-                                    }
-                                    size={isMobile ? "small" : "middle"}
-                                />
-                            </Space>
                         </Space>
-                    </div>
+                    </Space>
+                </Card>
 
-                    {/* Check-in/Check-out Buttons */}
-                    <Card
-                        className="check-in-out-card"
-                        style={{
-                            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                            border: "none",
-                        }}
+                {/* Calendar Navigation */}
+                <Card>
+                    <Space
+                        direction={isMobile ? "vertical" : "horizontal"}
+                        style={{ width: "100%", justifyContent: "space-between" }}
+                        wrap
                     >
+                        <Space>
+                            <Button icon={<LeftOutlined />} onClick={handlePrevMonth} />
+                            <Button onClick={handleToday}>Hôm nay</Button>
+                            <Button icon={<RightOutlined />} onClick={handleNextMonth} />
+                        </Space>
+                        <Title level={4} style={{ margin: 0 }}>
+                            {currentMonth.format("MMMM YYYY")}
+                        </Title>
+                        <Space>
+                            <Tag color="green">Đúng giờ</Tag>
+                            <Tag color="orange">Đi muộn/Về sớm</Tag>
+                            <Tag color="blue">Tăng ca</Tag>
+                            <Tag color="red">Nghỉ</Tag>
+                        </Space>
+                    </Space>
+                </Card>
+
+                {/* Check-in/Check-out Buttons */}
+                <Card
+                    className="check-in-out-card"
+                >
                         <Space
                             direction="vertical"
                             size={isMobile ? 12 : 16}
                             style={{ width: "100%", textAlign: "center" }}
                         >
-                            <Text className="today-text" style={{ color: "white", fontSize: isMobile ? 14 : 16 }}>
+                            <Text className="today-text" style={{ fontSize: isMobile ? 14 : 16 }}>
                                 Hôm nay: {dayjs().format("DD/MM/YYYY")}
                             </Text>
                             <Space 
@@ -341,126 +360,161 @@ const AttendancePage: React.FC = () => {
                                     )}
                                 </Space>
                             )}
-                        </Space>
-                    </Card>
+                    </Space>
+                </Card>
 
-                    {error && (
-                        <Alert
-                            type="error"
-                            message="Lỗi"
-                            description={error}
-                            showIcon
-                        />
-                    )}
+                {error && (
+                    <Alert
+                        type="error"
+                        message="Lỗi"
+                        description={error}
+                        showIcon
+                    />
+                )}
 
-                    {/* Calendar Grid */}
-                    {loading ? (
-                        <div style={{ textAlign: "center", padding: 40 }}>
-                            <Spin size="large" />
-                        </div>
-                    ) : (
-                        <div className="attendance-calendar">
-                            {/* Week Days Header */}
-                            <Row gutter={[8, 8]} className="calendar-header">
-                                {weekDays.map((day, index) => (
+                {/* Calendar Grid */}
+                {loading ? (
+                    <div style={{ textAlign: "center", padding: 40 }}>
+                        <Spin size="large" />
+                    </div>
+                ) : (
+                    <div className="attendance-calendar">
+                        {/* Week Days Header */}
+                        <Row gutter={[8, 8]} className="calendar-header">
+                            {weekDays.map((day, index) => (
+                                <Col span={24 / 7} key={index}>
+                                    <div className="calendar-header-cell">{day}</div>
+                                </Col>
+                            ))}
+                        </Row>
+
+                        {/* Calendar Days */}
+                        <Row
+                            gutter={isMobile ? [4, 4] : [8, 8]}
+                            className="calendar-body"
+                        >
+                            {calendarDays.map((day, index) => {
+                                const statusInfo = getStatusInfo(day.attendance);
+                                const hasAttendance = !!day.attendance;
+                                const isAbsent = day.attendance?.status === "ABSENT";
+
+                                return (
                                     <Col span={24 / 7} key={index}>
-                                        <div className="calendar-header-cell">{day}</div>
-                                    </Col>
-                                ))}
-                            </Row>
-
-                            {/* Calendar Days */}
-                            <Row 
-                                gutter={isMobile ? [4, 4] : [8, 8]} 
-                                className="calendar-body"
-                            >
-                                {calendarDays.map((day, index) => {
-                                    const statusInfo = getStatusInfo(day.attendance);
-                                    const isSelected = day.isToday;
-
-                                    return (
-                                        <Col 
-                                            xs={24 / 7} 
-                                            sm={24 / 7} 
-                                            md={24 / 7} 
-                                            lg={24 / 7} 
-                                            xl={24 / 7} 
-                                            key={index}
+                                        <div
+                                            className={`calendar-day ${
+                                                !day.isCurrentMonth ? "other-month" : ""
+                                            } ${day.isToday ? "today" : ""} ${
+                                                hasAttendance ? "has-attendance" : ""
+                                            } ${isAbsent ? "absent" : ""}`}
+                                            onClick={() => handleDateClick(day)}
+                                            style={{ cursor: hasAttendance ? "pointer" : "default" }}
                                         >
-                                            <Card
-                                                className={`calendar-day-card ${
-                                                    !day.isCurrentMonth ? "other-month" : ""
-                                                } ${isSelected ? "today" : ""}`}
-                                                size="small"
-                                            >
-                                                <div className="calendar-day-content">
-                                                    <div className="day-number">
-                                                        {day.date.format("D")}
-                                                    </div>
-                                                    {day.attendance && (
-                                                        <div className="attendance-info">
-                                                            {day.attendance.checkInTime && (
-                                                                <div className="time-entry">
-                                                                    {dayjs(
-                                                                        day.attendance.checkInTime
-                                                                    ).format("HH:mm")}
-                                                                    {day.attendance.checkOutTime
-                                                                        ? ` - ${dayjs(
-                                                                              day.attendance.checkOutTime
-                                                                          ).format("HH:mm")}`
-                                                                        : " -"}
-                                                                </div>
-                                                            )}
-                                                            {statusInfo && (
-                                                                <>
-                                                                    {statusInfo.hours > 0 && !isMobile && (
-                                                                        <div className="hours">
-                                                                            {statusInfo.hours.toFixed(2)}
-                                                                        </div>
-                                                                    )}
-                                                                    <div className="status">
-                                                                        <Tag
-                                                                            color={statusInfo.color}
-                                                                            style={{ 
-                                                                                margin: 0,
-                                                                                fontSize: isMobile ? 10 : 12,
-                                                                                padding: isMobile ? "0 4px" : "2px 8px"
-                                                                            }}
-                                                                        >
-                                                                            {isMobile 
-                                                                                ? statusInfo.text.split(" ")[0]
-                                                                                : statusInfo.text
-                                                                            }
-                                                                        </Tag>
-                                                                    </div>
-                                                                </>
-                                                            )}
-                                                            {day.attendance.status === "ABSENT" && (
-                                                                <div className="status">
-                                                                    <Tag 
-                                                                        color="red" 
-                                                                        style={{ 
-                                                                            margin: 0,
-                                                                            fontSize: isMobile ? 10 : 12,
-                                                                            padding: isMobile ? "0 4px" : "2px 8px"
-                                                                        }}
-                                                                    >
-                                                                        Nghỉ
-                                                                    </Tag>
-                                                                </div>
-                                                            )}
+                                            <div className="day-number">{day.date.format("D")}</div>
+                                            {hasAttendance && day.attendance && (
+                                                <div className="day-attendance">
+                                                    {day.attendance.checkInTime && (
+                                                        <div className="time-info">
+                                                            <ClockCircleOutlined style={{ fontSize: 10 }} />
+                                                            <span>
+                                                                {dayjs(day.attendance.checkInTime).format("HH:mm")}
+                                                                {day.attendance.checkOutTime
+                                                                    ? ` - ${dayjs(day.attendance.checkOutTime).format("HH:mm")}`
+                                                                    : ""}
+                                                            </span>
                                                         </div>
                                                     )}
+                                                    {statusInfo && (
+                                                        <Badge
+                                                            color={statusInfo.color}
+                                                            text={isMobile ? statusInfo.text.split(" ")[0] : statusInfo.text}
+                                                            style={{ fontSize: isMobile ? 9 : 11 }}
+                                                        />
+                                                    )}
+                                                    {isAbsent && (
+                                                        <Badge
+                                                            color="red"
+                                                            text="Nghỉ"
+                                                            style={{ fontSize: isMobile ? 9 : 11 }}
+                                                        />
+                                                    )}
                                                 </div>
-                                            </Card>
-                                        </Col>
-                                    );
-                                })}
-                            </Row>
-                        </div>
+                                            )}
+                                        </div>
+                                    </Col>
+                                );
+                            })}
+                        </Row>
+                    </div>
+                )}
+
+                {/* Attendance Details Modal */}
+                <Modal
+                    title={`Chi tiết chấm công ngày ${selectedDate?.format("DD/MM/YYYY")}`}
+                    open={modalVisible}
+                    onCancel={() => setModalVisible(false)}
+                    footer={[
+                        <Button key="close" onClick={() => setModalVisible(false)}>
+                            Đóng
+                        </Button>,
+                    ]}
+                    width={isMobile ? "90%" : 600}
+                >
+                    {selectedDayAttendance ? (
+                        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+                            <Card size="small">
+                                <Space direction="vertical" style={{ width: "100%" }} size="small">
+                                    {selectedDayAttendance.checkInTime && (
+                                        <Space>
+                                            <ClockCircleOutlined />
+                                            <Text strong>Giờ vào ca:</Text>
+                                            <Text>
+                                                {dayjs(selectedDayAttendance.checkInTime).format("HH:mm:ss")}
+                                            </Text>
+                                        </Space>
+                                    )}
+                                    {selectedDayAttendance.checkOutTime && (
+                                        <Space>
+                                            <ClockCircleOutlined />
+                                            <Text strong>Giờ kết ca:</Text>
+                                            <Text>
+                                                {dayjs(selectedDayAttendance.checkOutTime).format("HH:mm:ss")}
+                                            </Text>
+                                        </Space>
+                                    )}
+                                    {selectedDayAttendance.checkInTime && selectedDayAttendance.checkOutTime && (
+                                        <Space>
+                                            <Text strong>Tổng giờ làm:</Text>
+                                            <Text>
+                                                {dayjs(selectedDayAttendance.checkOutTime)
+                                                    .diff(dayjs(selectedDayAttendance.checkInTime), "hour", true)
+                                                    .toFixed(2)}{" "}
+                                                giờ
+                                            </Text>
+                                        </Space>
+                                    )}
+                                    {(() => {
+                                        const statusInfo = getStatusInfo(selectedDayAttendance);
+                                        return statusInfo ? (
+                                            <Space>
+                                                <Text strong>Trạng thái:</Text>
+                                                <Tag color={statusInfo.color}>{statusInfo.text}</Tag>
+                                            </Space>
+                                        ) : null;
+                                    })()}
+                                    {selectedDayAttendance.note && (
+                                        <Space direction="vertical" style={{ width: "100%" }}>
+                                            <Text strong>Ghi chú:</Text>
+                                            <Text type="secondary">{selectedDayAttendance.note}</Text>
+                                        </Space>
+                                    )}
+                                </Space>
+                            </Card>
+                        </Space>
+                    ) : (
+                        <Text type="secondary">Không có thông tin chấm công</Text>
                     )}
-                </Space>
-            </Card>
+                </Modal>
+            </Space>
         </div>
     );
 };

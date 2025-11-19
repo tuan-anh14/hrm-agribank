@@ -1,32 +1,4 @@
-.check-in-out-card {
-    .today-text {
-        display: block;
-    }
-
-    .check-in-btn {
-        background-color: #ff9a9e;
-        border-color: #ff9a9e;
-        min-width: 120px;
-
-        &:hover {
-            background-color: #ff7a80;
-            border-color: #ff7a80;
-        }
-    }
-
-    .check-out-btn {
-        background-color: #c44569;
-        border-color: #c44569;
-        min-width: 120px;
-
-        &:hover {
-            background-color: #b03a5a;
-            border-color: #b03a5a;
-        }
-    }
-}
-
-.attendance-calendar {
+.workschedule-calendar {
     width: 100%;
     background: #fff;
     border-radius: 8px;
@@ -62,12 +34,12 @@
 
             &.other-month {
                 opacity: 0.4;
-                background: #fff;
+                background: #fafafa;
             }
 
             &.today {
                 border-color: #1890ff;
-                background: #fff;
+                background: #e6f7ff;
                 font-weight: 600;
 
                 .day-number {
@@ -75,19 +47,14 @@
                 }
             }
 
-            &.has-attendance {
+            &.has-schedules {
                 border-color: #52c41a;
-                background: #fff;
+                background: #f6ffed;
 
                 &:hover {
-                    background: #f5f5f5;
+                    background: #e6f7ff;
                     border-color: #1890ff;
                 }
-            }
-
-            &.absent {
-                border-color: #ff4d4f;
-                background: #fff;
             }
 
             .day-number {
@@ -96,28 +63,20 @@
                 margin-bottom: 4px;
             }
 
-            .day-attendance {
+            .day-schedules {
                 display: flex;
-                flex-direction: column;
+                flex-wrap: wrap;
                 gap: 4px;
                 margin-top: 4px;
 
-                .time-info {
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                    font-size: 11px;
-                    color: #1890ff;
-                    font-weight: 500;
-
-                    span {
-                        line-height: 1.2;
-                    }
-                }
-
                 .ant-badge {
-                    font-size: 11px;
-                    line-height: 1.2;
+                    .ant-badge-count {
+                        font-size: 10px;
+                        min-width: 18px;
+                        height: 18px;
+                        line-height: 18px;
+                        padding: 0 4px;
+                    }
                 }
             }
         }
@@ -126,20 +85,7 @@
 
 // Responsive
 @media (max-width: 768px) {
-    .check-in-out-card {
-        .ant-card-body {
-            padding: 16px 12px;
-        }
-
-        .check-in-btn,
-        .check-out-btn {
-            min-width: 100%;
-            height: 44px;
-            font-size: 14px;
-        }
-    }
-
-    .attendance-calendar {
+    .workschedule-calendar {
         padding: 8px;
 
         .calendar-body {
@@ -151,13 +97,14 @@
                     font-size: 14px;
                 }
 
-                .day-attendance {
-                    .time-info {
-                        font-size: 9px;
-                    }
-
+                .day-schedules {
                     .ant-badge {
-                        font-size: 9px;
+                        .ant-badge-count {
+                            font-size: 9px;
+                            min-width: 16px;
+                            height: 16px;
+                            line-height: 16px;
+                        }
                     }
                 }
             }

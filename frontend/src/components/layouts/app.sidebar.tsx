@@ -11,6 +11,7 @@ import {
     ScheduleOutlined,
 } from '@ant-design/icons';
 import { useSidebar } from '@/components/context/sidebar.context';
+import { useCurrentApp } from '@/components/context/app.context';
 import { useIsMobile } from '@/hooks/useResponsive';
 import { SIDEBAR } from '@/utils/constants';
 import type { MenuProps } from 'antd';
@@ -23,7 +24,9 @@ const AppSidebar = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { collapsed, setCollapsed } = useSidebar();
+    const { user } = useCurrentApp();
     const isMobile = useIsMobile();
+    const isEmployee = user?.role === 'EMPLOYEE';
 
     useEffect(() => {
         if (isMobile) {
@@ -31,48 +34,69 @@ const AppSidebar = () => {
         }
     }, [isMobile, setCollapsed]);
 
-    const menuItems: MenuProps['items'] = [
-        {
-            key: '/',
-            icon: <DashboardOutlined />,
-            label: 'Dashboard',
-        },
-        {
-            key: '/employee',
-            icon: <UserOutlined />,
-            label: 'Nhân viên',
-        },
-        {
-            key: '/department',
-            icon: <BankOutlined />,
-            label: 'Phòng ban',
-        },
-        {
-            key: '/position',
-            icon: <FileTextOutlined />,
-            label: 'Chức vụ',
-        },
-        {
-            key: '/shift',
-            icon: <FieldTimeOutlined />,
-            label: 'Ca làm việc',
-        },
-        {
-            key: '/workschedule',
-            icon: <ScheduleOutlined />,
-            label: 'Lịch làm',
-        },
-        {
-            key: '/attendance',
-            icon: <CalendarOutlined />,
-            label: 'Chấm công',
-        },
-        {
-            key: '/payroll',
-            icon: <DollarOutlined />,
-            label: 'Lương',
-        },
-    ];
+    const menuItems: MenuProps['items'] = useMemo(() => {
+        const baseItems: MenuProps['items'] = [
+            {
+                key: '/',
+                icon: <DashboardOutlined />,
+                label: 'Dashboard',
+            },
+        ];
+
+        // Admin/HR only items
+        if (!isEmployee) {
+            baseItems.push(
+                {
+                    key: '/employee',
+                    icon: <UserOutlined />,
+                    label: 'Nhân viên',
+                },
+                {
+                    key: '/department',
+                    icon: <BankOutlined />,
+                    label: 'Phòng ban',
+                },
+                {
+                    key: '/position',
+                    icon: <FileTextOutlined />,
+                    label: 'Chức vụ',
+                },
+                {
+                    key: '/shift',
+                    icon: <FieldTimeOutlined />,
+                    label: 'Ca làm việc',
+                },
+                {
+                    key: '/workschedule',
+                    icon: <ScheduleOutlined />,
+                    label: 'Lịch làm',
+                }
+            );
+        } else {
+            // Employee items
+            baseItems.push({
+                key: '/my-workschedule',
+                icon: <ScheduleOutlined />,
+                label: 'Lịch làm của tôi',
+            });
+        }
+
+        // Common items for all roles
+        baseItems.push(
+            {
+                key: '/attendance',
+                icon: <CalendarOutlined />,
+                label: 'Chấm công',
+            },
+            {
+                key: '/payroll',
+                icon: <DollarOutlined />,
+                label: 'Lương',
+            }
+        );
+
+        return baseItems;
+    }, [isEmployee]);
 
     const handleMenuClick = useCallback<NonNullable<MenuProps['onClick']>>((info) => {
         const { key } = info;

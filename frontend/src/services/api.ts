@@ -224,3 +224,13 @@ export const deleteWorkScheduleAPI = (id: string) => {
     const urlBackend = `/api/v1/workschedule/${id}`;
     return axios.delete<IBackendRes<WorkSchedule>>(urlBackend);
 }
+
+export const getMyWorkSchedulesAPI = (params?: QueryWorkScheduleParams) => {
+    const urlBackend = "/api/v1/workschedule/me";
+    return axios.get<WorkScheduleListResponse>(urlBackend, { params });
+}
+
+export const createMyWorkScheduleAPI = (payload: Omit<CreateWorkSchedulePayload, 'employeeId'>) => {
+    const urlBackend = "/api/v1/workschedule/me";
+    return axios.post<IBackendRes<WorkSchedule>>(urlBackend, payload);
+}

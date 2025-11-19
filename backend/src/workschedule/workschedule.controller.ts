@@ -71,8 +71,11 @@ export class WorkscheduleController {
   @ApiOperation({ summary: 'Xem chi tiết lịch làm việc' })
   async getById(@Param('id') id: string, @Req() req: any) {
     const schedule = await this.workscheduleService.getById(id);
-    if (req.user.role === UserRole.EMPLOYEE && schedule.employeeId !== req.user.id) {
-      throw new ForbiddenException('Bạn chỉ có thể xem lịch làm việc của chính mình');
+    if (req.user.role === UserRole.EMPLOYEE) {
+      const employee = await this.employeeService.getEmployeeWithAccountByUserId(req.user.id);
+      if (!employee || schedule.employeeId !== employee.id) {
+        throw new ForbiddenException('Bạn chỉ có thể xem lịch làm việc của chính mình');
+      }
     }
     return schedule;
   }
@@ -82,6 +85,22 @@ export class WorkscheduleController {
   @ApiOperation({ summary: 'Tạo lịch làm việc' })
   async create(@Body() dto: CreateWorkScheduleDto) {
     return this.workscheduleService.create(dto);
+  }
+
+  @Post('me')
+  @Roles(UserRole.ADMIN, UserRole.HR, UserRole.EMPLOYEE)
+  @ApiOperation({ summary: 'Tạo lịch làm việc cho chính mình' })
+  async createMySchedule(@Body() dto: Omit<CreateWorkScheduleDto, 'employeeId'>, @Req() req: any) {
+    const employee = await this.employeeService.getEmployeeWithAccountByUserId(req.user.id);
+    if (!employee) {
+      throw new ForbiddenException('Không tìm thấy thông tin nhân viên');
+    }
+    // Tự động gán employeeId cho nhân viên đang đăng nhập
+    const createDto: CreateWorkScheduleDto = {
+      ...dto,
+      employeeId: employee.id,
+    };
+    return this.workscheduleService.create(createDto);
   }
 
   @Put(':id')

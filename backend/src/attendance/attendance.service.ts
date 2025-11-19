@@ -5,7 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Attendance, AttendanceStatus, Prisma } from '@prisma/client';
+import { Attendance, AttendanceStatus, Prisma, RequestStatus } from '@prisma/client';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { QueryAttendanceDto } from './dto/query-attendance.dto';
@@ -71,6 +71,17 @@ export class AttendanceService {
     }
 
     return AttendanceStatus.ON_TIME;
+  }
+
+  /**
+   * Get date range for work schedule query (start and end of day)
+   */
+  private getDateRangeForSchedule(date: Date): { start: Date; end: Date } {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
   }
 
   /**
@@ -301,6 +312,25 @@ export class AttendanceService {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Check if employee has an approved work schedule for today
+    const { start, end } = this.getDateRangeForSchedule(today);
+    const workSchedule = await this.prisma.workSchedule.findFirst({
+      where: {
+        employeeId,
+        date: {
+          gte: start,
+          lte: end,
+        },
+        status: RequestStatus.APPROVED,
+      },
+    });
+
+    if (!workSchedule) {
+      throw new BadRequestException(
+        'Bạn chưa đăng ký ca làm việc cho ngày hôm nay hoặc ca làm việc chưa được duyệt. Vui lòng đăng ký ca trước khi chấm công.',
+      );
+    }
+
     // Find existing attendance for today
     const existing = await this.prisma.attendance.findFirst({
       where: {
@@ -376,6 +406,25 @@ export class AttendanceService {
     const checkOutTime = data.checkOutTime ? new Date(data.checkOutTime) : new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    // Check if employee has an approved work schedule for today
+    const { start, end } = this.getDateRangeForSchedule(today);
+    const workSchedule = await this.prisma.workSchedule.findFirst({
+      where: {
+        employeeId,
+        date: {
+          gte: start,
+          lte: end,
+        },
+        status: RequestStatus.APPROVED,
+      },
+    });
+
+    if (!workSchedule) {
+      throw new BadRequestException(
+        'Bạn chưa đăng ký ca làm việc cho ngày hôm nay hoặc ca làm việc chưa được duyệt. Vui lòng đăng ký ca trước khi chấm công.',
+      );
+    }
 
     // Find existing attendance for today
     const existing = await this.prisma.attendance.findFirst({
