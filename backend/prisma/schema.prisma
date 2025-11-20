@@ -39,6 +39,17 @@ enum RewardPenaltyType {
   PENALTY
 }
 
+enum EmployeeType {
+  FULL_TIME
+  PART_TIME
+}
+
+enum ShiftType {
+  MORNING
+  AFTERNOON
+  FULL_DAY
+}
+
 // ====================== ACCOUNT / EMPLOYEE ======================
 model Account {
   id         String    @id @default(uuid())
@@ -54,8 +65,10 @@ model Account {
 }
 
 model Employee {
-  id           String    @id @default(uuid())
+  id           String       @id @default(uuid())
+  employeeCode String       @unique
   fullName     String
+  type         EmployeeType @default(FULL_TIME)
   gender       String?
   dateOfBirth  DateTime?
   phone        String?
@@ -63,8 +76,12 @@ model Employee {
   address      String?
   positionId   String?
   departmentId String?
-  startDate    DateTime? @default(now())
-  status       String?   @default("working")
+  startDate    DateTime?    @default(now())
+  status       String?      @default("working")
+
+  // Lương
+  salaryCoefficient Float? @default(1.0)
+  hourlyRate        Float?
 
   // relations
   position      Position?       @relation(fields: [positionId], references: [id])
@@ -96,22 +113,24 @@ model Department {
 }
 
 model Position {
-  id         String     @id @default(uuid())
-  title      String
-  baseSalary Float
-  allowance  Float?     @default(0)
-  gradeLevel Int? // thêm cấp bậc chức vụ
-  employees  Employee[]
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id          String     @id @default(uuid())
+  title       String
+  baseSalary  Float
+  description String?
+  allowance   Float?     @default(0)
+  gradeLevel  Int? // thêm cấp bậc chức vụ
+  employees   Employee[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 // ====================== SHIFT / WORK SCHEDULE / ATTENDANCE ======================
 model Shift {
   id        String         @id @default(uuid())
   name      String
-  startTime DateTime
-  endTime   DateTime
+  type      ShiftType
+  startTime DateTime       @db.Time
+  endTime   DateTime       @db.Time
   schedules WorkSchedule[]
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
@@ -143,6 +162,8 @@ model Attendance {
   checkOutTime DateTime?
   status       AttendanceStatus @default(ON_TIME)
   note         String?
+  lateMinutes  Int              @default(0)
+  earlyMinutes Int              @default(0)
 
   employee  Employee @relation(fields: [employeeId], references: [id])
   createdAt DateTime @default(now())
@@ -151,13 +172,26 @@ model Attendance {
 
 // ====================== PAYROLL / REWARD / PAYMENT ======================
 model Payroll {
-  id          String  @id @default(uuid())
-  employeeId  String
-  month       Int
-  year        Int
-  basicSalary Float
-  bonus       Float?  @default(0)
-  deduction   Float?  @default(0)
+  id         String @id @default(uuid())
+  employeeId String
+  month      Int
+  year       Int
+
+  // Snapshot dữ liệu lương
+  salaryCoefficient Float?
+  baseSalary        Float?
+
+  // Chi tiết công
+  standardWorkHours Float @default(0)
+  overtimeHours     Float @default(0)
+
+  // Các khoản tiền
+  totalWorkAmount Float  @default(0)
+  totalOTAmount   Float  @default(0)
+  bonus           Float? @default(0)
+  allowance       Float? @default(0)
+  deduction       Float? @default(0)
+
   totalSalary Float
   status      String? @default("pending")
 
