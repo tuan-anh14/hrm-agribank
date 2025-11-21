@@ -137,8 +137,9 @@ const ListShiftPage: React.FC = () => {
             title: "Thời lượng",
             key: "duration",
             render: (_, record) => {
-                const start = dayjs(record.startTime);
-                const end = dayjs(record.endTime);
+                // Normalize to same date to calculate duration based on time only
+                const start = dayjs(record.startTime).year(2000).month(0).date(1);
+                const end = dayjs(record.endTime).year(2000).month(0).date(1);
                 const duration = end.diff(start, "minute");
                 if (duration <= 0) {
                     return <Tag color="red">Không hợp lệ</Tag>;

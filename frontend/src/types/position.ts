@@ -4,6 +4,7 @@ export interface Position {
   baseSalary: number;
   allowance?: number | null;
   gradeLevel?: number | null;
+  description?: string | null;
   createdAt: string;
   updatedAt: string;
   _count?: {
@@ -16,6 +17,7 @@ export interface CreatePositionPayload {
   baseSalary: number;
   allowance?: number;
   gradeLevel?: number;
+  description?: string;
 }
 
 export interface UpdatePositionPayload {
@@ -23,4 +25,5 @@ export interface UpdatePositionPayload {
   baseSalary?: number;
   allowance?: number;
   gradeLevel?: number;
+  description?: string;
 }

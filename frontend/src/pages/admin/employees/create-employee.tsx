@@ -1,9 +1,10 @@
-import { Button, Form, Input, Select, Card, Typography, Space } from "antd";
+import { Button, Form, Input, Select, Card, Typography, Space, InputNumber } from "antd";
 import type { FormProps } from "antd";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { createEmployeeWithAccountAPI, getAllDepartmentsAPI, getAllPositionsAPI } from "@/services/api";
 import type { CreateEmployeeWithAccountPayload } from "@/types/employee";
+import { EmployeeType } from "@/types/employee";
 import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title } = Typography;
@@ -11,6 +12,8 @@ const { Option } = Select;
 
 type FieldType = {
     fullName: string;
+    employeeCode?: string;
+    type?: EmployeeType;
     email: string;
     password: string;
     role: string;
@@ -21,6 +24,8 @@ type FieldType = {
     departmentId?: string;
     positionId?: string;
     startDate?: string;
+    salaryCoefficient?: number;
+    hourlyRate?: number;
 };
 
 interface Department {
@@ -41,6 +46,7 @@ const CreateEmployeePage: React.FC = () => {
     const [loadingPositions, setLoadingPositions] = useState(false);
     const navigate = useNavigate();
     const [form] = Form.useForm();
+    const [employeeType, setEmployeeType] = useState<EmployeeType>(EmployeeType.FULL_TIME);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -81,6 +87,8 @@ const CreateEmployeePage: React.FC = () => {
         try {
             const payload: CreateEmployeeWithAccountPayload = {
                 fullName: values.fullName,
+                employeeCode: values.employeeCode,
+                type: values.type,
                 email: values.email,
                 password: values.password,
                 role: values.role || "EMPLOYEE",
@@ -91,6 +99,8 @@ const CreateEmployeePage: React.FC = () => {
                 departmentId: values.departmentId,
                 positionId: values.positionId,
                 startDate: values.startDate || undefined,
+                salaryCoefficient: values.salaryCoefficient,
+                hourlyRate: values.hourlyRate,
             };
 
             const res = await createEmployeeWithAccountAPI(payload);
@@ -163,6 +173,44 @@ const CreateEmployeePage: React.FC = () => {
                                 <Option value="ADMIN">Admin</Option>
                             </Select>
                         </Form.Item>
+
+                        <Form.Item<FieldType>
+                            label="Mã nhân viên"
+                            name="employeeCode"
+                            tooltip="Để trống để tự động sinh mã"
+                        >
+                            <Input placeholder="EMP001 (tự động nếu để trống)" />
+                        </Form.Item>
+
+                        <Form.Item<FieldType>
+                            label="Loại nhân viên"
+                            name="type"
+                            initialValue="FULL_TIME"
+                        >
+                            <Select onChange={(value) => setEmployeeType(value as EmployeeType)}>
+                                <Option value="FULL_TIME">Full-time (Toàn thời gian)</Option>
+                                <Option value="PART_TIME">Part-time (Bán thời gian)</Option>
+                            </Select>
+                        </Form.Item>
+
+                        {employeeType === 'FULL_TIME' && (
+                            <Form.Item<FieldType>
+                                label="Hệ số lương"
+                                name="salaryCoefficient"
+                                tooltip="Lương = Lương cơ bản × Hệ số"
+                            >
+                                <InputNumber style={{ width: '100%' }} step="0.1" placeholder="2.34" />
+                            </Form.Item>
+                        )}
+
+                        {employeeType === 'PART_TIME' && (
+                            <Form.Item<FieldType>
+                                label="Lương theo giờ (VNĐ)"
+                                name="hourlyRate"
+                            >
+                                <InputNumber style={{ width: '100%' }} placeholder="50000" />
+                            </Form.Item>
+                        )}
 
                         <Form.Item<FieldType>
                             label="Giới tính"

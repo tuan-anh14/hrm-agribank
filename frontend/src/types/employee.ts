@@ -1,6 +1,13 @@
+export enum EmployeeType {
+    FULL_TIME = 'FULL_TIME',
+    PART_TIME = 'PART_TIME'
+}
+
 export interface Employee {
     id: string;
+    employeeCode: string;
     fullName: string;
+    type: EmployeeType;
     gender?: string;
     dateOfBirth?: string;
     phone?: string;
@@ -10,6 +17,8 @@ export interface Employee {
     departmentId?: string | null;
     startDate?: string;
     status?: string;
+    salaryCoefficient?: number;
+    hourlyRate?: number;
     createdAt: string;
     updatedAt?: string;
     department?: {
@@ -24,6 +33,8 @@ export interface Employee {
 
 export interface CreateEmployeePayload {
     fullName: string;
+    employeeCode?: string;
+    type?: EmployeeType;
     email?: string;
     gender?: string;
     phone?: string;
@@ -33,10 +44,14 @@ export interface CreateEmployeePayload {
     positionId?: string;
     status?: string;
     startDate?: string;
+    salaryCoefficient?: number;
+    hourlyRate?: number;
 }
 
 export interface UpdateEmployeePayload {
     fullName?: string;
+    employeeCode?: string;
+    type?: EmployeeType;
     email?: string;
     gender?: string;
     phone?: string;
@@ -46,10 +61,14 @@ export interface UpdateEmployeePayload {
     positionId?: string;
     status?: string;
     startDate?: string;
+    salaryCoefficient?: number;
+    hourlyRate?: number;
 }
 
 export interface CreateEmployeeWithAccountPayload {
     fullName: string;
+    employeeCode?: string;
+    type?: EmployeeType;
     email: string;
     password: string;
     role?: string;
@@ -61,5 +80,7 @@ export interface CreateEmployeeWithAccountPayload {
     positionId?: string;
     status?: string;
     startDate?: string;
+    salaryCoefficient?: number;
+    hourlyRate?: number;
 }
 

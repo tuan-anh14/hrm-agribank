@@ -82,18 +82,34 @@ const AppSidebar = () => {
         }
 
         // Common items for all roles
-        baseItems.push(
-            {
-                key: '/attendance',
-                icon: <CalendarOutlined />,
-                label: 'Chấm công',
-            },
-            {
-                key: '/payroll',
-                icon: <DollarOutlined />,
-                label: 'Lương',
-            }
-        );
+        // Common items logic
+        if (!isEmployee) {
+            baseItems.push(
+                {
+                    key: '/attendance/manage',
+                    icon: <CalendarOutlined />,
+                    label: 'Quản lý chấm công',
+                },
+                {
+                    key: '/admin/payroll',
+                    icon: <DollarOutlined />,
+                    label: 'Quản lý lương',
+                }
+            );
+        } else {
+            baseItems.push(
+                {
+                    key: '/attendance',
+                    icon: <CalendarOutlined />,
+                    label: 'Chấm công',
+                },
+                {
+                    key: '/payroll',
+                    icon: <DollarOutlined />,
+                    label: 'Lương của tôi',
+                }
+            );
+        }
 
         return baseItems;
     }, [isEmployee]);

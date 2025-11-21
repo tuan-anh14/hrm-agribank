@@ -1,4 +1,4 @@
-import { Button, Form, Input, Card, Typography, Space, Spin, Alert, TimePicker } from "antd";
+import { Button, Form, Input, Card, Typography, Space, Spin, Alert, TimePicker, Select, message } from "antd";
 import type { FormProps } from "antd";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -6,11 +6,14 @@ import dayjs, { type Dayjs } from "dayjs";
 import { getShiftByIdAPI, updateShiftAPI } from "@/services/api";
 import { handleApiSuccess, notifyError } from "@/utils/notification";
 import type { Shift, UpdateShiftPayload } from "@/types/shift";
+import { ShiftType } from "@/types/shift";
 
 const { Title, Text } = Typography;
+const { Option } = Select;
 
 type FieldType = {
     name: string;
+    type?: ShiftType;
     startTime?: Dayjs;
     endTime?: Dayjs;
 };
@@ -51,6 +54,7 @@ const UpdateShiftPage: React.FC = () => {
                     setShift(shiftData);
                     form.setFieldsValue({
                         name: shiftData.name,
+                        type: shiftData.type,
                         startTime: dayjs(shiftData.startTime),
                         endTime: dayjs(shiftData.endTime),
                     });
@@ -87,6 +91,7 @@ const UpdateShiftPage: React.FC = () => {
         try {
             const payload: UpdateShiftPayload = {
                 name: values.name?.trim(),
+                type: values.type,
                 startTime: values.startTime?.toISOString(),
                 endTime: values.endTime?.toISOString(),
             };
@@ -157,6 +162,17 @@ const UpdateShiftPage: React.FC = () => {
                             ]}
                         >
                             <Input placeholder="Ví dụ: Ca sáng" />
+                        </Form.Item>
+
+                        <Form.Item
+                            label="Loại ca"
+                            name="type"
+                        >
+                            <Select>
+                                <Option value={ShiftType.MORNING}>Ca sáng</Option>
+                                <Option value={ShiftType.AFTERNOON}>Ca chiều</Option>
+                                <Option value={ShiftType.FULL_DAY}>Ca cả ngày</Option>
+                            </Select>
                         </Form.Item>
 
                         <Form.Item

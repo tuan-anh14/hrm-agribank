@@ -25,6 +25,11 @@ export class CreatePositionDto {
   @Min(0)
   @Max(20)
   gradeLevel?: number;
+  @ApiProperty({ example: 'Mô tả về chức vụ', required: false })
+  @IsString()
+  @IsOptional()
+  @MaxLength(255)
+  description?: string;
 }
 
 

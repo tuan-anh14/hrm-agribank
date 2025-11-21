@@ -14,7 +14,7 @@ import { ApproveWorkScheduleDto } from './dto/approve-workschedule.dto';
 
 @Injectable()
 export class WorkscheduleService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   private readonly includeRelations: Prisma.WorkScheduleInclude = {
     employee: {
@@ -56,18 +56,17 @@ export class WorkscheduleService {
     return { start, end };
   }
 
-  private async ensureEmployeeAndShiftExist(employeeId: string, shiftId: string) {
-    const [employee, shift] = await Promise.all([
-      this.prisma.employee.findUnique({ where: { id: employeeId } }),
-      this.prisma.shift.findUnique({ where: { id: shiftId } }),
-    ]);
-
+  private async ensureEmployeeAndShiftExist(employeeId: string, shiftId?: string | null) {
+    const employee = await this.prisma.employee.findUnique({ where: { id: employeeId } });
     if (!employee) {
       throw new NotFoundException(`Không tìm thấy nhân viên ID ${employeeId}`);
     }
 
-    if (!shift) {
-      throw new NotFoundException(`Không tìm thấy ca làm việc ID ${shiftId}`);
+    if (shiftId) {
+      const shift = await this.prisma.shift.findUnique({ where: { id: shiftId } });
+      if (!shift) {
+        throw new NotFoundException(`Không tìm thấy ca làm việc ID ${shiftId}`);
+      }
     }
   }
 
@@ -222,7 +221,7 @@ export class WorkscheduleService {
       updateData.employeeId = data.employeeId;
     }
 
-    if (data.shiftId) {
+    if (data.shiftId !== undefined) {
       updateData.shiftId = data.shiftId;
     }
 

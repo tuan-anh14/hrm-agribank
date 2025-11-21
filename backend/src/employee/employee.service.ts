@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Employee, Account, Prisma } from '@prisma/client';
+import { Employee, Account, Prisma, EmployeeType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 type EmployeeWithAccount = Employee & {
@@ -11,7 +11,7 @@ type EmployeeWithAccount = Employee & {
 
 @Injectable()
 export class EmployeeService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   private normalizeEmployeeDates<T extends { dateOfBirth?: string | Date | null; startDate?: string | Date | null }>(data: T): T {
     const normalized: any = { ...data };
@@ -29,6 +29,10 @@ export class EmployeeService {
     }
 
     return normalized;
+  }
+
+  private generateEmployeeCode(): string {
+    return `EMP${Math.floor(100000 + Math.random() * 900000)}`;
   }
 
   async getAll(): Promise<Employee[]> {
@@ -54,6 +58,12 @@ export class EmployeeService {
   async create(data: any): Promise<Employee> {
     try {
       const normalizedData = this.normalizeEmployeeDates(data);
+
+      // Generate employeeCode if not provided
+      if (!normalizedData.employeeCode) {
+        normalizedData.employeeCode = this.generateEmployeeCode();
+      }
+
       return await this.prisma.employee.create({
         data: normalizedData,
       });
@@ -105,8 +115,8 @@ export class EmployeeService {
   async findOneByUsername(username: string): Promise<EmployeeWithAccount | null> {
     return this.prisma.employee.findFirst({
       where: { email: username },
-      include: { 
-        department: true, 
+      include: {
+        department: true,
         position: true,
         account: true
       },
@@ -163,6 +173,10 @@ export class EmployeeService {
     positionId?: string;
     status?: string;
     startDate?: string;
+    employeeCode?: string;
+    type?: EmployeeType;
+    salaryCoefficient?: number;
+    hourlyRate?: number;
   }): Promise<{ employee: Employee; account: Account }> {
     // Check if email already exists
     const existing = await this.findOneByUsername(data.email);
@@ -186,6 +200,10 @@ export class EmployeeService {
             positionId: data.positionId,
             status: data.status || 'working',
             startDate: data.startDate,
+            employeeCode: data.employeeCode || this.generateEmployeeCode(),
+            type: data.type || EmployeeType.FULL_TIME,
+            salaryCoefficient: data.salaryCoefficient,
+            hourlyRate: data.hourlyRate,
           }),
         });
 

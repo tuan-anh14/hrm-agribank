@@ -29,7 +29,7 @@ const ViewPositionPage: React.FC = () => {
                 const res = await getPositionByIdAPI(id);
                 // Axios interceptor unwraps response.data
                 let positionData: Position | null = null;
-                
+
                 if (res && typeof res === 'object') {
                     if ('data' in res && res.data) {
                         positionData = res.data as Position;
@@ -37,19 +37,19 @@ const ViewPositionPage: React.FC = () => {
                         positionData = res as unknown as Position;
                     }
                 }
-                
+
                 if (positionData) {
                     setPosition(positionData);
                 } else {
-                    const errorMsg = (res as any)?.message 
+                    const errorMsg = (res as any)?.message
                         ? (Array.isArray((res as any).message) ? (res as any).message[0] : (res as any).message)
                         : "Không tìm thấy thông tin chức vụ";
                     setError(errorMsg);
                 }
             } catch (error: any) {
                 console.error("Error fetching position:", error);
-                const errorMessage = error?.response?.data?.message 
-                    || error?.message 
+                const errorMessage = error?.response?.data?.message
+                    || error?.message
                     || "Không thể tải thông tin chức vụ";
                 setError(errorMessage);
             } finally {
@@ -131,6 +131,9 @@ const ViewPositionPage: React.FC = () => {
                         size="middle"
                     >
                         <Descriptions.Item label="Tên chức vụ">{position.title}</Descriptions.Item>
+                        <Descriptions.Item label="Mô tả">
+                            {position.description || "-"}
+                        </Descriptions.Item>
                         <Descriptions.Item label="Lương cơ bản">
                             {formatCurrency(position.baseSalary)}
                         </Descriptions.Item>

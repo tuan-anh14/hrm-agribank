@@ -8,11 +8,11 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { CreateShiftDto } from './dto/create-shift.dto';
 import { UpdateShiftDto } from './dto/update-shift.dto';
 import { QueryShiftDto } from './dto/query-shift.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, ShiftType } from '@prisma/client';
 
 @Injectable()
 export class ShiftService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   private normalizeDateTime(value: string | Date): Date {
     const date = typeof value === 'string' ? new Date(value) : value;
@@ -23,7 +23,20 @@ export class ShiftService {
   }
 
   private validateTimeRange(start: Date, end: Date) {
-    if (start >= end) {
+    // Create copies to avoid mutating original dates
+    const s = new Date(start);
+    const e = new Date(end);
+
+    // Normalize to the same date (e.g., 1970-01-01) to compare only time components
+    s.setFullYear(1970, 0, 1);
+    s.setMonth(0);
+    s.setDate(1);
+
+    e.setFullYear(1970, 0, 1);
+    e.setMonth(0);
+    e.setDate(1);
+
+    if (s.getTime() >= e.getTime()) {
       throw new BadRequestException('Giờ kết thúc phải sau giờ bắt đầu');
     }
   }
@@ -77,6 +90,7 @@ export class ShiftService {
       return await this.prisma.shift.create({
         data: {
           name: dto.name.trim(),
+          type: dto.type || ShiftType.FULL_DAY,
           startTime: start,
           endTime: end,
         },
@@ -101,6 +115,10 @@ export class ShiftService {
 
     if (dto.name !== undefined) {
       updateData.name = dto.name.trim();
+    }
+
+    if (dto.type) {
+      updateData.type = dto.type;
     }
 
     let start = shift.startTime;

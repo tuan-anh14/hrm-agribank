@@ -13,6 +13,7 @@ type FieldType = {
     baseSalary: number;
     allowance?: number;
     gradeLevel?: number;
+    description?: string;
 };
 
 const UpdatePositionPage: React.FC = () => {
@@ -38,7 +39,7 @@ const UpdatePositionPage: React.FC = () => {
             try {
                 const res = await getPositionByIdAPI(id);
                 let positionData: Position | null = null;
-                
+
                 if (res && typeof res === 'object') {
                     if ('data' in res && res.data) {
                         positionData = res.data as Position;
@@ -46,7 +47,7 @@ const UpdatePositionPage: React.FC = () => {
                         positionData = res as unknown as Position;
                     }
                 }
-                
+
                 if (positionData) {
                     setPosition(positionData);
                     form.setFieldsValue({
@@ -54,17 +55,18 @@ const UpdatePositionPage: React.FC = () => {
                         baseSalary: positionData.baseSalary,
                         allowance: positionData.allowance || undefined,
                         gradeLevel: positionData.gradeLevel || undefined,
+                        description: positionData.description || undefined,
                     });
                 } else {
-                    const errorMsg = (res as any)?.message 
+                    const errorMsg = (res as any)?.message
                         ? (Array.isArray((res as any).message) ? (res as any).message[0] : (res as any).message)
                         : "Không tìm thấy thông tin chức vụ";
                     setError(errorMsg);
                 }
             } catch (error: any) {
                 console.error("Error fetching data:", error);
-                const errorMessage = error?.response?.data?.message 
-                    || error?.message 
+                const errorMessage = error?.response?.data?.message
+                    || error?.message
                     || "Không thể tải thông tin chức vụ";
                 setError(errorMessage);
             } finally {
@@ -88,6 +90,7 @@ const UpdatePositionPage: React.FC = () => {
                 baseSalary: values.baseSalary,
                 allowance: values.allowance || undefined,
                 gradeLevel: values.gradeLevel || undefined,
+                description: values.description?.trim() || undefined,
             };
 
             const res = await updatePositionAPI(id, payload);
@@ -208,6 +211,19 @@ const UpdatePositionPage: React.FC = () => {
                                 placeholder="3"
                                 min={0}
                                 max={20}
+                            />
+                        </Form.Item>
+
+                        <Form.Item<FieldType>
+                            label="Mô tả"
+                            name="description"
+                            rules={[
+                                { max: 255, message: "Mô tả không được quá 255 ký tự!" },
+                            ]}
+                        >
+                            <Input.TextArea
+                                rows={3}
+                                placeholder="Mô tả về chức vụ..."
                             />
                         </Form.Item>
 

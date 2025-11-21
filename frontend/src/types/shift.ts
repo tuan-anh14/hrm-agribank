@@ -1,6 +1,13 @@
+export enum ShiftType {
+    MORNING = 'MORNING',
+    AFTERNOON = 'AFTERNOON',
+    FULL_DAY = 'FULL_DAY'
+}
+
 export interface Shift {
     id: string;
     name: string;
+    type: ShiftType;
     startTime: string;
     endTime: string;
     createdAt: string;
@@ -23,12 +30,14 @@ export interface QueryShiftParams {
 
 export interface CreateShiftPayload {
     name: string;
+    type?: ShiftType;
     startTime: string;
     endTime: string;
 }
 
 export interface UpdateShiftPayload {
     name?: string;
+    type?: ShiftType;
     startTime?: string;
     endTime?: string;
 }

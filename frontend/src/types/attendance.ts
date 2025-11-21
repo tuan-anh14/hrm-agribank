@@ -8,6 +8,8 @@ export interface Attendance {
     checkOutTime?: string | null;
     status: AttendanceStatus;
     note?: string | null;
+    lateMinutes: number;
+    earlyMinutes: number;
     createdAt: string;
     updatedAt?: string;
     employee?: {

@@ -43,14 +43,14 @@ export interface QueryWorkScheduleParams {
 
 export interface CreateWorkSchedulePayload {
     employeeId: string;
-    shiftId: string;
+    shiftId?: string | null;
     date: string;
     note?: string;
 }
 
 export interface UpdateWorkSchedulePayload {
     employeeId?: string;
-    shiftId?: string;
+    shiftId?: string | null;
     date?: string;
     note?: string;
 }

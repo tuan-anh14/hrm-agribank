@@ -36,6 +36,9 @@ import ListAttendancePage from '@/pages/admin/attendances';
 import CreateAttendancePage from '@/pages/admin/attendances/create-attendance';
 import UpdateAttendancePage from '@/pages/admin/attendances/update-attendance';
 import ViewAttendancePage from '@/pages/admin/attendances/view-attendance';
+import ListPayrollPage from '@/pages/admin/payroll';
+import GeneratePayrollPage from '@/pages/admin/payroll/generate';
+import PayrollDetailPage from '@/pages/admin/payroll/detail';
 
 // Layout
 import AppLayout from '@/layout';
@@ -311,6 +314,31 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute>
             <PayrollPage />
+          </ProtectedRoute>
+        ),
+      },
+      // Admin Payroll routes
+      {
+        path: '/admin/payroll',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <ListPayrollPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/admin/payroll/generate',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <GeneratePayrollPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/admin/payroll/:id',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR', 'EMPLOYEE']}>
+            <PayrollDetailPage />
           </ProtectedRoute>
         ),
       },

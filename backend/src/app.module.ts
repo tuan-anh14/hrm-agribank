@@ -10,22 +10,24 @@ import { PositionModule } from './position/position.module';
 import { AttendanceModule } from './attendance/attendance.module';
 import { WorkscheduleModule } from './workschedule/workschedule.module';
 import { ShiftModule } from './shift/shift.module';
+import { PayrollModule } from './payroll/payroll.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    PrismaModule, 
-    EmployeeModule, 
-    AuthModule, 
+    PrismaModule,
+    EmployeeModule,
+    AuthModule,
     DepartmentModule,
     PositionModule,
     AttendanceModule,
     WorkscheduleModule,
     ShiftModule,
+    PayrollModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }

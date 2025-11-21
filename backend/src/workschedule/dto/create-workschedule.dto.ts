@@ -13,10 +13,11 @@ export class CreateWorkScheduleDto {
   @ApiProperty({
     example: '039b53f2-4ae5-4c41-8c5a-2530502e90a3',
     description: 'ID ca làm việc',
+    required: false,
   })
   @IsUUID(4, { message: 'ID ca làm việc phải là UUID hợp lệ' })
-  @IsNotEmpty({ message: 'ID ca làm việc không được để trống' })
-  shiftId: string;
+  @IsOptional()
+  shiftId?: string;
 
   @ApiProperty({
     example: '2025-11-18',

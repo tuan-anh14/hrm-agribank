@@ -14,7 +14,7 @@ import { CheckOutDto } from './dto/check-out.dto';
 
 @Injectable()
 export class AttendanceService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   /**
    * Normalize date strings to Date objects for Prisma
@@ -323,6 +323,7 @@ export class AttendanceService {
         },
         status: RequestStatus.APPROVED,
       },
+      include: { shift: true },
     });
 
     if (!workSchedule) {
@@ -368,6 +369,19 @@ export class AttendanceService {
       });
     }
 
+    // Calculate late minutes
+    let lateMinutes = 0;
+    if (workSchedule.shift && workSchedule.shift.startTime) {
+      const shiftStart = new Date(checkInTime);
+      const shiftTime = new Date(workSchedule.shift.startTime);
+      shiftStart.setHours(shiftTime.getHours(), shiftTime.getMinutes(), 0, 0);
+
+      if (checkInTime > shiftStart) {
+        const diffMs = checkInTime.getTime() - shiftStart.getTime();
+        lateMinutes = Math.floor(diffMs / 60000);
+      }
+    }
+
     // Create new attendance record
     const status = this.calculateStatus(checkInTime);
     return await this.prisma.attendance.create({
@@ -377,6 +391,7 @@ export class AttendanceService {
         checkInTime,
         status,
         note: data.note,
+        lateMinutes,
       },
       include: {
         employee: {
@@ -418,6 +433,7 @@ export class AttendanceService {
         },
         status: RequestStatus.APPROVED,
       },
+      include: { shift: true },
     });
 
     if (!workSchedule) {
@@ -454,12 +470,26 @@ export class AttendanceService {
       throw new BadRequestException('Check-out time must be after check-in time');
     }
 
+    // Calculate early minutes
+    let earlyMinutes = 0;
+    if (workSchedule.shift && workSchedule.shift.endTime) {
+      const shiftEnd = new Date(checkOutTime);
+      const shiftTime = new Date(workSchedule.shift.endTime);
+      shiftEnd.setHours(shiftTime.getHours(), shiftTime.getMinutes(), 0, 0);
+
+      if (checkOutTime < shiftEnd) {
+        const diffMs = shiftEnd.getTime() - checkOutTime.getTime();
+        earlyMinutes = Math.floor(diffMs / 60000);
+      }
+    }
+
     // Update attendance with check-out
     return await this.prisma.attendance.update({
       where: { id: existing.id },
       data: {
         checkOutTime,
         note: data.note || existing.note,
+        earlyMinutes,
       },
       include: {
         employee: {

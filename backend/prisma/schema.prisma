@@ -139,7 +139,7 @@ model Shift {
 model WorkSchedule {
   id           String        @id @default(uuid())
   employeeId   String
-  shiftId      String
+  shiftId      String?
   date         DateTime
   status       RequestStatus @default(PENDING)
   approvedById String?
@@ -147,7 +147,7 @@ model WorkSchedule {
   note         String?
 
   employee   Employee  @relation(fields: [employeeId], references: [id])
-  shift      Shift     @relation(fields: [shiftId], references: [id])
+  shift      Shift?    @relation(fields: [shiftId], references: [id])
   approvedBy Employee? @relation("ScheduleApprovedBy", fields: [approvedById], references: [id])
 
   createdAt DateTime @default(now())

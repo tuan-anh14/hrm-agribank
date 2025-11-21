@@ -30,30 +30,30 @@ interface FetchPositionsParams {
 
 async function fetchPositions(params: FetchPositionsParams): Promise<PositionsResponse> {
     const { page, pageSize, search, sortBy, sortOrder } = params;
-    
+
     try {
         const raw = await getAllPositionsAPI();
-        const list: Position[] = Array.isArray(raw) 
-            ? raw 
-            : Array.isArray((raw as any)?.data) 
-                ? (raw as any).data 
+        const list: Position[] = Array.isArray(raw)
+            ? raw
+            : Array.isArray((raw as any)?.data)
+                ? (raw as any).data
                 : [];
-        
+
         // Client-side search
         const q = search.trim().toLowerCase();
         const filtered = q
             ? list.filter((p) => [
-                  p.title,
-                  p.gradeLevel?.toString(),
-              ].some((v) => (v || "").toLowerCase().includes(q)))
+                p.title,
+                p.gradeLevel?.toString(),
+            ].some((v) => (v || "").toLowerCase().includes(q)))
             : list;
-        
+
         // Client-side sort
         const sorted = [...filtered].sort((a, b) => {
             const key = sortBy;
             const av = (a as any)[key] ?? "";
             const bv = (b as any)[key] ?? "";
-            
+
             if (key === "createdAt" || key === "updatedAt" || key === "baseSalary" || key === "allowance" || key === "gradeLevel") {
                 const an = Number(av) || 0;
                 const bn = Number(bv) || 0;
@@ -64,19 +64,19 @@ async function fetchPositions(params: FetchPositionsParams): Promise<PositionsRe
                 }
                 return sortOrder === "asc" ? an - bn : bn - an;
             }
-            
+
             const as = String(av).toLowerCase();
             const bs = String(bv).toLowerCase();
             if (as < bs) return sortOrder === "asc" ? -1 : 1;
             if (as > bs) return sortOrder === "asc" ? 1 : -1;
             return 0;
         });
-        
+
         // Client-side paginate
         const start = (page - 1) * pageSize;
         const end = start + pageSize;
         const paged = sorted.slice(start, end);
-        
+
         return { data: paged, total: sorted.length, page, pageSize };
     } catch (error) {
         throw new Error("Không thể tải danh sách chức vụ");
@@ -126,12 +126,12 @@ function usePositions(initialPageSize: number = 10): UsePositionsReturn {
         if (abortRef.current) {
             abortRef.current.abort();
         }
-        
+
         const controller = new AbortController();
         abortRef.current = controller;
         setLoading(true);
         setError(null);
-        
+
         try {
             const resp = await fetchPositions({
                 page,
@@ -216,7 +216,7 @@ const ListPositionPage: React.FC = () => {
         if (pagination.pageSize && pagination.pageSize !== pageSize) {
             actions.setPageSize(pagination.pageSize);
         }
-        
+
         const s = Array.isArray(sorter) ? sorter[0] : sorter;
         if (s && s.order && s.field) {
             const key = String(s.field) as keyof Position | "createdAt";
@@ -242,7 +242,7 @@ const ListPositionPage: React.FC = () => {
 
     const columns: ColumnsType<Position> = useMemo(() => {
         const antOrder = sortOrder === "asc" ? "ascend" : "descend";
-        
+
         return [
             {
                 title: "Tên chức vụ",
@@ -251,6 +251,14 @@ const ListPositionPage: React.FC = () => {
                 sorter: true,
                 sortOrder: sortBy === "title" ? antOrder : undefined,
                 responsive: ["xs", "sm", "md", "lg"],
+            },
+            {
+                title: "Mô tả",
+                dataIndex: "description",
+                key: "description",
+                sorter: false,
+                responsive: ["lg"],
+                render: (value: string | null) => value || "-",
             },
             {
                 title: "Lương cơ bản",

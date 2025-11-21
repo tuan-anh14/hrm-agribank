@@ -8,8 +8,8 @@ import {
     getAllDepartmentsAPI,
     getAllPositionsAPI,
 } from "@/services/api";
-import type { UpdateEmployeePayload } from "@/types/employee";
-import type { Employee } from "@/types/employee";
+import type { UpdateEmployeePayload, Employee } from "@/types/employee";
+import { EmployeeType } from "@/types/employee";
 import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title } = Typography;
@@ -17,6 +17,8 @@ const { Option } = Select;
 
 type FieldType = {
     fullName: string;
+    employeeCode?: string;
+    type?: EmployeeType;
     email?: string;
     gender?: string;
     phone?: string;
@@ -26,6 +28,8 @@ type FieldType = {
     positionId?: string;
     status?: string;
     startDate?: string;
+    salaryCoefficient?: number;
+    hourlyRate?: number;
 };
 
 interface Department {
@@ -50,6 +54,7 @@ const UpdateEmployeePage: React.FC = () => {
     const [employee, setEmployee] = useState<Employee | null>(null);
     const navigate = useNavigate();
     const [form] = Form.useForm();
+    const [employeeType, setEmployeeType] = useState<EmployeeType>(EmployeeType.FULL_TIME);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -74,7 +79,7 @@ const UpdateEmployeePage: React.FC = () => {
                 // Axios interceptor unwraps response.data
                 // Backend returns Employee directly, so res might be Employee or IBackendRes<Employee>
                 let employeeData: Employee | null = null;
-                
+
                 if (employeeRes && typeof employeeRes === 'object') {
                     // Check if res is IBackendRes (has data field)
                     if ('data' in employeeRes && employeeRes.data) {
@@ -85,11 +90,14 @@ const UpdateEmployeePage: React.FC = () => {
                         employeeData = employeeRes as unknown as Employee;
                     }
                 }
-                
+
                 if (employeeData) {
                     setEmployee(employeeData);
+                    setEmployeeType(employeeData.type || EmployeeType.FULL_TIME);
                     form.setFieldsValue({
                         fullName: employeeData.fullName,
+                        employeeCode: employeeData.employeeCode,
+                        type: employeeData.type,
                         email: employeeData.email,
                         gender: employeeData.gender,
                         phone: employeeData.phone,
@@ -99,9 +107,11 @@ const UpdateEmployeePage: React.FC = () => {
                         positionId: employeeData.positionId,
                         status: employeeData.status,
                         startDate: employeeData.startDate ? (employeeData.startDate as string).split("T")[0] : undefined,
+                        salaryCoefficient: employeeData.salaryCoefficient,
+                        hourlyRate: employeeData.hourlyRate,
                     });
                 } else {
-                    const errorMsg = (employeeRes as any)?.message 
+                    const errorMsg = (employeeRes as any)?.message
                         ? (Array.isArray((employeeRes as any).message) ? (employeeRes as any).message[0] : (employeeRes as any).message)
                         : "Không tìm thấy thông tin nhân viên";
                     setError(errorMsg);
@@ -122,8 +132,8 @@ const UpdateEmployeePage: React.FC = () => {
                 }
             } catch (error: any) {
                 console.error("Error fetching data:", error);
-                const errorMessage = error?.response?.data?.message 
-                    || error?.message 
+                const errorMessage = error?.response?.data?.message
+                    || error?.message
                     || "Không thể tải thông tin nhân viên";
                 setError(errorMessage);
             } finally {
@@ -146,6 +156,8 @@ const UpdateEmployeePage: React.FC = () => {
         try {
             const payload: UpdateEmployeePayload = {
                 fullName: values.fullName,
+                employeeCode: values.employeeCode,
+                type: values.type,
                 email: values.email,
                 gender: values.gender,
                 phone: values.phone,
@@ -155,6 +167,8 @@ const UpdateEmployeePage: React.FC = () => {
                 positionId: values.positionId,
                 status: values.status,
                 startDate: values.startDate || undefined,
+                salaryCoefficient: values.salaryCoefficient,
+                hourlyRate: values.hourlyRate,
             };
 
             const res = await updateEmployeeAPI(id, payload);
@@ -234,6 +248,42 @@ const UpdateEmployeePage: React.FC = () => {
                         >
                             <Input placeholder="a.nguyen@agribank.vn" />
                         </Form.Item>
+
+                        <Form.Item<FieldType>
+                            label="Mã nhân viên"
+                            name="employeeCode"
+                        >
+                            <Input disabled placeholder="Mã nhân viên" />
+                        </Form.Item>
+
+                        <Form.Item<FieldType>
+                            label="Loại nhân viên"
+                            name="type"
+                        >
+                            <Select onChange={(value) => setEmployeeType(value as EmployeeType)}>
+                                <Option value="FULL_TIME">Full-time (Toàn thời gian)</Option>
+                                <Option value="PART_TIME">Part-time (Bán thời gian)</Option>
+                            </Select>
+                        </Form.Item>
+
+                        {employeeType === EmployeeType.FULL_TIME && (
+                            <Form.Item<FieldType>
+                                label="Hệ số lương"
+                                name="salaryCoefficient"
+                                tooltip="Lương = Lương cơ bản × Hệ số"
+                            >
+                                <Input type="number" step="0.1" placeholder="2.34" />
+                            </Form.Item>
+                        )}
+
+                        {employeeType === EmployeeType.PART_TIME && (
+                            <Form.Item<FieldType>
+                                label="Lương theo giờ (VNĐ)"
+                                name="hourlyRate"
+                            >
+                                <Input type="number" placeholder="50000" />
+                            </Form.Item>
+                        )}
 
                         <Form.Item<FieldType>
                             label="Giới tính"

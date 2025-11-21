@@ -23,20 +23,20 @@ interface FetchAttendancesParams {
 
 async function fetchAttendances(params: FetchAttendancesParams, isEmployee: boolean) {
     const { page, limit, employeeId, startDate, endDate } = params;
-    
+
     try {
         const queryParams: any = {
             page,
             limit,
         };
-        
+
         if (startDate) {
             queryParams.startDate = startDate;
         }
         if (endDate) {
             queryParams.endDate = endDate;
         }
-        
+
         // Employee chỉ lấy chấm công của mình
         // Admin/HR có thể filter theo employeeId
         let res;
@@ -48,12 +48,12 @@ async function fetchAttendances(params: FetchAttendancesParams, isEmployee: bool
             }
             res = await getAllAttendancesAPI(queryParams);
         }
-        
+
         // Backend returns { data, total, page, limit, totalPages }
         if (res && typeof res === 'object' && 'data' in res) {
             return res;
         }
-        
+
         // Fallback if response structure is different
         const fallbackData = Array.isArray(res) ? res : [];
         return {
@@ -110,12 +110,12 @@ function useAttendances(initialLimit: number = 10, isEmployee: boolean = false):
         if (abortRef.current) {
             abortRef.current.abort();
         }
-        
+
         const controller = new AbortController();
         abortRef.current = controller;
         setLoading(true);
         setError(null);
-        
+
         try {
             const resp = await fetchAttendances({
                 page,
@@ -152,9 +152,9 @@ function useAttendances(initialLimit: number = 10, isEmployee: boolean = false):
 
     return {
         state: { data, total, page, limit, employeeId, startDate, endDate, loading, error, totalPages },
-        actions: { 
-            setPage, 
-            setLimit, 
+        actions: {
+            setPage,
+            setLimit,
             setEmployeeId: (id?: string) => {
                 setPage(1);
                 setEmployeeId(id);
@@ -206,10 +206,10 @@ const ListAttendancePage: React.FC = () => {
             const loadEmployees = async () => {
                 try {
                     const res = await getAllEmployeesAPI();
-                    const list: Employee[] = Array.isArray(res) 
-                        ? res 
-                        : Array.isArray((res as any)?.data) 
-                            ? (res as any).data 
+                    const list: Employee[] = Array.isArray(res)
+                        ? res
+                        : Array.isArray((res as any)?.data)
+                            ? (res as any).data
                             : [];
                     setEmployees(list);
                 } catch (error) {
@@ -299,6 +299,34 @@ const ListAttendancePage: React.FC = () => {
                 responsive: ["xs", "sm", "md", "lg"],
             },
             {
+                title: "Đi muộn",
+                dataIndex: "lateMinutes",
+                key: "lateMinutes",
+                render: (minutes: number) => {
+                    if (!minutes || minutes === 0) return <Text type="secondary">-</Text>;
+                    return (
+                        <Tag color="orange">
+                            {minutes} phút
+                        </Tag>
+                    );
+                },
+                responsive: ["md", "lg"],
+            },
+            {
+                title: "Về sớm",
+                dataIndex: "earlyMinutes",
+                key: "earlyMinutes",
+                render: (minutes: number) => {
+                    if (!minutes || minutes === 0) return <Text type="secondary">-</Text>;
+                    return (
+                        <Tag color="volcano">
+                            {minutes} phút
+                        </Tag>
+                    );
+                },
+                responsive: ["md", "lg"],
+            },
+            {
                 title: "Ghi chú",
                 dataIndex: "note",
                 key: "note",
@@ -373,7 +401,7 @@ const ListAttendancePage: React.FC = () => {
                 <Title level={3} style={{ margin: 0 }}>
                     Quản lý chấm công
                 </Title>
-                <Button 
+                <Button
                     icon={<CalendarOutlined />}
                     onClick={() => navigate("/attendance")}
                 >

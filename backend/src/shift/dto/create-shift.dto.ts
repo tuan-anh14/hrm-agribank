@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDateString, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsOptional, IsString, MaxLength, IsEnum } from 'class-validator';
+import { ShiftType } from '@prisma/client';
 
 export class CreateShiftDto {
   @ApiProperty({ example: 'Ca sáng' })
@@ -7,6 +8,16 @@ export class CreateShiftDto {
   @IsNotEmpty({ message: 'Tên ca không được để trống' })
   @MaxLength(100, { message: 'Tên ca không được quá 100 ký tự' })
   name: string;
+
+  @ApiProperty({
+    example: 'FULL_DAY',
+    description: 'Loại ca làm việc',
+    enum: ShiftType,
+    default: 'FULL_DAY'
+  })
+  @IsOptional()
+  @IsEnum(ShiftType, { message: 'Loại ca làm việc không hợp lệ' })
+  type?: ShiftType;
 
   @ApiProperty({
     example: '2025-11-18T08:30:00.000Z',

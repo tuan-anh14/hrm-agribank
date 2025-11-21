@@ -15,6 +15,7 @@ import {
     Modal,
     Form,
     Input,
+    Radio,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
@@ -165,18 +166,32 @@ function useWorkSchedules(initialLimit: number = 10) {
     };
 }
 
+import CalendarView from "./calendar-view";
+import { useCurrentApp } from "@/components/context/app.context";
+
 const ListWorkSchedulePage: React.FC = () => {
+    const { user } = useCurrentApp();
     const { state, actions } = useWorkSchedules(10);
     const { data, total, page, limit, loading, error, employeeId, shiftId, status } = state;
     const navigate = useNavigate();
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null]>([null, null]);
+    const [viewMode, setViewMode] = useState<"LIST" | "CALENDAR">("LIST");
 
     const [approveModalOpen, setApproveModalOpen] = useState(false);
     const [approveStatus, setApproveStatus] = useState<"APPROVED" | "REJECTED">("APPROVED");
     const [selectedSchedule, setSelectedSchedule] = useState<WorkSchedule | null>(null);
     const [form] = Form.useForm<{ note?: string }>();
+
+    const isAdmin = user?.role === "ADMIN";
+    // HR can view but maybe restricted on some actions if needed. 
+    // Request: "HR/Employee loses some admin functions".
+    // Assuming HR can Approve/Reject but maybe not Delete? Or maybe just View?
+    // Let's assume HR has similar rights to Admin for now but Employee is restricted.
+    // Actually, usually Employee doesn't access this page.
+    // But if they do, hide actions.
+    const canAction = isAdmin || user?.role === "HR";
 
     useEffect(() => {
         const loadEmployees = async () => {
@@ -211,6 +226,7 @@ const ListWorkSchedulePage: React.FC = () => {
     }, []);
 
     const handleDelete = async (id: string, status: WorkScheduleStatus) => {
+        if (!canAction) return;
         if (status !== "PENDING") {
             message.warning("Chỉ có thể xoá lịch ở trạng thái chờ duyệt");
             return;
@@ -226,6 +242,7 @@ const ListWorkSchedulePage: React.FC = () => {
     };
 
     const openApproveModal = (schedule: WorkSchedule, status: "APPROVED" | "REJECTED") => {
+        if (!canAction) return;
         setSelectedSchedule(schedule);
         setApproveStatus(status);
         form.resetFields();
@@ -313,51 +330,55 @@ const ListWorkSchedulePage: React.FC = () => {
                     >
                         Xem
                     </Button>
-                    <Button
-                        type="link"
-                        icon={<EditOutlined />}
-                        disabled={record.status !== "PENDING"}
-                        onClick={() => navigate(`/workschedule/${record.id}/edit`)}
-                        size="small"
-                        style={{ color: record.status === "PENDING" ? "#faad14" : undefined }}
-                    >
-                        Sửa
-                    </Button>
-                    <Button
-                        type="link"
-                        icon={<CheckOutlined />}
-                        size="small"
-                        disabled={record.status !== "PENDING"}
-                        onClick={() => openApproveModal(record, "APPROVED")}
-                    >
-                        Duyệt
-                    </Button>
-                    <Button
-                        type="link"
-                        icon={<CloseOutlined />}
-                        size="small"
-                        danger
-                        disabled={record.status !== "PENDING"}
-                        onClick={() => openApproveModal(record, "REJECTED")}
-                    >
-                        Từ chối
-                    </Button>
-                    <Popconfirm
-                        title="Xoá lịch làm việc"
-                        description="Bạn có chắc chắn muốn xoá lịch này?"
-                        onConfirm={() => handleDelete(record.id, record.status)}
-                        okText="Xoá"
-                        cancelText="Huỷ"
-                        okButtonProps={{ danger: true }}
-                    >
-                        <Button type="link" danger icon={<DeleteOutlined />} size="small" disabled={record.status !== "PENDING"}>
-                            Xoá
-                        </Button>
-                    </Popconfirm>
+                    {canAction && (
+                        <>
+                            <Button
+                                type="link"
+                                icon={<EditOutlined />}
+                                disabled={record.status !== "PENDING"}
+                                onClick={() => navigate(`/workschedule/${record.id}/edit`)}
+                                size="small"
+                                style={{ color: record.status === "PENDING" ? "#faad14" : undefined }}
+                            >
+                                Sửa
+                            </Button>
+                            <Button
+                                type="link"
+                                icon={<CheckOutlined />}
+                                size="small"
+                                disabled={record.status !== "PENDING"}
+                                onClick={() => openApproveModal(record, "APPROVED")}
+                            >
+                                Duyệt
+                            </Button>
+                            <Button
+                                type="link"
+                                icon={<CloseOutlined />}
+                                size="small"
+                                danger
+                                disabled={record.status !== "PENDING"}
+                                onClick={() => openApproveModal(record, "REJECTED")}
+                            >
+                                Từ chối
+                            </Button>
+                            <Popconfirm
+                                title="Xoá lịch làm việc"
+                                description="Bạn có chắc chắn muốn xoá lịch này?"
+                                onConfirm={() => handleDelete(record.id, record.status)}
+                                okText="Xoá"
+                                cancelText="Huỷ"
+                                okButtonProps={{ danger: true }}
+                            >
+                                <Button type="link" danger icon={<DeleteOutlined />} size="small" disabled={record.status !== "PENDING"}>
+                                    Xoá
+                                </Button>
+                            </Popconfirm>
+                        </>
+                    )}
                 </Space>
             ),
         },
-    ], [navigate]);
+    ], [navigate, canAction]);
 
     return (
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -369,102 +390,127 @@ const ListWorkSchedulePage: React.FC = () => {
                     Quản lý lịch làm việc
                 </Title>
                 <Space wrap>
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={() => navigate("/workschedule/create")}
+                    <Radio.Group
+                        value={viewMode}
+                        onChange={(e) => setViewMode(e.target.value)}
+                        buttonStyle="solid"
                     >
-                        Tạo lịch làm việc
-                    </Button>
-                    <Select
-                        allowClear
-                        placeholder="Lọc theo nhân viên"
-                        value={employeeId}
-                        onChange={(value) => actions.setEmployeeId(value)}
-                        showSearch
-                        optionFilterProp="children"
-                        style={{ width: 220 }}
-                        options={employees.map((emp) => ({
-                            value: emp.id,
-                            label: `${emp.fullName}${emp.email ? ` (${emp.email})` : ""}`,
-                        }))}
-                    />
-                    <Select
-                        allowClear
-                        placeholder="Lọc theo ca làm việc"
-                        value={shiftId}
-                        onChange={(value) => actions.setShiftId(value)}
-                        showSearch
-                        optionFilterProp="children"
-                        style={{ width: 200 }}
-                        options={shifts.map((shift) => ({
-                            value: shift.id,
-                            label: `${shift.name} (${dayjs(shift.startTime).format("HH:mm")}-${dayjs(shift.endTime).format("HH:mm")})`,
-                        }))}
-                    />
-                    <Select
-                        allowClear
-                        placeholder="Trạng thái"
-                        value={status}
-                        onChange={(value) => actions.setStatus(value)}
-                        style={{ width: 160 }}
-                        options={STATUS_OPTIONS.map((option) => ({
-                            value: option.value,
-                            label: option.label,
-                        }))}
-                    />
-                    <RangePicker
-                        value={dateRange}
-                        onChange={(dates) => {
-                            if (dates && dates[0] && dates[1]) {
-                                setDateRange(dates);
-                                actions.setDateRange([
-                                    dates[0].format("YYYY-MM-DD"),
-                                    dates[1].format("YYYY-MM-DD"),
-                                ]);
-                            } else {
-                                setDateRange([null, null]);
-                                actions.setDateRange(undefined);
-                            }
-                        }}
-                        format="DD/MM/YYYY"
-                        placeholder={["Từ ngày", "Đến ngày"]}
-                    />
+                        <Radio.Button value="LIST">Danh sách</Radio.Button>
+                        <Radio.Button value="CALENDAR">Lịch</Radio.Button>
+                    </Radio.Group>
+
+                    {canAction && (
+                        <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => navigate("/workschedule/create")}
+                        >
+                            Tạo lịch làm việc
+                        </Button>
+                    )}
                 </Space>
             </Space>
 
-            {error && (
-                <Alert type="error" showIcon message="Lỗi khi tải danh sách lịch làm việc" description={error} />
-            )}
+            {viewMode === "LIST" ? (
+                <>
+                    <Space wrap>
+                        <Select
+                            allowClear
+                            placeholder="Lọc theo nhân viên"
+                            value={employeeId}
+                            onChange={(value) => actions.setEmployeeId(value)}
+                            showSearch
+                            optionFilterProp="children"
+                            style={{ width: 220 }}
+                            options={employees.map((emp) => ({
+                                value: emp.id,
+                                label: `${emp.fullName}${emp.email ? ` (${emp.email})` : ""}`,
+                            }))}
+                        />
+                        <Select
+                            allowClear
+                            placeholder="Lọc theo ca làm việc"
+                            value={shiftId}
+                            onChange={(value) => actions.setShiftId(value)}
+                            showSearch
+                            optionFilterProp="children"
+                            style={{ width: 200 }}
+                            options={shifts.map((shift) => ({
+                                value: shift.id,
+                                label: `${shift.name} (${dayjs(shift.startTime).format("HH:mm")}-${dayjs(shift.endTime).format("HH:mm")})`,
+                            }))}
+                        />
+                        <Select
+                            allowClear
+                            placeholder="Trạng thái"
+                            value={status}
+                            onChange={(value) => actions.setStatus(value)}
+                            style={{ width: 160 }}
+                            options={STATUS_OPTIONS.map((option) => ({
+                                value: option.value,
+                                label: option.label,
+                            }))}
+                        />
+                        <RangePicker
+                            value={dateRange}
+                            onChange={(dates) => {
+                                if (dates && dates[0] && dates[1]) {
+                                    setDateRange(dates);
+                                    actions.setDateRange([
+                                        dates[0].format("YYYY-MM-DD"),
+                                        dates[1].format("YYYY-MM-DD"),
+                                    ]);
+                                } else {
+                                    setDateRange([null, null]);
+                                    actions.setDateRange(undefined);
+                                }
+                            }}
+                            format="DD/MM/YYYY"
+                            placeholder={["Từ ngày", "Đến ngày"]}
+                        />
+                    </Space>
 
-            <Card styles={{ body: { padding: 0 } }}>
-                <Table<WorkSchedule>
-                    rowKey="id"
-                    columns={columns}
-                    dataSource={data}
-                    loading={{ spinning: loading, indicator: <Spin /> }}
-                    pagination={{
-                        current: page,
-                        pageSize: limit,
-                        total,
-                        showSizeChanger: true,
-                        showTotal: (t, range) => `${range[0]}-${range[1]} của ${t}`,
-                        responsive: true,
-                    }}
-                    onChange={(pagination) => {
-                        if (pagination.current && pagination.current !== page) {
-                            actions.setPage(pagination.current);
-                        }
-                        if (pagination.pageSize && pagination.pageSize !== limit) {
-                            actions.setLimit(pagination.pageSize);
-                        }
-                    }}
-                    scroll={{ x: "max-content" }}
+                    {error && (
+                        <Alert type="error" showIcon message="Lỗi khi tải danh sách lịch làm việc" description={error} />
+                    )}
+
+                    <Card styles={{ body: { padding: 0 } }}>
+                        <Table<WorkSchedule>
+                            rowKey="id"
+                            columns={columns}
+                            dataSource={data}
+                            loading={{ spinning: loading, indicator: <Spin /> }}
+                            pagination={{
+                                current: page,
+                                pageSize: limit,
+                                total,
+                                showSizeChanger: true,
+                                showTotal: (t, range) => `${range[0]}-${range[1]} của ${t}`,
+                                responsive: true,
+                            }}
+                            onChange={(pagination) => {
+                                if (pagination.current && pagination.current !== page) {
+                                    actions.setPage(pagination.current);
+                                }
+                                if (pagination.pageSize && pagination.pageSize !== limit) {
+                                    actions.setLimit(pagination.pageSize);
+                                }
+                            }}
+                            scroll={{ x: "max-content" }}
+                        />
+                    </Card>
+
+                    {!loading && !error && data.length === 0 && (
+                        <Text type="secondary">Không có lịch làm việc nào</Text>
+                    )}
+                </>
+            ) : (
+                <CalendarView
+                    employeeId={employeeId}
+                    shifts={shifts}
+                    employees={employees}
+                    onEmployeeChange={actions.setEmployeeId}
                 />
-            </Card>
-
-            {!loading && !error && data.length === 0 && (
-                <Text type="secondary">Không có lịch làm việc nào</Text>
             )}
 
             <Modal

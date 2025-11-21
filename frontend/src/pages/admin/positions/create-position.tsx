@@ -13,6 +13,7 @@ type FieldType = {
     baseSalary: number;
     allowance?: number;
     gradeLevel?: number;
+    description?: string;
 };
 
 const CreatePositionPage: React.FC = () => {
@@ -28,6 +29,7 @@ const CreatePositionPage: React.FC = () => {
                 baseSalary: values.baseSalary,
                 allowance: values.allowance || undefined,
                 gradeLevel: values.gradeLevel || undefined,
+                description: values.description?.trim() || undefined,
             };
 
             const res = await createPositionAPI(payload);
@@ -125,6 +127,19 @@ const CreatePositionPage: React.FC = () => {
                                 placeholder="3"
                                 min={0}
                                 max={20}
+                            />
+                        </Form.Item>
+
+                        <Form.Item<FieldType>
+                            label="Mô tả"
+                            name="description"
+                            rules={[
+                                { max: 255, message: "Mô tả không được quá 255 ký tự!" },
+                            ]}
+                        >
+                            <Input.TextArea
+                                rows={3}
+                                placeholder="Mô tả về chức vụ..."
                             />
                         </Form.Item>
 

@@ -1,9 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsOptional, IsString, IsUUID, IsDateString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, IsUUID, IsDateString, IsEnum, IsNumber } from 'class-validator';
+import { EmployeeType } from '@prisma/client';
 
 export class CreateEmployeeDto {
-  @ApiProperty({ 
-    example: 'Nguyễn Văn A', 
+  @ApiProperty({
+    example: 'Nguyễn Văn A',
     description: 'Họ và tên nhân viên',
     minLength: 2,
     maxLength: 100
@@ -12,8 +13,45 @@ export class CreateEmployeeDto {
   @IsString({ message: 'Họ và tên phải là chuỗi' })
   fullName: string;
 
-  @ApiProperty({ 
-    example: 'Nam', 
+  @ApiProperty({
+    example: 'EMP001',
+    description: 'Mã nhân viên',
+    required: false
+  })
+  @IsOptional()
+  @IsString({ message: 'Mã nhân viên phải là chuỗi' })
+  employeeCode?: string;
+
+  @ApiProperty({
+    example: 'FULL_TIME',
+    description: 'Loại nhân viên',
+    enum: EmployeeType,
+    default: 'FULL_TIME'
+  })
+  @IsOptional()
+  @IsEnum(EmployeeType, { message: 'Loại nhân viên không hợp lệ' })
+  type?: EmployeeType;
+
+  @ApiProperty({
+    example: 2.34,
+    description: 'Hệ số lương (cho Full-time)',
+    required: false
+  })
+  @IsOptional()
+  @IsNumber({}, { message: 'Hệ số lương phải là số' })
+  salaryCoefficient?: number;
+
+  @ApiProperty({
+    example: 50000,
+    description: 'Lương theo giờ (cho Part-time)',
+    required: false
+  })
+  @IsOptional()
+  @IsNumber({}, { message: 'Lương theo giờ phải là số' })
+  hourlyRate?: number;
+
+  @ApiProperty({
+    example: 'Nam',
     description: 'Giới tính',
     required: false,
     enum: ['Nam', 'Nữ', 'Khác']
@@ -22,8 +60,8 @@ export class CreateEmployeeDto {
   @IsString({ message: 'Giới tính phải là chuỗi' })
   gender?: string;
 
-  @ApiProperty({ 
-    example: 'a.nguyen@agribank.vn', 
+  @ApiProperty({
+    example: 'a.nguyen@agribank.vn',
     description: 'Email nhân viên',
     required: false
   })
@@ -31,8 +69,8 @@ export class CreateEmployeeDto {
   @IsEmail({}, { message: 'Email không hợp lệ' })
   email?: string;
 
-  @ApiProperty({ 
-    example: '0123456789', 
+  @ApiProperty({
+    example: '0123456789',
     description: 'Số điện thoại',
     required: false,
     pattern: '^[0-9]{10,11}$'
@@ -41,8 +79,8 @@ export class CreateEmployeeDto {
   @IsString({ message: 'Số điện thoại phải là chuỗi' })
   phone?: string;
 
-  @ApiProperty({ 
-    example: '123e4567-e89b-12d3-a456-426614174000', 
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174000',
     description: 'ID phòng ban',
     required: false
   })
@@ -50,8 +88,8 @@ export class CreateEmployeeDto {
   @IsUUID(4, { message: 'ID phòng ban phải là UUID hợp lệ' })
   departmentId?: string;
 
-  @ApiProperty({ 
-    example: '123e4567-e89b-12d3-a456-426614174001', 
+  @ApiProperty({
+    example: '123e4567-e89b-12d3-a456-426614174001',
     description: 'ID vị trí',
     required: false
   })
@@ -59,8 +97,8 @@ export class CreateEmployeeDto {
   @IsUUID(4, { message: 'ID vị trí phải là UUID hợp lệ' })
   positionId?: string;
 
-  @ApiProperty({ 
-    example: 'working', 
+  @ApiProperty({
+    example: 'working',
     description: 'Trạng thái làm việc',
     required: false,
     enum: ['working', 'on_leave', 'terminated']
@@ -69,8 +107,8 @@ export class CreateEmployeeDto {
   @IsString({ message: 'Trạng thái phải là chuỗi' })
   status?: string;
 
-  @ApiProperty({ 
-    example: '1990-01-01', 
+  @ApiProperty({
+    example: '1990-01-01',
     description: 'Ngày sinh',
     required: false
   })
@@ -78,8 +116,8 @@ export class CreateEmployeeDto {
   @IsDateString({}, { message: 'Ngày sinh phải là định dạng ngày hợp lệ' })
   dateOfBirth?: string;
 
-  @ApiProperty({ 
-    example: '123 Đường ABC, Quận 1, TP.HCM', 
+  @ApiProperty({
+    example: '123 Đường ABC, Quận 1, TP.HCM',
     description: 'Địa chỉ',
     required: false
   })

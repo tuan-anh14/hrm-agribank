@@ -1,16 +1,19 @@
-import { Button, Form, Card, Typography, Space, TimePicker, Input, message } from "antd";
+import { Button, Form, Card, Typography, Space, TimePicker, Input, Select, message } from "antd";
 import type { FormProps } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { createShiftAPI } from "@/services/api";
 import type { CreateShiftPayload } from "@/types/shift";
+import { ShiftType } from "@/types/shift";
 import { handleApiSuccess, notifyError } from "@/utils/notification";
 
 const { Title } = Typography;
+const { Option } = Select;
 
 type FieldType = {
     name: string;
+    type?: ShiftType;
     startTime?: Dayjs;
     endTime?: Dayjs;
 };
@@ -30,6 +33,7 @@ const CreateShiftPage: React.FC = () => {
         try {
             const payload: CreateShiftPayload = {
                 name: values.name.trim(),
+                type: values.type,
                 startTime: values.startTime.toISOString(),
                 endTime: values.endTime.toISOString(),
             };
@@ -69,6 +73,18 @@ const CreateShiftPage: React.FC = () => {
                             ]}
                         >
                             <Input placeholder="Ví dụ: Ca sáng" />
+                        </Form.Item>
+
+                        <Form.Item
+                            label="Loại ca"
+                            name="type"
+                            initialValue={ShiftType.FULL_DAY}
+                        >
+                            <Select>
+                                <Option value={ShiftType.MORNING}>Ca sáng</Option>
+                                <Option value={ShiftType.AFTERNOON}>Ca chiều</Option>
+                                <Option value={ShiftType.FULL_DAY}>Ca cả ngày</Option>
+                            </Select>
                         </Form.Item>
 
                         <Form.Item

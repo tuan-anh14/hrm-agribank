@@ -5,10 +5,11 @@ import type { Position, CreatePositionPayload, UpdatePositionPayload } from '@/t
 import type { Attendance, CreateAttendancePayload, UpdateAttendancePayload, QueryAttendanceParams, AttendanceListResponse, CheckInPayload, CheckOutPayload } from '@/types/attendance';
 import type { Shift, ShiftListResponse, QueryShiftParams, CreateShiftPayload, UpdateShiftPayload } from '@/types/shift';
 import type { WorkSchedule, WorkScheduleListResponse, QueryWorkScheduleParams, CreateWorkSchedulePayload, UpdateWorkSchedulePayload, ApproveWorkSchedulePayload } from '@/types/workschedule';
+import type { Payroll, GeneratePayrollPayload, QueryPayrollParams, PayrollListResponse } from '@/types/payroll';
 
 export const loginAPI = (username: string, password: string) => {
     const urlBackend = "/api/v1/auth/login"
-    return axios.post<IBackendRes<ILoginHRM>>(urlBackend, {username, password})
+    return axios.post<IBackendRes<ILoginHRM>>(urlBackend, { username, password })
 }
 
 export const activateAccountAPI = (payload: IActivateAccountReq) => {
@@ -23,7 +24,7 @@ export const activateAccountAPI = (payload: IActivateAccountReq) => {
 export const fetchAccountAPI = () => {
     const urlBackend = "/api/v1/auth/account";
     return axios.get<IBackendRes<IFetchAccount>>(urlBackend);
-  }
+}
 
 export const refreshTokenAPI = () => {
     const urlBackend = "/api/v1/auth/refresh";
@@ -233,4 +234,20 @@ export const getMyWorkSchedulesAPI = (params?: QueryWorkScheduleParams) => {
 export const createMyWorkScheduleAPI = (payload: Omit<CreateWorkSchedulePayload, 'employeeId'>) => {
     const urlBackend = "/api/v1/workschedule/me";
     return axios.post<IBackendRes<WorkSchedule>>(urlBackend, payload);
+}
+
+// Payroll APIs
+export const generatePayrollAPI = (payload: GeneratePayrollPayload) => {
+    const urlBackend = "/api/v1/payroll/generate";
+    return axios.post<IBackendRes<Payroll[]>>(urlBackend, payload);
+}
+
+export const getAllPayrollsAPI = (params?: QueryPayrollParams) => {
+    const urlBackend = "/api/v1/payroll";
+    return axios.get<Payroll[]>(urlBackend, { params });
+}
+
+export const getPayrollByIdAPI = (id: string) => {
+    const urlBackend = `/api/v1/payroll/${id}`;
+    return axios.get<IBackendRes<Payroll>>(urlBackend);
 }
