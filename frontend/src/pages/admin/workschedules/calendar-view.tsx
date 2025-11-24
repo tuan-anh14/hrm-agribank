@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Card, Typography, Space, Button, message, Row, Col, Select, Popover, Radio, Alert, Spin, Grid } from "antd";
+import { Card, Typography, Space, Button, message, Row, Col, Select, Popover, Radio, Alert, Spin, Grid, Tag } from "antd";
 import { LeftOutlined, RightOutlined, SaveOutlined, ReloadOutlined } from "@ant-design/icons";
 import dayjs, { type Dayjs } from "dayjs";
 import { getAllWorkSchedulesAPI, createWorkScheduleAPI, updateWorkScheduleAPI } from "@/services/api";
@@ -35,6 +35,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
     const [saving, setSaving] = useState(false);
     const screens = Grid.useBreakpoint();
     const isMobile = !screens.md;
+    const [filteredWeekday, setFilteredWeekday] = useState<number | null>(null);
 
     // Local state for modified shifts before saving
     // Key: "YYYY-MM-DD", Value: shiftId or "OFF"
@@ -123,6 +124,19 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
 
         return days;
     }, [currentMonth, schedules, employeeId, employees, fullDayShift]);
+
+    const visibleCalendarDays = useMemo(() => {
+        if (filteredWeekday === null) {
+            return calendarDays;
+        }
+        return calendarDays.filter(
+            (day) => day.isCurrentMonth && day.date.day() === filteredWeekday
+        );
+    }, [calendarDays, filteredWeekday]);
+
+    const toggleWeekdayFilter = (weekdayIndex: number) => {
+        setFilteredWeekday((prev) => (prev === weekdayIndex ? null : weekdayIndex));
+    };
 
     const handlePrevMonth = () => setCurrentMonth(currentMonth.subtract(1, "month"));
     const handleNextMonth = () => setCurrentMonth(currentMonth.add(1, "month"));
@@ -241,18 +255,33 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
                             <Alert message="Vui lòng chọn nhân viên để xem và đăng ký lịch" type="info" showIcon />
                         ) : (
                             <div className="calendar-grid">
+                                {filteredWeekday !== null && (
+                                    <div style={{ padding: "8px 12px", borderBottom: "1px solid #f0f0f0", background: "#fff" }}>
+                                        <Space size={8}>
+                                            <Tag color="magenta">Đang lọc: {weekDays[filteredWeekday]}</Tag>
+                                            <Button size="small" onClick={() => setFilteredWeekday(null)}>
+                                                Bỏ lọc
+                                            </Button>
+                                        </Space>
+                                    </div>
+                                )}
                                 {/* Header */}
                                 <Row gutter={[0, 0]} className="calendar-header-row">
                                     {weekDays.map((day, idx) => (
-                                        <Col span={24 / 7} key={idx} className="calendar-header-cell">
-                                            {day}
+                                        <Col span={24 / 7} key={idx}>
+                                            <div
+                                                className={`calendar-header-cell filterable ${filteredWeekday === idx ? "active" : ""}`}
+                                                onClick={() => toggleWeekdayFilter(idx)}
+                                            >
+                                                {day}
+                                            </div>
                                         </Col>
                                     ))}
                                 </Row>
 
                                 {/* Body */}
                                 <Row gutter={[0, 0]} className="calendar-body-row">
-                                    {calendarDays.map((day, idx) => {
+                                    {visibleCalendarDays.map((day, idx) => {
                                         const dateStr = day.date.format("YYYY-MM-DD");
                                         const currentShiftId = modifiedSchedules[dateStr] !== undefined
                                             ? modifiedSchedules[dateStr]

@@ -1,27 +1,32 @@
 .check-in-out-card {
     .today-text {
         display: block;
+        color: #fff;
     }
 
     .check-in-btn {
         background-color: #ff9a9e;
         border-color: #ff9a9e;
+        color: #fff;
         min-width: 120px;
 
         &:hover {
             background-color: #ff7a80;
             border-color: #ff7a80;
+            color: #fff;
         }
     }
 
     .check-out-btn {
         background-color: #c44569;
         border-color: #c44569;
+        color: #fff;
         min-width: 120px;
 
         &:hover {
             background-color: #b03a5a;
             border-color: #b03a5a;
+            color: #fff;
         }
     }
 }
@@ -33,6 +38,10 @@
     padding: 16px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 
+    .weekday-filter-info {
+        margin-bottom: 8px;
+    }
+
     .calendar-header {
         margin-bottom: 8px;
 
@@ -42,6 +51,22 @@
             padding: 8px;
             color: #595959;
             font-size: 14px;
+            user-select: none;
+            transition: all 0.2s;
+
+            &.filterable {
+                cursor: pointer;
+
+                &:hover {
+                    background: #f0f5ff;
+                }
+
+                &.active {
+                    background: #1890ff;
+                    color: #fff;
+                    border-radius: 4px;
+                }
+            }
         }
     }
 

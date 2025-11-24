@@ -14,6 +14,21 @@
                 font-weight: 600;
                 color: #a90000; // Agribank Red
                 border-right: 1px solid #f0f0f0;
+                user-select: none;
+                transition: all 0.2s;
+
+                &.filterable {
+                    cursor: pointer;
+
+                    &:hover {
+                        background-color: #fff5f0;
+                    }
+
+                    &.active {
+                        background-color: #a90000;
+                        color: #fff;
+                    }
+                }
                 
                 &:last-child {
                     border-right: none;

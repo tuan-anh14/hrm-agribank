@@ -92,6 +92,7 @@ const AttendancePage: React.FC = () => {
     const [checkingOut, setCheckingOut] = useState(false);
     const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
+    const [filteredWeekday, setFilteredWeekday] = useState<number | null>(null);
 
     // Lấy thông tin chấm công hôm nay
     const todayAttendance = useMemo(() => {
@@ -129,6 +130,15 @@ const AttendancePage: React.FC = () => {
 
         return days;
     }, [currentMonth, attendances]);
+
+    const visibleCalendarDays = useMemo(() => {
+        if (filteredWeekday === null) {
+            return calendarDays;
+        }
+        return calendarDays.filter(
+            (day) => day.isCurrentMonth && day.date.day() === filteredWeekday
+        );
+    }, [calendarDays, filteredWeekday]);
 
     // Load attendances
     const loadAttendances = async () => {
@@ -219,6 +229,10 @@ const AttendancePage: React.FC = () => {
     };
 
     const weekDays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+
+    const toggleWeekdayFilter = (weekdayIndex: number) => {
+        setFilteredWeekday((prev) => (prev === weekdayIndex ? null : weekdayIndex));
+    };
 
     const handlePrevMonth = () => {
         setCurrentMonth(currentMonth.subtract(1, "month"));
@@ -380,10 +394,25 @@ const AttendancePage: React.FC = () => {
                 ) : (
                     <div className="attendance-calendar">
                         {/* Week Days Header */}
+                        {filteredWeekday !== null && (
+                            <div className="weekday-filter-info">
+                                <Space size={8}>
+                                    <Tag color="magenta">Đang lọc: {weekDays[filteredWeekday]}</Tag>
+                                    <Button size="small" onClick={() => setFilteredWeekday(null)}>
+                                        Bỏ lọc
+                                    </Button>
+                                </Space>
+                            </div>
+                        )}
                         <Row gutter={[8, 8]} className="calendar-header">
                             {weekDays.map((day, index) => (
                                 <Col span={24 / 7} key={index}>
-                                    <div className="calendar-header-cell">{day}</div>
+                                    <div
+                                        className={`calendar-header-cell filterable ${filteredWeekday === index ? "active" : ""}`}
+                                        onClick={() => toggleWeekdayFilter(index)}
+                                    >
+                                        {day}
+                                    </div>
                                 </Col>
                             ))}
                         </Row>
@@ -393,7 +422,7 @@ const AttendancePage: React.FC = () => {
                             gutter={isMobile ? [4, 4] : [8, 8]}
                             className="calendar-body"
                         >
-                            {calendarDays.map((day, index) => {
+                            {visibleCalendarDays.map((day, index) => {
                                 const statusInfo = getStatusInfo(day.attendance);
                                 const hasAttendance = !!day.attendance;
                                 const isAbsent = day.attendance?.status === "ABSENT";
