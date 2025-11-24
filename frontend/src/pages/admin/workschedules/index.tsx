@@ -16,6 +16,7 @@ import {
     Form,
     Input,
     Radio,
+    Grid,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, CheckOutlined, CloseOutlined } from "@ant-design/icons";
@@ -174,6 +175,8 @@ const ListWorkSchedulePage: React.FC = () => {
     const { state, actions } = useWorkSchedules(10);
     const { data, total, page, limit, loading, error, employeeId, shiftId, status } = state;
     const navigate = useNavigate();
+    const screens = Grid.useBreakpoint();
+    const isMobile = !screens.md;
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [shifts, setShifts] = useState<Shift[]>([]);
     const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null]>([null, null]);
@@ -383,17 +386,23 @@ const ListWorkSchedulePage: React.FC = () => {
     return (
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
             <Space
-                align="center"
+                direction={isMobile ? "vertical" : "horizontal"}
+                align={isMobile ? "start" : "center"}
                 style={{ width: "100%", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}
             >
                 <Title level={3} style={{ margin: 0 }}>
                     Quản lý lịch làm việc
                 </Title>
-                <Space wrap>
+                <Space
+                    wrap
+                    direction={isMobile ? "vertical" : "horizontal"}
+                    style={{ width: isMobile ? "100%" : "auto" }}
+                >
                     <Radio.Group
                         value={viewMode}
                         onChange={(e) => setViewMode(e.target.value)}
                         buttonStyle="solid"
+                        style={{ width: isMobile ? "100%" : "auto" }}
                     >
                         <Radio.Button value="LIST">Danh sách</Radio.Button>
                         <Radio.Button value="CALENDAR">Lịch</Radio.Button>
@@ -404,6 +413,7 @@ const ListWorkSchedulePage: React.FC = () => {
                             type="primary"
                             icon={<PlusOutlined />}
                             onClick={() => navigate("/workschedule/create")}
+                            block={isMobile}
                         >
                             Tạo lịch làm việc
                         </Button>
@@ -413,7 +423,19 @@ const ListWorkSchedulePage: React.FC = () => {
 
             {viewMode === "LIST" ? (
                 <>
-                    <Space wrap>
+                    <Card
+                        size="small"
+                        styles={{
+                            body: {
+                                padding: isMobile ? 12 : 16,
+                            },
+                        }}
+                    >
+                        <Space
+                            direction={isMobile ? "vertical" : "horizontal"}
+                            style={{ width: "100%" }}
+                            wrap
+                        >
                         <Select
                             allowClear
                             placeholder="Lọc theo nhân viên"
@@ -421,7 +443,7 @@ const ListWorkSchedulePage: React.FC = () => {
                             onChange={(value) => actions.setEmployeeId(value)}
                             showSearch
                             optionFilterProp="children"
-                            style={{ width: 220 }}
+                                style={{ width: isMobile ? "100%" : 220 }}
                             options={employees.map((emp) => ({
                                 value: emp.id,
                                 label: `${emp.fullName}${emp.email ? ` (${emp.email})` : ""}`,
@@ -434,7 +456,7 @@ const ListWorkSchedulePage: React.FC = () => {
                             onChange={(value) => actions.setShiftId(value)}
                             showSearch
                             optionFilterProp="children"
-                            style={{ width: 200 }}
+                                style={{ width: isMobile ? "100%" : 200 }}
                             options={shifts.map((shift) => ({
                                 value: shift.id,
                                 label: `${shift.name} (${dayjs(shift.startTime).format("HH:mm")}-${dayjs(shift.endTime).format("HH:mm")})`,
@@ -445,7 +467,7 @@ const ListWorkSchedulePage: React.FC = () => {
                             placeholder="Trạng thái"
                             value={status}
                             onChange={(value) => actions.setStatus(value)}
-                            style={{ width: 160 }}
+                                style={{ width: isMobile ? "100%" : 160 }}
                             options={STATUS_OPTIONS.map((option) => ({
                                 value: option.value,
                                 label: option.label,
@@ -467,8 +489,10 @@ const ListWorkSchedulePage: React.FC = () => {
                             }}
                             format="DD/MM/YYYY"
                             placeholder={["Từ ngày", "Đến ngày"]}
+                                style={{ width: isMobile ? "100%" : "auto" }}
                         />
-                    </Space>
+                        </Space>
+                    </Card>
 
                     {error && (
                         <Alert type="error" showIcon message="Lỗi khi tải danh sách lịch làm việc" description={error} />

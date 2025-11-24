@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Card, Typography, Space, Button, message, Row, Col, Select, Popover, Radio, Alert, Spin } from "antd";
+import { Card, Typography, Space, Button, message, Row, Col, Select, Popover, Radio, Alert, Spin, Grid } from "antd";
 import { LeftOutlined, RightOutlined, SaveOutlined, ReloadOutlined } from "@ant-design/icons";
 import dayjs, { type Dayjs } from "dayjs";
 import { getAllWorkSchedulesAPI, createWorkScheduleAPI, updateWorkScheduleAPI } from "@/services/api";
@@ -33,6 +33,8 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
     const [schedules, setSchedules] = useState<WorkSchedule[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const screens = Grid.useBreakpoint();
+    const isMobile = !screens.md;
 
     // Local state for modified shifts before saving
     // Key: "YYYY-MM-DD", Value: shiftId or "OFF"
@@ -187,8 +189,12 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
                 <Spin spinning={loading}>
                     <Space direction="vertical" size={16} style={{ width: "100%" }}>
                         {/* Header Controls */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 16 }}>
-                            <Space>
+                        <Space
+                            direction={isMobile ? "vertical" : "horizontal"}
+                            style={{ width: "100%", justifyContent: "space-between" }}
+                            size={16}
+                        >
+                            <Space wrap style={{ width: isMobile ? "100%" : "auto" }}>
                                 <Button icon={<LeftOutlined />} onClick={handlePrevMonth} />
                                 <Title level={4} style={{ margin: 0 }}>
                                     {currentMonth.format("MMMM YYYY")}
@@ -197,14 +203,18 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
                                 <Button onClick={handleToday}>Hôm nay</Button>
                             </Space>
 
-                            <Space>
+                            <Space
+                                wrap
+                                direction={isMobile ? "vertical" : "horizontal"}
+                                style={{ width: isMobile ? "100%" : "auto" }}
+                            >
                                 <Select
                                     placeholder="Chọn nhân viên"
                                     value={employeeId}
                                     onChange={onEmployeeChange}
                                     showSearch
                                     optionFilterProp="children"
-                                    style={{ width: 250 }}
+                                    style={{ width: isMobile ? "100%" : 250 }}
                                     options={employees.map((emp) => ({
                                         value: emp.id,
                                         label: `${emp.fullName} (${emp.email}) - ${emp.type === 'FULL_TIME' ? 'Full-time' : 'Part-time'}`,
@@ -218,13 +228,14 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
                                         loading={saving}
                                         disabled={!employeeId || Object.keys(modifiedSchedules).length === 0}
                                         style={{ backgroundColor: "#a90000", borderColor: "#a90000" }} // Agribank Red
+                                        block={isMobile}
                                     >
                                         Đăng ký
                                     </Button>
                                 )}
-                                <Button icon={<ReloadOutlined />} onClick={loadSchedules} />
+                                <Button icon={<ReloadOutlined />} onClick={loadSchedules} block={isMobile} />
                             </Space>
-                        </div>
+                        </Space>
 
                         {!employeeId ? (
                             <Alert message="Vui lòng chọn nhân viên để xem và đăng ký lịch" type="info" showIcon />
