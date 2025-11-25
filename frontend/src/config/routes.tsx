@@ -3,40 +3,37 @@ import ProtectedRoute from '@/components/guards/ProtectedRoute';
 import PublicRoute from '@/components/guards/PublicRoute';
 
 // Pages
-import HomePage from '@/pages/client/home';
-import AboutPage from '@/pages/client/about';
+import HomePage from '@/pages/dashboard/home';
+import AboutPage from '@/pages/about/about';
 import LoginPage from '@/pages/auth/login';
-import AttendancePage from '@/pages/client/attendance';
 // Admin Pages
-import ListEmployeePage from '@/pages/admin/employees';
-import CreateEmployeePage from '@/pages/admin/employees/create-employee';
-import UpdateEmployeePage from '@/pages/admin/employees/update-employee';
-import ViewEmployeePage from '@/pages/admin/employees/view-employee';
-import ListDepartmentPage from '@/pages/admin/departments';
-import CreateDepartmentPage from '@/pages/admin/departments/create-department';
-import UpdateDepartmentPage from '@/pages/admin/departments/update-department';
-import ViewDepartmentPage from '@/pages/admin/departments/view-department';
-import ListPositionPage from '@/pages/admin/positions';
-import CreatePositionPage from '@/pages/admin/positions/create-position';
-import UpdatePositionPage from '@/pages/admin/positions/update-position';
-import ViewPositionPage from '@/pages/admin/positions/view-position';
-import ListShiftPage from '@/pages/admin/shifts';
-import CreateShiftPage from '@/pages/admin/shifts/create-shift';
-import UpdateShiftPage from '@/pages/admin/shifts/update-shift';
-import ViewShiftPage from '@/pages/admin/shifts/view-shift';
-import ListWorkSchedulePage from '@/pages/admin/workschedules';
-import CreateWorkSchedulePage from '@/pages/admin/workschedules/create-workschedule';
-import UpdateWorkSchedulePage from '@/pages/admin/workschedules/update-workschedule';
-import ViewWorkSchedulePage from '@/pages/admin/workschedules/view-workschedule';
-import MyWorkSchedulePage from '@/pages/client/my-workschedule';
-import CreateMyWorkSchedulePage from '@/pages/client/create-my-workschedule';
-import ListAttendancePage from '@/pages/admin/attendances';
-import CreateAttendancePage from '@/pages/admin/attendances/create-attendance';
-import UpdateAttendancePage from '@/pages/admin/attendances/update-attendance';
-import ViewAttendancePage from '@/pages/admin/attendances/view-attendance';
+import ListEmployeePage from '@/pages/employee';
+import CreateEmployeePage from '@/pages/employee/create-employee';
+import UpdateEmployeePage from '@/pages/employee/update-employee';
+import ViewEmployeePage from '@/pages/employee/view-employee';
+import ListDepartmentPage from '@/pages/department';
+import CreateDepartmentPage from '@/pages/department/create-department';
+import UpdateDepartmentPage from '@/pages/department/update-department';
+import ViewDepartmentPage from '@/pages/department/view-department';
+import ListPositionPage from '@/pages/position';
+import CreatePositionPage from '@/pages/position/create-position';
+import UpdatePositionPage from '@/pages/position/update-position';
+import ViewPositionPage from '@/pages/position/view-position';
+import ListShiftPage from '@/pages/shift';
+import CreateShiftPage from '@/pages/shift/create-shift';
+import UpdateShiftPage from '@/pages/shift/update-shift';
+import ViewShiftPage from '@/pages/shift/view-shift';
+import ListWorkSchedulePage from '@/pages/work-schedule';
+import CreateWorkSchedulePage from '@/pages/work-schedule/create-workschedule';
+import UpdateWorkSchedulePage from '@/pages/work-schedule/update-workschedule';
+import ViewWorkSchedulePage from '@/pages/work-schedule/view-workschedule';
+import ListAttendancePage from '@/pages/attendance';
+import CreateAttendancePage from '@/pages/attendance/create-attendance';
+import UpdateAttendancePage from '@/pages/attendance/update-attendance';
+import ViewAttendancePage from '@/pages/attendance/view-attendance';
 import PayrollList from '@/pages/payroll/PayrollList';
 import PayrollDetail from '@/pages/payroll/PayrollDetail';
-import MyPayroll from '@/pages/payroll/MyPayroll';
+// import MyPayroll from '@/pages/payroll/MyPayroll'; // Merged into PayrollList
 import RewardPenaltyManager from '@/pages/reward-penalty/RewardPenaltyManager';
 
 // Layout
@@ -78,15 +75,7 @@ export const routes: RouteObject[] = [
         ),
       },
       {
-        path: '/admin/employees',
-        element: (
-          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
-            <ListEmployeePage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: '/admin/create-employee',
+        path: '/employee/create',
         element: (
           <ProtectedRoute requiredRole={['ADMIN']}>
             <CreateEmployeePage />
@@ -94,15 +83,7 @@ export const routes: RouteObject[] = [
         ),
       },
       {
-        path: '/admin/employees/create',
-        element: (
-          <ProtectedRoute requiredRole={['ADMIN']}>
-            <CreateEmployeePage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: '/admin/employees/:id',
+        path: '/employee/:id',
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
             <ViewEmployeePage />
@@ -110,7 +91,7 @@ export const routes: RouteObject[] = [
         ),
       },
       {
-        path: '/admin/employees/:id/edit',
+        path: '/employee/:id/edit',
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
             <UpdateEmployeePage />
@@ -216,11 +197,11 @@ export const routes: RouteObject[] = [
           </ProtectedRoute>
         ),
       },
-      // WorkSchedule routes
+      // WorkSchedule routes (Unified)
       {
         path: '/workschedule',
         element: (
-          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+          <ProtectedRoute>
             <ListWorkSchedulePage />
           </ProtectedRoute>
         ),
@@ -228,7 +209,7 @@ export const routes: RouteObject[] = [
       {
         path: '/workschedule/create',
         element: (
-          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+          <ProtectedRoute>
             <CreateWorkSchedulePage />
           </ProtectedRoute>
         ),
@@ -236,7 +217,7 @@ export const routes: RouteObject[] = [
       {
         path: '/workschedule/:id',
         element: (
-          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+          <ProtectedRoute>
             <ViewWorkSchedulePage />
           </ProtectedRoute>
         ),
@@ -244,41 +225,18 @@ export const routes: RouteObject[] = [
       {
         path: '/workschedule/:id/edit',
         element: (
-          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+          <ProtectedRoute>
             <UpdateWorkSchedulePage />
           </ProtectedRoute>
         ),
       },
-      // Employee Work Schedule routes
-      {
-        path: '/my-workschedule',
-        element: (
-          <ProtectedRoute>
-            <MyWorkSchedulePage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: '/my-workschedule/create',
-        element: (
-          <ProtectedRoute>
-            <CreateMyWorkSchedulePage />
-          </ProtectedRoute>
-        ),
-      },
-      // Attendance routes
+      // Attendance routes (Unified)
       {
         path: '/attendance',
         element: (
           <ProtectedRoute>
-            <AttendancePage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: '/attendance/manage',
-        element: (
-          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            {/* Temporary: still using client page for basic user, admin page for admin until fully merged */}
+            {/* Actually, plan says to unify. For now, let's point to ListAttendancePage and we will refactor it to handle both */}
             <ListAttendancePage />
           </ProtectedRoute>
         ),
@@ -307,12 +265,12 @@ export const routes: RouteObject[] = [
           </ProtectedRoute>
         ),
       },
-      // Payroll routes
+      // Payroll routes (Unified)
       {
-        path: '/my-payroll',
+        path: '/payroll',
         element: (
           <ProtectedRoute>
-            <MyPayroll />
+            <PayrollList />
           </ProtectedRoute>
         ),
       },
@@ -324,17 +282,8 @@ export const routes: RouteObject[] = [
           </ProtectedRoute>
         ),
       },
-      // Admin Payroll routes
       {
-        path: '/admin/payroll',
-        element: (
-          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
-            <PayrollList />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: '/admin/reward-penalty',
+        path: '/reward-penalty',
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
             <RewardPenaltyManager />

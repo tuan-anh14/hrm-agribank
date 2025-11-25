@@ -65,58 +65,36 @@ const AppSidebar = () => {
                     key: '/shift',
                     icon: <FieldTimeOutlined />,
                     label: 'Ca làm việc',
-                },
-                {
-                    key: '/workschedule',
-                    icon: <ScheduleOutlined />,
-                    label: 'Lịch làm',
                 }
             );
-        } else {
-            // Employee items
-            baseItems.push({
-                key: '/my-workschedule',
-                icon: <ScheduleOutlined />,
-                label: 'Lịch làm của tôi',
-            });
         }
 
-        // Common items for all roles
-        // Common items logic
+        // Unified items for all roles
+        baseItems.push(
+            {
+                key: '/workschedule',
+                icon: <ScheduleOutlined />,
+                label: isEmployee ? 'Lịch làm việc' : 'Quản lý lịch làm',
+            },
+            {
+                key: '/attendance',
+                icon: <CalendarOutlined />,
+                label: isEmployee ? 'Chấm công' : 'Quản lý chấm công',
+            },
+            {
+                key: '/payroll',
+                icon: <DollarOutlined />,
+                label: isEmployee ? 'Bảng lương' : 'Quản lý lương',
+            }
+        );
+
+        // Extra Admin/HR items that don't fit into the unified list above or are separate
         if (!isEmployee) {
             baseItems.push(
                 {
-                    key: '/attendance/manage',
-                    icon: <CalendarOutlined />,
-                    label: 'Quản lý chấm công',
-                },
-                {
-                    key: 'payroll-management',
+                    key: '/reward-penalty',
                     icon: <DollarOutlined />,
-                    label: 'Quản lý lương',
-                    children: [
-                        {
-                            key: '/admin/payroll',
-                            label: 'Bảng lương',
-                        },
-                        {
-                            key: '/admin/reward-penalty',
-                            label: 'Khen thưởng / Kỷ luật',
-                        }
-                    ]
-                }
-            );
-        } else {
-            baseItems.push(
-                {
-                    key: '/attendance',
-                    icon: <CalendarOutlined />,
-                    label: 'Chấm công',
-                },
-                {
-                    key: '/payroll',
-                    icon: <DollarOutlined />,
-                    label: 'Lương của tôi',
+                    label: 'Khen thưởng / Kỷ luật',
                 }
             );
         }
