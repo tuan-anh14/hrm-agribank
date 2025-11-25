@@ -19,7 +19,7 @@ const RewardPenaltyManager: React.FC = () => {
         setLoading(true);
         try {
             const res = await getAllRewardPenaltiesAPI();
-            setData(data);
+            setData(res);
         } catch (error) {
             message.error('Failed to fetch data');
         } finally {
