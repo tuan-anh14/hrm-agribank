@@ -21,7 +21,7 @@ const RewardPenaltyManager: React.FC = () => {
             const res = await getAllRewardPenaltiesAPI();
             setData(res);
         } catch (error) {
-            message.error('Failed to fetch data');
+            message.error('Lấy dữ liệu thất bại');
         } finally {
             setLoading(false);
         }
@@ -44,34 +44,34 @@ const RewardPenaltyManager: React.FC = () => {
     const handleCreate = async (values: CreateRewardPenaltyDto) => {
         try {
             await createRewardPenaltyAPI(values);
-            message.success('Created successfully');
+            message.success('Tạo thành công');
             setIsModalOpen(false);
             form.resetFields();
             fetchData();
         } catch (error) {
-            message.error('Failed to create');
+            message.error('Tạo thất bại');
         }
     };
 
     const handleDelete = async (id: string) => {
         try {
             await deleteRewardPenaltyAPI(id);
-            message.success('Deleted successfully');
+            message.success('Xóa thành công');
             fetchData();
         } catch (error) {
-            message.error('Failed to delete');
+            message.error('Xóa thất bại');
         }
     };
 
     const columns = [
         {
-            title: 'Employee',
+            title: 'Nhân viên',
             dataIndex: ['employee', 'fullName'],
             key: 'employeeName',
             render: (_: string, record: RewardPenalty) => `${record.employee?.fullName} (${record.employee?.employeeCode})`
         },
         {
-            title: 'Type',
+            title: 'Loại',
             dataIndex: 'type',
             key: 'type',
             render: (type: string) => (
@@ -81,27 +81,27 @@ const RewardPenaltyManager: React.FC = () => {
             )
         },
         {
-            title: 'Amount',
+            title: 'Số tiền',
             dataIndex: 'amount',
             key: 'amount',
             render: (val: number) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val)
         },
         {
-            title: 'Reason',
+            title: 'Lý do',
             dataIndex: 'reason',
             key: 'reason',
         },
         {
-            title: 'Date',
+            title: 'Ngày tạo',
             dataIndex: 'createdAt',
             key: 'createdAt',
             render: (date: string) => dayjs(date).format('DD/MM/YYYY HH:mm')
         },
         {
-            title: 'Action',
+            title: 'Hành động',
             key: 'action',
             render: (_: string, record: RewardPenalty) => (
-                <Popconfirm title="Sure to delete?" onConfirm={() => handleDelete(record.id)}>
+                <Popconfirm title="Bạn có chắc chắn muốn xóa?" onConfirm={() => handleDelete(record.id)}>
                     <Button danger icon={<DeleteOutlined />} size="small" />
                 </Popconfirm>
             )
@@ -111,9 +111,9 @@ const RewardPenaltyManager: React.FC = () => {
     return (
         <div style={{ padding: 20 }}>
             <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-                <h2>Reward & Penalty Management</h2>
+                <h2>Quản lý Khen thưởng / Kỷ luật</h2>
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
-                    Add New
+                    Thêm mới
                 </Button>
             </div>
 
@@ -125,13 +125,13 @@ const RewardPenaltyManager: React.FC = () => {
             />
 
             <Modal
-                title="Add Reward/Penalty"
+                title="Thêm Khen thưởng / Kỷ luật"
                 open={isModalOpen}
                 onCancel={() => setIsModalOpen(false)}
                 onOk={() => form.submit()}
             >
                 <Form form={form} layout="vertical" onFinish={handleCreate}>
-                    <Form.Item name="employeeId" label="Employee" rules={[{ required: true }]}>
+                    <Form.Item name="employeeId" label="Nhân viên" rules={[{ required: true }]}>
                         <Select showSearch optionFilterProp="children">
                             {employees.map(emp => (
                                 <Select.Option key={emp.id} value={emp.id}>
@@ -140,21 +140,21 @@ const RewardPenaltyManager: React.FC = () => {
                             ))}
                         </Select>
                     </Form.Item>
-                    <Form.Item name="type" label="Type" rules={[{ required: true }]}>
+                    <Form.Item name="type" label="Loại" rules={[{ required: true }]}>
                         <Select>
-                            <Select.Option value={RewardPenaltyType.REWARD}>Reward</Select.Option>
-                            <Select.Option value={RewardPenaltyType.PENALTY}>Penalty</Select.Option>
+                            <Select.Option value={RewardPenaltyType.REWARD}>Khen thưởng</Select.Option>
+                            <Select.Option value={RewardPenaltyType.PENALTY}>Kỷ luật</Select.Option>
                         </Select>
                     </Form.Item>
-                    <Form.Item name="amount" label="Amount" rules={[{ required: true }]}>
+                    <Form.Item name="amount" label="Số tiền" rules={[{ required: true }]}>
                         <InputNumber style={{ width: '100%' }} formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} parser={(displayValue) => displayValue?.replace(/\$\s?|(,*)/g, '') as unknown as number} />
                     </Form.Item>
-                    <Form.Item name="reason" label="Reason">
+                    <Form.Item name="reason" label="Lý do">
                         <Input.TextArea />
                     </Form.Item>
-                </Form>
-            </Modal>
-        </div>
+                </Form >
+            </Modal >
+        </div >
     );
 };
 

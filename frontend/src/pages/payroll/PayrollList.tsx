@@ -24,7 +24,7 @@ const PayrollList: React.FC = () => {
             // @ts-ignore
             setData(res.data || res);
         } catch (error) {
-            message.error('Failed to fetch payrolls');
+            message.error('Lấy dữ liệu thất bại');
         } finally {
             setLoading(false);
         }
@@ -39,39 +39,39 @@ const PayrollList: React.FC = () => {
             const m = values.date.month() + 1;
             const y = values.date.year();
             await generatePayrollAPI({ month: m, year: y });
-            message.success('Payroll generated successfully');
+            message.success('Tạo bảng lương thành công');
             setIsGenerateModalOpen(false);
             setMonth(m);
             setYear(y);
             fetchData();
         } catch (error) {
-            message.error('Failed to generate payroll');
+            message.error('Tạo bảng lương thất bại');
         }
     };
 
     const handleStatusUpdate = async (id: string, status: string) => {
         try {
             await updatePayrollStatusAPI(id, status);
-            message.success(`Payroll ${status} successfully`);
+            message.success(`Cập nhật trạng thái ${status} thành công`);
             fetchData();
         } catch (error) {
-            message.error('Failed to update status');
+            message.error('Cập nhật trạng thái thất bại');
         }
     };
 
     const handlePay = async (id: string) => {
         try {
             await payPayrollAPI(id);
-            message.success('Payment processed successfully');
+            message.success('Thanh toán thành công');
             fetchData();
         } catch (error) {
-            message.error('Failed to process payment');
+            message.error('Thanh toán thất bại');
         }
     };
 
     const columns = [
         {
-            title: 'Employee',
+            title: 'Nhân viên',
             dataIndex: ['employee', 'fullName'],
             key: 'employeeName',
             render: (_: string, record: Payroll) => (
@@ -82,12 +82,12 @@ const PayrollList: React.FC = () => {
             )
         },
         {
-            title: 'Period',
+            title: 'Kỳ lương',
             key: 'period',
             render: (_: any, record: Payroll) => `${record.month}/${record.year}`
         },
         {
-            title: 'Total Salary',
+            title: 'Tổng lương',
             dataIndex: 'totalSalary',
             key: 'totalSalary',
             render: (val: number) => (
@@ -97,7 +97,7 @@ const PayrollList: React.FC = () => {
             )
         },
         {
-            title: 'Status',
+            title: 'Trạng thái',
             dataIndex: 'status',
             key: 'status',
             render: (status: string) => {
@@ -109,7 +109,7 @@ const PayrollList: React.FC = () => {
             }
         },
         {
-            title: 'Action',
+            title: 'Hành động',
             key: 'action',
             render: (_: any, record: Payroll) => (
                 <Space>
@@ -117,18 +117,18 @@ const PayrollList: React.FC = () => {
 
                     {record.status === 'pending' && (
                         <>
-                            <Popconfirm title="Approve this payroll?" onConfirm={() => handleStatusUpdate(record.id, 'approved')}>
+                            <Popconfirm title="Duyệt bảng lương này?" onConfirm={() => handleStatusUpdate(record.id, 'approved')}>
                                 <Button type="primary" icon={<CheckOutlined />} size="small" ghost />
                             </Popconfirm>
-                            <Popconfirm title="Reject this payroll?" onConfirm={() => handleStatusUpdate(record.id, 'rejected')}>
+                            <Popconfirm title="Từ chối bảng lương này?" onConfirm={() => handleStatusUpdate(record.id, 'rejected')}>
                                 <Button danger icon={<CloseOutlined />} size="small" ghost />
                             </Popconfirm>
                         </>
                     )}
 
                     {record.status === 'approved' && (
-                        <Popconfirm title="Mark as Paid?" onConfirm={() => handlePay(record.id)}>
-                            <Button type="primary" icon={<DollarOutlined />} size="small">Pay</Button>
+                        <Popconfirm title="Xác nhận đã thanh toán?" onConfirm={() => handlePay(record.id)}>
+                            <Button type="primary" icon={<DollarOutlined />} size="small">Thanh toán</Button>
                         </Popconfirm>
                     )}
                 </Space>
@@ -139,11 +139,11 @@ const PayrollList: React.FC = () => {
     return (
         <div style={{ padding: 20 }}>
             <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2>Payroll Management</h2>
+                <h2>Quản lý Bảng lương</h2>
                 <Space>
                     <Select value={month} onChange={setMonth} style={{ width: 100 }}>
                         {Array.from({ length: 12 }, (_, i) => (
-                            <Select.Option key={i + 1} value={i + 1}>Month {i + 1}</Select.Option>
+                            <Select.Option key={i + 1} value={i + 1}>Tháng {i + 1}</Select.Option>
                         ))}
                     </Select>
                     <Select value={year} onChange={setYear} style={{ width: 100 }}>
@@ -151,7 +151,7 @@ const PayrollList: React.FC = () => {
                         <Select.Option value={2025}>2025</Select.Option>
                     </Select>
                     <Button type="primary" icon={<CalculatorOutlined />} onClick={() => setIsGenerateModalOpen(true)}>
-                        Generate Payroll
+                        Tạo bảng lương
                     </Button>
                 </Space>
             </div>
@@ -164,18 +164,18 @@ const PayrollList: React.FC = () => {
             />
 
             <Modal
-                title="Generate Payroll"
+                title="Tạo bảng lương"
                 open={isGenerateModalOpen}
                 onCancel={() => setIsGenerateModalOpen(false)}
                 onOk={() => generateForm.submit()}
             >
                 <Form form={generateForm} layout="vertical" onFinish={handleGenerate}>
-                    <Form.Item name="date" label="Select Month/Year" rules={[{ required: true }]}>
+                    <Form.Item name="date" label="Chọn Tháng/Năm" rules={[{ required: true }]}>
                         <DatePicker picker="month" style={{ width: '100%' }} />
                     </Form.Item>
-                </Form>
-            </Modal>
-        </div>
+                </Form >
+            </Modal >
+        </div >
     );
 };
 
