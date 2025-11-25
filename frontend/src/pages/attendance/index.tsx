@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Card, Table, Select, Typography, Space, Alert, Spin, Button, Popconfirm, Tag, DatePicker } from "antd";
+import { Card, Table, Select, Typography, Space, Alert, Spin, Button, Popconfirm, Tag, DatePicker, Radio } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, CalendarOutlined } from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, EyeOutlined, PlusOutlined, CalendarOutlined, UnorderedListOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import dayjs, { type Dayjs } from "dayjs";
 import { getAllAttendancesAPI, getMyAttendancesAPI, deleteAttendanceAPI, getAllEmployeesAPI } from "@/services/api";
@@ -9,6 +9,7 @@ import type { Attendance } from "@/types/attendance";
 import type { Employee } from "@/types/employee";
 import { useCurrentApp } from "@/components/context/app.context";
 import { handleApiSuccess, notifyError } from "@/utils/notification";
+import AttendanceCalendar from "./AttendanceCalendar";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -199,6 +200,7 @@ const ListAttendancePage: React.FC = () => {
     const navigate = useNavigate();
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null]>([null, null]);
+    const [viewMode, setViewMode] = useState<"LIST" | "CALENDAR">(isEmployee ? "CALENDAR" : "LIST");
 
     useEffect(() => {
         // Chỉ load employees nếu không phải EMPLOYEE (Admin/HR cần filter)
@@ -399,15 +401,18 @@ const ListAttendancePage: React.FC = () => {
                 style={{ width: "100%", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}
             >
                 <Title level={3} style={{ margin: 0 }}>
-                    Quản lý chấm công
+                    {isEmployee ? "Chấm công của tôi" : "Quản lý chấm công"}
                 </Title>
-                <Button
-                    icon={<CalendarOutlined />}
-                    onClick={() => navigate("/attendance")}
-                >
-                    Xem Calendar
-                </Button>
                 <Space wrap>
+                    <Radio.Group
+                        value={viewMode}
+                        onChange={(e) => setViewMode(e.target.value)}
+                        buttonStyle="solid"
+                    >
+                        <Radio.Button value="LIST"><UnorderedListOutlined /> Danh sách</Radio.Button>
+                        <Radio.Button value="CALENDAR"><CalendarOutlined /> Lịch</Radio.Button>
+                    </Radio.Group>
+
                     {!isEmployee && (
                         <Button
                             type="primary"
@@ -417,76 +422,87 @@ const ListAttendancePage: React.FC = () => {
                             Tạo chấm công
                         </Button>
                     )}
-                    {!isEmployee && (
-                        <Select
-                            value={employeeId || undefined}
-                            onChange={(v) => actions.setEmployeeId(v || undefined)}
-                            placeholder="Lọc theo nhân viên"
-                            allowClear
-                            showSearch
-                            optionFilterProp="children"
-                            style={{ width: 200 }}
-                            filterOption={(input, option) =>
-                                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                            }
-                            options={employees.map(emp => ({
-                                value: emp.id,
-                                label: `${emp.fullName}${emp.email ? ` (${emp.email})` : ''}`,
-                            }))}
-                        />
-                    )}
-                    <RangePicker
-                        value={dateRange}
-                        onChange={handleDateRangeChange}
-                        format="DD/MM/YYYY"
-                        placeholder={['Từ ngày', 'Đến ngày']}
-                    />
-                    <Select
-                        value={limit}
-                        onChange={(v) => actions.setLimit(v)}
-                        style={{ width: 120 }}
-                        options={[
-                            { value: 10, label: "10 / trang" },
-                            { value: 20, label: "20 / trang" },
-                            { value: 50, label: "50 / trang" },
-                            { value: 100, label: "100 / trang" },
-                        ]}
-                    />
                 </Space>
             </Space>
 
-            {error && (
-                <Alert type="error" showIcon message="Lỗi khi tải danh sách chấm công" description={error} />
-            )}
+            {viewMode === "LIST" ? (
+                <>
+                    <Card size="small">
+                        <Space wrap>
+                            {!isEmployee && (
+                                <Select
+                                    value={employeeId || undefined}
+                                    onChange={(v) => actions.setEmployeeId(v || undefined)}
+                                    placeholder="Lọc theo nhân viên"
+                                    allowClear
+                                    showSearch
+                                    optionFilterProp="children"
+                                    style={{ width: 200 }}
+                                    filterOption={(input, option) =>
+                                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                                    }
+                                    options={employees.map(emp => ({
+                                        value: emp.id,
+                                        label: `${emp.fullName}${emp.email ? ` (${emp.email})` : ''}`,
+                                    }))}
+                                />
+                            )}
+                            <RangePicker
+                                value={dateRange}
+                                onChange={handleDateRangeChange}
+                                format="DD/MM/YYYY"
+                                placeholder={['Từ ngày', 'Đến ngày']}
+                            />
+                            <Select
+                                value={limit}
+                                onChange={(v) => actions.setLimit(v)}
+                                style={{ width: 120 }}
+                                options={[
+                                    { value: 10, label: "10 / trang" },
+                                    { value: 20, label: "20 / trang" },
+                                    { value: 50, label: "50 / trang" },
+                                    { value: 100, label: "100 / trang" },
+                                ]}
+                            />
+                        </Space>
+                    </Card>
 
-            <Card styles={{ body: { padding: 0 } }}>
-                <Table<Attendance>
-                    rowKey="id"
-                    columns={columns}
-                    dataSource={data}
-                    loading={{ spinning: loading, indicator: <Spin /> }}
-                    pagination={{
-                        current: page,
-                        pageSize: limit,
-                        total,
-                        showSizeChanger: true,
-                        showTotal: (t, range) => `${range[0]}-${range[1]} của ${t}`,
-                        responsive: true,
-                    }}
-                    onChange={(pagination) => {
-                        if (pagination.current && pagination.current !== page) {
-                            actions.setPage(pagination.current);
-                        }
-                        if (pagination.pageSize && pagination.pageSize !== limit) {
-                            actions.setLimit(pagination.pageSize);
-                        }
-                    }}
-                    scroll={{ x: 'max-content' }}
-                />
-            </Card>
+                    {error && (
+                        <Alert type="error" showIcon message="Lỗi khi tải danh sách chấm công" description={error} />
+                    )}
 
-            {!loading && !error && data.length === 0 && (
-                <Text type="secondary">Không tìm thấy chấm công nào</Text>
+                    <Card styles={{ body: { padding: 0 } }}>
+                        <Table<Attendance>
+                            rowKey="id"
+                            columns={columns}
+                            dataSource={data}
+                            loading={{ spinning: loading, indicator: <Spin /> }}
+                            pagination={{
+                                current: page,
+                                pageSize: limit,
+                                total,
+                                showSizeChanger: true,
+                                showTotal: (t, range) => `${range[0]}-${range[1]} của ${t}`,
+                                responsive: true,
+                            }}
+                            onChange={(pagination) => {
+                                if (pagination.current && pagination.current !== page) {
+                                    actions.setPage(pagination.current);
+                                }
+                                if (pagination.pageSize && pagination.pageSize !== limit) {
+                                    actions.setLimit(pagination.pageSize);
+                                }
+                            }}
+                            scroll={{ x: 'max-content' }}
+                        />
+                    </Card>
+
+                    {!loading && !error && data.length === 0 && (
+                        <Text type="secondary">Không tìm thấy chấm công nào</Text>
+                    )}
+                </>
+            ) : (
+                <AttendanceCalendar employeeId={isEmployee ? undefined : employeeId} />
             )}
         </Space>
     );

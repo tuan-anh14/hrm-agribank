@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Card, Typography, Space, Button, Spin, Alert, message, Tag, Row, Col, Modal, Badge } from "antd";
-import { LeftOutlined, RightOutlined, ClockCircleOutlined, TableOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { LeftOutlined, RightOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import dayjs, { type Dayjs } from "dayjs";
-import { getMyAttendancesAPI, checkInAPI, checkOutAPI } from "@/services/api";
+import { getMyAttendancesAPI, checkInAPI, checkOutAPI, getAllAttendancesAPI } from "@/services/api";
 import type { Attendance } from "@/types/attendance";
 import { useCurrentApp } from "@/components/context/app.context";
 import { useIsMobile } from "@/hooks/useResponsive";
-import "./attendance.scss";
+import "./attendance-calendar.scss";
 
 const { Title, Text } = Typography;
 
@@ -18,12 +17,16 @@ interface CalendarDay {
     isToday: boolean;
 }
 
+interface AttendanceCalendarProps {
+    employeeId?: string; // If provided, view that employee's attendance (Admin view)
+}
+
 const getStatusInfo = (attendance: Attendance | undefined) => {
     if (!attendance) return null;
 
     const checkIn = attendance.checkInTime ? dayjs(attendance.checkInTime) : null;
     const checkOut = attendance.checkOutTime ? dayjs(attendance.checkOutTime) : null;
-    
+
     let statusText = "";
     let statusColor = "";
     let hours = 0;
@@ -34,14 +37,9 @@ const getStatusInfo = (attendance: Attendance | undefined) => {
 
     if (checkIn && checkOut) {
         hours = checkOut.diff(checkIn, "hour", true);
-        
-        // Kiểm tra đi muộn (sau 9:00)
+
         const lateCheckIn = checkIn.hour() > 9 || (checkIn.hour() === 9 && checkIn.minute() > 0);
-        
-        // Kiểm tra về sớm (trước 17:00)
         const earlyCheckOut = checkOut.hour() < 17 || (checkOut.hour() === 17 && checkOut.minute() < 30);
-        
-        // Kiểm tra tăng ca (sau 17:30)
         const overtime = checkOut.hour() > 17 || (checkOut.hour() === 17 && checkOut.minute() >= 30);
 
         if (lateCheckIn && earlyCheckOut) {
@@ -79,11 +77,9 @@ const getStatusInfo = (attendance: Attendance | undefined) => {
     return { text: statusText, color: statusColor, hours };
 };
 
-const AttendancePage: React.FC = () => {
+const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({ employeeId }) => {
     const { user } = useCurrentApp();
-    const navigate = useNavigate();
     const isMobile = useIsMobile();
-    const isEmployee = user?.role === 'EMPLOYEE';
     const [currentMonth, setCurrentMonth] = useState<Dayjs>(dayjs());
     const [attendances, setAttendances] = useState<Attendance[]>([]);
     const [loading, setLoading] = useState(false);
@@ -93,6 +89,9 @@ const AttendancePage: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<Dayjs | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [filteredWeekday, setFilteredWeekday] = useState<number | null>(null);
+
+    // Determine if we are viewing our own attendance
+    const isMyAttendance = !employeeId || employeeId === user?.id;
 
     // Lấy thông tin chấm công hôm nay
     const todayAttendance = useMemo(() => {
@@ -106,8 +105,8 @@ const AttendancePage: React.FC = () => {
     const calendarDays = useMemo(() => {
         const startOfMonth = currentMonth.startOf("month");
         const endOfMonth = currentMonth.endOf("month");
-        const startDate = startOfMonth.startOf("week"); // Bắt đầu từ Chủ nhật
-        const endDate = endOfMonth.endOf("week"); // Kết thúc ở Thứ bảy
+        const startDate = startOfMonth.startOf("week");
+        const endDate = endOfMonth.endOf("week");
 
         const days: CalendarDay[] = [];
         let currentDate = startDate;
@@ -148,13 +147,20 @@ const AttendancePage: React.FC = () => {
         try {
             const startDate = currentMonth.startOf("month").format("YYYY-MM-DD");
             const endDate = currentMonth.endOf("month").format("YYYY-MM-DD");
-
-            const res = await getMyAttendancesAPI({
+            const params = {
                 startDate,
                 endDate,
                 page: 1,
                 limit: 100,
-            });
+            };
+
+            let res;
+            if (isMyAttendance) {
+                res = await getMyAttendancesAPI(params);
+            } else {
+                // Admin viewing specific employee
+                res = await getAllAttendancesAPI({ ...params, employeeId });
+            }
 
             if (res && typeof res === "object" && "data" in res) {
                 setAttendances(res.data || []);
@@ -171,10 +177,11 @@ const AttendancePage: React.FC = () => {
 
     useEffect(() => {
         loadAttendances();
-    }, [currentMonth]);
+    }, [currentMonth, employeeId]);
 
     // Check-in
     const handleCheckIn = async () => {
+        if (!isMyAttendance) return; // Only self can check in
         if (todayAttendance?.checkInTime) {
             message.warning("Bạn đã check-in hôm nay rồi!");
             return;
@@ -200,6 +207,7 @@ const AttendancePage: React.FC = () => {
 
     // Check-out
     const handleCheckOut = async () => {
+        if (!isMyAttendance) return;
         if (!todayAttendance?.checkInTime) {
             message.warning("Vui lòng check-in trước khi check-out!");
             return;
@@ -234,17 +242,9 @@ const AttendancePage: React.FC = () => {
         setFilteredWeekday((prev) => (prev === weekdayIndex ? null : weekdayIndex));
     };
 
-    const handlePrevMonth = () => {
-        setCurrentMonth(currentMonth.subtract(1, "month"));
-    };
-
-    const handleNextMonth = () => {
-        setCurrentMonth(currentMonth.add(1, "month"));
-    };
-
-    const handleToday = () => {
-        setCurrentMonth(dayjs());
-    };
+    const handlePrevMonth = () => setCurrentMonth(currentMonth.subtract(1, "month"));
+    const handleNextMonth = () => setCurrentMonth(currentMonth.add(1, "month"));
+    const handleToday = () => setCurrentMonth(dayjs());
 
     const handleDateClick = (day: CalendarDay) => {
         if (day.attendance) {
@@ -262,31 +262,8 @@ const AttendancePage: React.FC = () => {
     }, [selectedDate, attendances]);
 
     return (
-        <div style={{ padding: isMobile ? "12px" : "24px", maxWidth: "1400px", margin: "0 auto" }}>
+        <div className="attendance-calendar-container">
             <Space direction="vertical" size={16} style={{ width: "100%" }}>
-                {/* Header */}
-                <Card>
-                    <Space
-                        direction={isMobile ? "vertical" : "horizontal"}
-                        style={{ width: "100%", justifyContent: "space-between" }}
-                        wrap
-                    >
-                        <Title level={3} style={{ margin: 0 }}>
-                            Chấm công
-                        </Title>
-                        <Space wrap>
-                            {!isEmployee && (
-                                <Button
-                                    icon={<TableOutlined />}
-                                    onClick={() => navigate("/attendance/manage")}
-                                >
-                                    {isMobile ? "Quản lý" : "Quản lý chấm công"}
-                                </Button>
-                            )}
-                        </Space>
-                    </Space>
-                </Card>
-
                 {/* Calendar Navigation */}
                 <Card>
                     <Space
@@ -302,7 +279,7 @@ const AttendancePage: React.FC = () => {
                         <Title level={4} style={{ margin: 0 }}>
                             {currentMonth.format("MMMM YYYY")}
                         </Title>
-                        <Space>
+                        <Space wrap>
                             <Tag color="green">Đúng giờ</Tag>
                             <Tag color="orange">Đi muộn/Về sớm</Tag>
                             <Tag color="blue">Tăng ca</Tag>
@@ -311,10 +288,9 @@ const AttendancePage: React.FC = () => {
                     </Space>
                 </Card>
 
-                {/* Check-in/Check-out Buttons */}
-                <Card
-                    className="check-in-out-card"
-                >
+                {/* Check-in/Check-out Buttons - Only show for My Attendance */}
+                {isMyAttendance && (
+                    <Card className="check-in-out-card">
                         <Space
                             direction="vertical"
                             size={isMobile ? 12 : 16}
@@ -323,7 +299,7 @@ const AttendancePage: React.FC = () => {
                             <Text className="today-text" style={{ fontSize: isMobile ? 14 : 16 }}>
                                 Hôm nay: {dayjs().format("DD/MM/YYYY")}
                             </Text>
-                            <Space 
+                            <Space
                                 direction={isMobile ? "vertical" : "horizontal"}
                                 size={isMobile ? 12 : 16}
                                 style={{ width: "100%" }}
@@ -357,7 +333,7 @@ const AttendancePage: React.FC = () => {
                                 </Button>
                             </Space>
                             {todayAttendance && (
-                                <Space 
+                                <Space
                                     direction={isMobile ? "vertical" : "horizontal"}
                                     size={8}
                                     wrap
@@ -374,8 +350,9 @@ const AttendancePage: React.FC = () => {
                                     )}
                                 </Space>
                             )}
-                    </Space>
-                </Card>
+                        </Space>
+                    </Card>
+                )}
 
                 {error && (
                     <Alert
@@ -430,11 +407,9 @@ const AttendancePage: React.FC = () => {
                                 return (
                                     <Col span={24 / 7} key={index}>
                                         <div
-                                            className={`calendar-day ${
-                                                !day.isCurrentMonth ? "other-month" : ""
-                                            } ${day.isToday ? "today" : ""} ${
-                                                hasAttendance ? "has-attendance" : ""
-                                            } ${isAbsent ? "absent" : ""}`}
+                                            className={`calendar-day ${!day.isCurrentMonth ? "other-month" : ""
+                                                } ${day.isToday ? "today" : ""} ${hasAttendance ? "has-attendance" : ""
+                                                } ${isAbsent ? "absent" : ""}`}
                                             onClick={() => handleDateClick(day)}
                                             style={{ cursor: hasAttendance ? "pointer" : "default" }}
                                         >
@@ -548,4 +523,4 @@ const AttendancePage: React.FC = () => {
     );
 };
 
-export default AttendancePage;
+export default AttendanceCalendar;

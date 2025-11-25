@@ -43,8 +43,9 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
 
     const isAdmin = user?.role === "ADMIN";
     const isHR = user?.role === "HR";
-    // Allow Admin and HR to edit. Employee is read-only.
-    const canEdit = isAdmin || isHR;
+    const isEmployee = !isAdmin && !isHR;
+    // Allow Admin/HR to edit any. Employee can edit their own.
+    const canEdit = isAdmin || isHR || (isEmployee && employeeId === user?.id);
 
     const fullDayShift = useMemo(() => shifts.find(s => s.type === ShiftType.FULL_DAY), [shifts]);
 
@@ -222,18 +223,20 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
                                 direction={isMobile ? "vertical" : "horizontal"}
                                 style={{ width: isMobile ? "100%" : "auto" }}
                             >
-                                <Select
-                                    placeholder="Chọn nhân viên"
-                                    value={employeeId}
-                                    onChange={onEmployeeChange}
-                                    showSearch
-                                    optionFilterProp="children"
-                                    style={{ width: isMobile ? "100%" : 250 }}
-                                    options={employees.map((emp) => ({
-                                        value: emp.id,
-                                        label: `${emp.fullName} (${emp.email}) - ${emp.type === 'FULL_TIME' ? 'Full-time' : 'Part-time'}`,
-                                    }))}
-                                />
+                                {!isEmployee && (
+                                    <Select
+                                        placeholder="Chọn nhân viên"
+                                        value={employeeId}
+                                        onChange={onEmployeeChange}
+                                        showSearch
+                                        optionFilterProp="children"
+                                        style={{ width: isMobile ? "100%" : 250 }}
+                                        options={employees.map((emp) => ({
+                                            value: emp.id,
+                                            label: `${emp.fullName} (${emp.email}) - ${emp.type === 'FULL_TIME' ? 'Full-time' : 'Part-time'}`,
+                                        }))}
+                                    />
+                                )}
                                 {canEdit && (
                                     <Button
                                         type="primary"
@@ -293,9 +296,21 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
                                             const shift = shifts.find(s => s.id === currentShiftId);
                                             if (shift) {
                                                 displayContent = (
-                                                    <div className="shift-tag">
-                                                        <strong>{shift.name}</strong>
-                                                        <div style={{ fontSize: 10 }}>
+                                                    <div className="shift-tag" style={{
+                                                        backgroundColor: day.schedule?.status === 'APPROVED' ? '#f6ffed' :
+                                                            day.schedule?.status === 'REJECTED' ? '#fff1f0' : '#fff7e6',
+                                                        border: `1px solid ${day.schedule?.status === 'APPROVED' ? '#b7eb8f' :
+                                                            day.schedule?.status === 'REJECTED' ? '#ffa39e' : '#ffd591'}`,
+                                                        borderRadius: 4,
+                                                        padding: 2
+                                                    }}>
+                                                        <strong style={{
+                                                            color: day.schedule?.status === 'APPROVED' ? '#389e0d' :
+                                                                day.schedule?.status === 'REJECTED' ? '#cf1322' : '#d46b08'
+                                                        }}>
+                                                            {shift.name}
+                                                        </strong>
+                                                        <div style={{ fontSize: 10, color: '#666' }}>
                                                             {dayjs(shift.startTime).format("HH:mm")} - {dayjs(shift.endTime).format("HH:mm")}
                                                         </div>
                                                     </div>

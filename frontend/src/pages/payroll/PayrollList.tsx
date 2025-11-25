@@ -5,13 +5,20 @@ import { getAllPayrollsAPI, generatePayrollAPI, updatePayrollStatusAPI, payPayro
 import type { Payroll } from '@/types/payroll';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
+import { useCurrentApp } from '@/components/context/app.context';
 
 const PayrollList: React.FC = () => {
+    const { user } = useCurrentApp();
     const [data, setData] = useState<Payroll[]>([]);
     const [loading, setLoading] = useState(false);
     const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
     const [generateForm] = Form.useForm();
     const navigate = useNavigate();
+
+    const isAdmin = user?.role === "ADMIN";
+    const isHR = user?.role === "HR";
+    const isEmployee = !isAdmin && !isHR;
+    const canAction = isAdmin || isHR;
 
     // Filters
     const [month, setMonth] = useState<number>(dayjs().month() + 1);
@@ -20,7 +27,11 @@ const PayrollList: React.FC = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const res = await getAllPayrollsAPI({ month, year });
+            const params: any = { month, year };
+            if (isEmployee && user?.id) {
+                params.employeeId = user.id;
+            }
+            const res = await getAllPayrollsAPI(params);
             // @ts-ignore
             setData(res.data || res);
         } catch (error) {
@@ -31,8 +42,10 @@ const PayrollList: React.FC = () => {
     };
 
     useEffect(() => {
-        fetchData();
-    }, [month, year]);
+        if (user) {
+            fetchData();
+        }
+    }, [month, year, user]);
 
     const handleGenerate = async (values: any) => {
         try {
@@ -74,6 +87,7 @@ const PayrollList: React.FC = () => {
             title: 'Nhân viên',
             dataIndex: ['employee', 'fullName'],
             key: 'employeeName',
+            hidden: isEmployee,
             render: (_: string, record: Payroll) => (
                 <div>
                     <div>{record.employee?.fullName}</div>
@@ -113,9 +127,11 @@ const PayrollList: React.FC = () => {
             key: 'action',
             render: (_: any, record: Payroll) => (
                 <Space>
-                    <Button icon={<EyeOutlined />} size="small" onClick={() => navigate(`/payroll/${record.id}`)} />
+                    <Button icon={<EyeOutlined />} size="small" onClick={() => navigate(`/payroll/${record.id}`)}>
+                        {isEmployee ? "Xem chi tiết" : ""}
+                    </Button>
 
-                    {record.status === 'pending' && (
+                    {canAction && record.status === 'pending' && (
                         <>
                             <Popconfirm title="Duyệt bảng lương này?" onConfirm={() => handleStatusUpdate(record.id, 'approved')}>
                                 <Button type="primary" icon={<CheckOutlined />} size="small" ghost />
@@ -126,7 +142,7 @@ const PayrollList: React.FC = () => {
                         </>
                     )}
 
-                    {record.status === 'approved' && (
+                    {canAction && record.status === 'approved' && (
                         <Popconfirm title="Xác nhận đã thanh toán?" onConfirm={() => handlePay(record.id)}>
                             <Button type="primary" icon={<DollarOutlined />} size="small">Thanh toán</Button>
                         </Popconfirm>
@@ -136,10 +152,12 @@ const PayrollList: React.FC = () => {
         }
     ];
 
+    const visibleColumns = columns.filter(col => !col.hidden);
+
     return (
         <div style={{ padding: 20 }}>
             <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2>Quản lý Bảng lương</h2>
+                <h2>{isEmployee ? "Lịch sử lương của tôi" : "Quản lý Bảng lương"}</h2>
                 <Space>
                     <Select value={month} onChange={setMonth} style={{ width: 100 }}>
                         {Array.from({ length: 12 }, (_, i) => (
@@ -150,14 +168,16 @@ const PayrollList: React.FC = () => {
                         <Select.Option value={2024}>2024</Select.Option>
                         <Select.Option value={2025}>2025</Select.Option>
                     </Select>
-                    <Button type="primary" icon={<CalculatorOutlined />} onClick={() => setIsGenerateModalOpen(true)}>
-                        Tạo bảng lương
-                    </Button>
+                    {canAction && (
+                        <Button type="primary" icon={<CalculatorOutlined />} onClick={() => setIsGenerateModalOpen(true)}>
+                            Tạo bảng lương
+                        </Button>
+                    )}
                 </Space>
             </div>
 
             <Table
-                columns={columns}
+                columns={visibleColumns}
                 dataSource={data}
                 rowKey="id"
                 loading={loading}

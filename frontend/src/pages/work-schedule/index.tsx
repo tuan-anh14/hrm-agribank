@@ -188,16 +188,22 @@ const ListWorkSchedulePage: React.FC = () => {
     const [form] = Form.useForm<{ note?: string }>();
 
     const isAdmin = user?.role === "ADMIN";
-    // HR can view but maybe restricted on some actions if needed. 
-    // Request: "HR/Employee loses some admin functions".
-    // Assuming HR can Approve/Reject but maybe not Delete? Or maybe just View?
-    // Let's assume HR has similar rights to Admin for now but Employee is restricted.
-    // Actually, usually Employee doesn't access this page.
-    // But if they do, hide actions.
-    const canAction = isAdmin || user?.role === "HR";
+    const isHR = user?.role === "HR";
+    const isEmployee = !isAdmin && !isHR;
+
+    // Actions: Admin/HR can Approve/Reject/Delete. Employee can only View.
+    const canAction = isAdmin || isHR;
+
+    useEffect(() => {
+        // If employee, force employeeId filter
+        if (isEmployee && user?.id) {
+            actions.setEmployeeId(user.id);
+        }
+    }, [isEmployee, user?.id]);
 
     useEffect(() => {
         const loadEmployees = async () => {
+            if (isEmployee) return; // Employees don't need to load other employees
             try {
                 const res = await getAllEmployeesAPI();
                 const list: Employee[] = Array.isArray(res)
@@ -226,7 +232,7 @@ const ListWorkSchedulePage: React.FC = () => {
 
         loadEmployees();
         loadShifts();
-    }, []);
+    }, [isEmployee]);
 
     const handleDelete = async (id: string, status: WorkScheduleStatus) => {
         if (!canAction) return;
@@ -271,117 +277,121 @@ const ListWorkSchedulePage: React.FC = () => {
         }
     };
 
-    const columns: ColumnsType<WorkSchedule> = useMemo(() => [
-        {
-            title: "Nhân viên",
-            key: "employee",
-            render: (_, record) => (
-                <div>
-                    <div style={{ fontWeight: 600 }}>{record.employee?.fullName || "N/A"}</div>
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                        {record.employee?.email || ""}
-                    </Text>
-                </div>
-            ),
-        },
-        {
-            title: "Ca làm việc",
-            key: "shift",
-            render: (_, record) => (
-                <div>
-                    <div>{record.shift?.name || "N/A"}</div>
-                    {record.shift && (
+    const columns: ColumnsType<WorkSchedule> = useMemo(() => {
+        const cols: ColumnsType<WorkSchedule> = [
+            {
+                title: "Nhân viên",
+                key: "employee",
+                hidden: isEmployee, // Hide employee column for employee view
+                render: (_, record) => (
+                    <div>
+                        <div style={{ fontWeight: 600 }}>{record.employee?.fullName || "N/A"}</div>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                            {dayjs(record.shift.startTime).format("HH:mm")} - {dayjs(record.shift.endTime).format("HH:mm")}
+                            {record.employee?.email || ""}
                         </Text>
-                    )}
-                </div>
-            ),
-        },
-        {
-            title: "Ngày",
-            dataIndex: "date",
-            key: "date",
-            render: (value: string) => dayjs(value).format("DD/MM/YYYY"),
-        },
-        {
-            title: "Trạng thái",
-            dataIndex: "status",
-            key: "status",
-            render: (status: WorkScheduleStatus) => {
-                const option = STATUS_OPTIONS.find((opt) => opt.value === status);
-                return <Tag color={option?.color}>{option?.label || status}</Tag>;
+                    </div>
+                ),
             },
-        },
-        {
-            title: "Ghi chú",
-            dataIndex: "note",
-            key: "note",
-            render: (text: string) => text || "-",
-        },
-        {
-            title: "Thao tác",
-            key: "actions",
-            width: 260,
-            render: (_, record) => (
-                <Space size="small" wrap>
-                    <Button
-                        type="link"
-                        icon={<EyeOutlined />}
-                        onClick={() => navigate(`/workschedule/${record.id}`)}
-                        size="small"
-                    >
-                        Xem
-                    </Button>
-                    {canAction && (
-                        <>
-                            <Button
-                                type="link"
-                                icon={<EditOutlined />}
-                                disabled={record.status !== "PENDING"}
-                                onClick={() => navigate(`/workschedule/${record.id}/edit`)}
-                                size="small"
-                                style={{ color: record.status === "PENDING" ? "#faad14" : undefined }}
-                            >
-                                Sửa
-                            </Button>
-                            <Button
-                                type="link"
-                                icon={<CheckOutlined />}
-                                size="small"
-                                disabled={record.status !== "PENDING"}
-                                onClick={() => openApproveModal(record, "APPROVED")}
-                            >
-                                Duyệt
-                            </Button>
-                            <Button
-                                type="link"
-                                icon={<CloseOutlined />}
-                                size="small"
-                                danger
-                                disabled={record.status !== "PENDING"}
-                                onClick={() => openApproveModal(record, "REJECTED")}
-                            >
-                                Từ chối
-                            </Button>
-                            <Popconfirm
-                                title="Xoá lịch làm việc"
-                                description="Bạn có chắc chắn muốn xoá lịch này?"
-                                onConfirm={() => handleDelete(record.id, record.status)}
-                                okText="Xoá"
-                                cancelText="Huỷ"
-                                okButtonProps={{ danger: true }}
-                            >
-                                <Button type="link" danger icon={<DeleteOutlined />} size="small" disabled={record.status !== "PENDING"}>
-                                    Xoá
+            {
+                title: "Ca làm việc",
+                key: "shift",
+                render: (_, record) => (
+                    <div>
+                        <div>{record.shift?.name || "N/A"}</div>
+                        {record.shift && (
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                                {dayjs(record.shift.startTime).format("HH:mm")} - {dayjs(record.shift.endTime).format("HH:mm")}
+                            </Text>
+                        )}
+                    </div>
+                ),
+            },
+            {
+                title: "Ngày",
+                dataIndex: "date",
+                key: "date",
+                render: (value: string) => dayjs(value).format("DD/MM/YYYY"),
+            },
+            {
+                title: "Trạng thái",
+                dataIndex: "status",
+                key: "status",
+                render: (status: WorkScheduleStatus) => {
+                    const option = STATUS_OPTIONS.find((opt) => opt.value === status);
+                    return <Tag color={option?.color}>{option?.label || status}</Tag>;
+                },
+            },
+            {
+                title: "Ghi chú",
+                dataIndex: "note",
+                key: "note",
+                render: (text: string) => text || "-",
+            },
+            {
+                title: "Thao tác",
+                key: "actions",
+                width: canAction ? 260 : 100,
+                render: (_, record) => (
+                    <Space size="small" wrap>
+                        <Button
+                            type="link"
+                            icon={<EyeOutlined />}
+                            onClick={() => navigate(`/workschedule/${record.id}`)}
+                            size="small"
+                        >
+                            Xem
+                        </Button>
+                        {canAction && (
+                            <>
+                                <Button
+                                    type="link"
+                                    icon={<EditOutlined />}
+                                    disabled={record.status !== "PENDING"}
+                                    onClick={() => navigate(`/workschedule/${record.id}/edit`)}
+                                    size="small"
+                                    style={{ color: record.status === "PENDING" ? "#faad14" : undefined }}
+                                >
+                                    Sửa
                                 </Button>
-                            </Popconfirm>
-                        </>
-                    )}
-                </Space>
-            ),
-        },
-    ], [navigate, canAction]);
+                                <Button
+                                    type="link"
+                                    icon={<CheckOutlined />}
+                                    size="small"
+                                    disabled={record.status !== "PENDING"}
+                                    onClick={() => openApproveModal(record, "APPROVED")}
+                                >
+                                    Duyệt
+                                </Button>
+                                <Button
+                                    type="link"
+                                    icon={<CloseOutlined />}
+                                    size="small"
+                                    danger
+                                    disabled={record.status !== "PENDING"}
+                                    onClick={() => openApproveModal(record, "REJECTED")}
+                                >
+                                    Từ chối
+                                </Button>
+                                <Popconfirm
+                                    title="Xoá lịch làm việc"
+                                    description="Bạn có chắc chắn muốn xoá lịch này?"
+                                    onConfirm={() => handleDelete(record.id, record.status)}
+                                    okText="Xoá"
+                                    cancelText="Huỷ"
+                                    okButtonProps={{ danger: true }}
+                                >
+                                    <Button type="link" danger icon={<DeleteOutlined />} size="small" disabled={record.status !== "PENDING"}>
+                                        Xoá
+                                    </Button>
+                                </Popconfirm>
+                            </>
+                        )}
+                    </Space>
+                ),
+            },
+        ];
+        return cols.filter(col => !col.hidden);
+    }, [navigate, canAction, isEmployee]);
 
     return (
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
@@ -391,7 +401,7 @@ const ListWorkSchedulePage: React.FC = () => {
                 style={{ width: "100%", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}
             >
                 <Title level={3} style={{ margin: 0 }}>
-                    Quản lý lịch làm việc
+                    {isEmployee ? "Lịch làm việc của tôi" : "Quản lý lịch làm việc"}
                 </Title>
                 <Space
                     wrap
@@ -408,16 +418,15 @@ const ListWorkSchedulePage: React.FC = () => {
                         <Radio.Button value="CALENDAR">Lịch</Radio.Button>
                     </Radio.Group>
 
-                    {canAction && (
-                        <Button
-                            type="primary"
-                            icon={<PlusOutlined />}
-                            onClick={() => navigate("/workschedule/create")}
-                            block={isMobile}
-                        >
-                            Tạo lịch làm việc
-                        </Button>
-                    )}
+                    {/* Both Admin and Employee can create/request schedule */}
+                    <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => navigate("/workschedule/create")}
+                        block={isMobile}
+                    >
+                        {isEmployee ? "Đăng ký lịch làm" : "Tạo lịch làm việc"}
+                    </Button>
                 </Space>
             </Space>
 
@@ -436,61 +445,63 @@ const ListWorkSchedulePage: React.FC = () => {
                             style={{ width: "100%" }}
                             wrap
                         >
-                        <Select
-                            allowClear
-                            placeholder="Lọc theo nhân viên"
-                            value={employeeId}
-                            onChange={(value) => actions.setEmployeeId(value)}
-                            showSearch
-                            optionFilterProp="children"
-                                style={{ width: isMobile ? "100%" : 220 }}
-                            options={employees.map((emp) => ({
-                                value: emp.id,
-                                label: `${emp.fullName}${emp.email ? ` (${emp.email})` : ""}`,
-                            }))}
-                        />
-                        <Select
-                            allowClear
-                            placeholder="Lọc theo ca làm việc"
-                            value={shiftId}
-                            onChange={(value) => actions.setShiftId(value)}
-                            showSearch
-                            optionFilterProp="children"
+                            {!isEmployee && (
+                                <Select
+                                    allowClear
+                                    placeholder="Lọc theo nhân viên"
+                                    value={employeeId}
+                                    onChange={(value) => actions.setEmployeeId(value)}
+                                    showSearch
+                                    optionFilterProp="children"
+                                    style={{ width: isMobile ? "100%" : 220 }}
+                                    options={employees.map((emp) => ({
+                                        value: emp.id,
+                                        label: `${emp.fullName}${emp.email ? ` (${emp.email})` : ""}`,
+                                    }))}
+                                />
+                            )}
+                            <Select
+                                allowClear
+                                placeholder="Lọc theo ca làm việc"
+                                value={shiftId}
+                                onChange={(value) => actions.setShiftId(value)}
+                                showSearch
+                                optionFilterProp="children"
                                 style={{ width: isMobile ? "100%" : 200 }}
-                            options={shifts.map((shift) => ({
-                                value: shift.id,
-                                label: `${shift.name} (${dayjs(shift.startTime).format("HH:mm")}-${dayjs(shift.endTime).format("HH:mm")})`,
-                            }))}
-                        />
-                        <Select
-                            allowClear
-                            placeholder="Trạng thái"
-                            value={status}
-                            onChange={(value) => actions.setStatus(value)}
+                                options={shifts.map((shift) => ({
+                                    value: shift.id,
+                                    label: `${shift.name} (${dayjs(shift.startTime).format("HH:mm")}-${dayjs(shift.endTime).format("HH:mm")})`,
+                                }))}
+                            />
+                            <Select
+                                allowClear
+                                placeholder="Trạng thái"
+                                value={status}
+                                onChange={(value) => actions.setStatus(value)}
                                 style={{ width: isMobile ? "100%" : 160 }}
-                            options={STATUS_OPTIONS.map((option) => ({
-                                value: option.value,
-                                label: option.label,
-                            }))}
-                        />
-                        <RangePicker
-                            value={dateRange}
-                            onChange={(dates) => {
-                                if (dates && dates[0] && dates[1]) {
-                                    setDateRange(dates);
-                                    actions.setDateRange([
-                                        dates[0].format("YYYY-MM-DD"),
-                                        dates[1].format("YYYY-MM-DD"),
-                                    ]);
-                                } else {
-                                    setDateRange([null, null]);
-                                    actions.setDateRange(undefined);
-                                }
-                            }}
-                            format="DD/MM/YYYY"
-                            placeholder={["Từ ngày", "Đến ngày"]}
+                                options={STATUS_OPTIONS.map((option) => ({
+                                    value: option.value,
+                                    label: option.label,
+                                }))}
+                            />
+                            <RangePicker
+                                value={dateRange}
+                                onChange={(dates) => {
+                                    if (dates && dates[0] && dates[1]) {
+                                        setDateRange(dates);
+                                        actions.setDateRange([
+                                            dates[0].format("YYYY-MM-DD"),
+                                            dates[1].format("YYYY-MM-DD"),
+                                        ]);
+                                    } else {
+                                        setDateRange([null, null]);
+                                        actions.setDateRange(undefined);
+                                    }
+                                }}
+                                format="DD/MM/YYYY"
+                                placeholder={["Từ ngày", "Đến ngày"]}
                                 style={{ width: isMobile ? "100%" : "auto" }}
-                        />
+                            />
                         </Space>
                     </Card>
 
@@ -530,7 +541,7 @@ const ListWorkSchedulePage: React.FC = () => {
                 </>
             ) : (
                 <CalendarView
-                    employeeId={employeeId}
+                    employeeId={isEmployee ? user?.id : employeeId}
                     shifts={shifts}
                     employees={employees}
                     onEmployeeChange={actions.setEmployeeId}

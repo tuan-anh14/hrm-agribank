@@ -8,6 +8,7 @@ import type { Employee } from "@/types/employee";
 import type { Shift } from "@/types/shift";
 import type { CreateWorkSchedulePayload } from "@/types/workschedule";
 import { handleApiSuccess, notifyError } from "@/utils/notification";
+import { useCurrentApp } from "@/components/context/app.context";
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -20,14 +21,26 @@ type FieldType = {
 };
 
 const CreateWorkSchedulePage: React.FC = () => {
+    const { user } = useCurrentApp();
     const [form] = Form.useForm<FieldType>();
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [shifts, setShifts] = useState<Shift[]>([]);
 
+    const isAdmin = user?.role === "ADMIN";
+    const isHR = user?.role === "HR";
+    const isEmployee = !isAdmin && !isHR;
+
+    useEffect(() => {
+        if (isEmployee && user?.id) {
+            form.setFieldsValue({ employeeId: user.id });
+        }
+    }, [isEmployee, user?.id, form]);
+
     useEffect(() => {
         const loadEmployees = async () => {
+            if (isEmployee) return;
             try {
                 const res = await getAllEmployeesAPI();
                 const list: Employee[] = Array.isArray(res)
@@ -56,7 +69,7 @@ const CreateWorkSchedulePage: React.FC = () => {
 
         loadEmployees();
         loadShifts();
-    }, []);
+    }, [isEmployee]);
 
     const onFinish: FormProps<FieldType>["onFinish"] = async (values) => {
         if (!values.employeeId || !values.shiftId || !values.date) {
@@ -74,7 +87,8 @@ const CreateWorkSchedulePage: React.FC = () => {
             };
 
             const res = await createWorkScheduleAPI(payload);
-            if (handleApiSuccess(res, "Tạo lịch làm việc thành công!", "Có lỗi xảy ra khi tạo lịch")) {
+            const successMsg = isEmployee ? "Đăng ký lịch thành công!" : "Tạo lịch làm việc thành công!";
+            if (handleApiSuccess(res, successMsg, "Có lỗi xảy ra khi tạo lịch")) {
                 form.resetFields();
                 setTimeout(() => navigate("/workschedule"), 1000);
             }
@@ -94,7 +108,7 @@ const CreateWorkSchedulePage: React.FC = () => {
             <Card>
                 <Space direction="vertical" size={24} style={{ width: "100%" }}>
                     <Title level={2} style={{ margin: 0 }}>
-                        Tạo lịch làm việc mới
+                        {isEmployee ? "Đăng ký lịch làm việc" : "Tạo lịch làm việc mới"}
                     </Title>
 
                     <Form<FieldType>
@@ -103,21 +117,30 @@ const CreateWorkSchedulePage: React.FC = () => {
                         size="large"
                         onFinish={onFinish}
                     >
-                        <Form.Item
-                            label="Nhân viên"
-                            name="employeeId"
-                            rules={[{ required: true, message: "Vui lòng chọn nhân viên" }]}
-                        >
-                            <Select
-                                placeholder="Chọn nhân viên"
-                                showSearch
-                                optionFilterProp="children"
-                                options={employees.map((emp) => ({
-                                    value: emp.id,
-                                    label: `${emp.fullName}${emp.email ? ` (${emp.email})` : ""}`,
-                                }))}
-                            />
-                        </Form.Item>
+                        {!isEmployee && (
+                            <Form.Item
+                                label="Nhân viên"
+                                name="employeeId"
+                                rules={[{ required: true, message: "Vui lòng chọn nhân viên" }]}
+                            >
+                                <Select
+                                    placeholder="Chọn nhân viên"
+                                    showSearch
+                                    optionFilterProp="children"
+                                    options={employees.map((emp) => ({
+                                        value: emp.id,
+                                        label: `${emp.fullName}${emp.email ? ` (${emp.email})` : ""}`,
+                                    }))}
+                                />
+                            </Form.Item>
+                        )}
+
+                        {/* Hidden field for employeeId when isEmployee is true */}
+                        {isEmployee && (
+                            <Form.Item name="employeeId" hidden>
+                                <Input />
+                            </Form.Item>
+                        )}
 
                         <Form.Item
                             label="Ca làm việc"
@@ -158,7 +181,7 @@ const CreateWorkSchedulePage: React.FC = () => {
                         <Form.Item>
                             <Space>
                                 <Button type="primary" htmlType="submit" loading={isSubmitting}>
-                                    Tạo lịch
+                                    {isEmployee ? "Đăng ký" : "Tạo lịch"}
                                 </Button>
                                 <Button onClick={() => navigate("/workschedule")}>Huỷ</Button>
                             </Space>
