@@ -91,9 +91,19 @@ const AppSidebar = () => {
                     label: 'Quản lý chấm công',
                 },
                 {
-                    key: '/admin/payroll',
+                    key: 'payroll-management',
                     icon: <DollarOutlined />,
                     label: 'Quản lý lương',
+                    children: [
+                        {
+                            key: '/admin/payroll',
+                            label: 'Bảng lương',
+                        },
+                        {
+                            key: '/admin/reward-penalty',
+                            label: 'Khen thưởng / Kỷ luật',
+                        }
+                    ]
                 }
             );
         } else {
