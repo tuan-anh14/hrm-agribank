@@ -5,7 +5,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Attendance, AttendanceStatus, Prisma, RequestStatus } from '@prisma/client';
+import { Attendance, AttendanceStatus, Prisma, RequestStatus, EmployeeType, ShiftType } from '@prisma/client';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { QueryAttendanceDto } from './dto/query-attendance.dto';
@@ -326,10 +326,20 @@ export class AttendanceService {
       include: { shift: true },
     });
 
+    let activeShift = workSchedule?.shift;
+
     if (!workSchedule) {
-      throw new BadRequestException(
-        'Bạn chưa đăng ký ca làm việc cho ngày hôm nay hoặc ca làm việc chưa được duyệt. Vui lòng đăng ký ca trước khi chấm công.',
-      );
+      if (employee.type === EmployeeType.FULL_TIME) {
+        // Allow FULL_TIME to check in without explicit schedule
+        // Try to find a default FULL_DAY shift for time calculations
+        activeShift = await this.prisma.shift.findFirst({
+          where: { type: ShiftType.FULL_DAY }
+        });
+      } else {
+        throw new BadRequestException(
+          'Bạn chưa đăng ký ca làm việc cho ngày hôm nay hoặc ca làm việc chưa được duyệt. Vui lòng đăng ký ca trước khi chấm công.',
+        );
+      }
     }
 
     // Find existing attendance for today
@@ -371,9 +381,9 @@ export class AttendanceService {
 
     // Calculate late minutes
     let lateMinutes = 0;
-    if (workSchedule.shift && workSchedule.shift.startTime) {
+    if (activeShift && activeShift.startTime) {
       const shiftStart = new Date(checkInTime);
-      const shiftTime = new Date(workSchedule.shift.startTime);
+      const shiftTime = new Date(activeShift.startTime);
       shiftStart.setHours(shiftTime.getHours(), shiftTime.getMinutes(), 0, 0);
 
       if (checkInTime > shiftStart) {
@@ -436,10 +446,19 @@ export class AttendanceService {
       include: { shift: true },
     });
 
+    let activeShift = workSchedule?.shift;
+
     if (!workSchedule) {
-      throw new BadRequestException(
-        'Bạn chưa đăng ký ca làm việc cho ngày hôm nay hoặc ca làm việc chưa được duyệt. Vui lòng đăng ký ca trước khi chấm công.',
-      );
+      if (employee.type === EmployeeType.FULL_TIME) {
+        // Allow FULL_TIME to check out without explicit schedule
+        activeShift = await this.prisma.shift.findFirst({
+          where: { type: ShiftType.FULL_DAY }
+        });
+      } else {
+        throw new BadRequestException(
+          'Bạn chưa đăng ký ca làm việc cho ngày hôm nay hoặc ca làm việc chưa được duyệt. Vui lòng đăng ký ca trước khi chấm công.',
+        );
+      }
     }
 
     // Find existing attendance for today
@@ -472,9 +491,9 @@ export class AttendanceService {
 
     // Calculate early minutes
     let earlyMinutes = 0;
-    if (workSchedule.shift && workSchedule.shift.endTime) {
+    if (activeShift && activeShift.endTime) {
       const shiftEnd = new Date(checkOutTime);
-      const shiftTime = new Date(workSchedule.shift.endTime);
+      const shiftTime = new Date(activeShift.endTime);
       shiftEnd.setHours(shiftTime.getHours(), shiftTime.getMinutes(), 0, 0);
 
       if (checkOutTime < shiftEnd) {

@@ -190,7 +190,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({ employeeId }) =
         setCheckingIn(true);
         try {
             const res = await checkInAPI({});
-            if (res?.data || res?.message) {
+            if (res && (res.data || (res as any).id)) {
                 message.success("Check-in thành công!");
                 await loadAttendances();
             } else {
@@ -221,7 +221,7 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({ employeeId }) =
         setCheckingOut(true);
         try {
             const res = await checkOutAPI({});
-            if (res?.data || res?.message) {
+            if (res && (res.data || (res as any).id)) {
                 message.success("Check-out thành công!");
                 await loadAttendances();
             } else {
