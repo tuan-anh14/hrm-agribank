@@ -6,9 +6,7 @@ import PublicRoute from '@/components/guards/PublicRoute';
 import HomePage from '@/pages/client/home';
 import AboutPage from '@/pages/client/about';
 import LoginPage from '@/pages/auth/login';
-import PayrollPage from '@/pages/client/payroll';
 import AttendancePage from '@/pages/client/attendance';
-
 // Admin Pages
 import ListEmployeePage from '@/pages/admin/employees';
 import CreateEmployeePage from '@/pages/admin/employees/create-employee';
@@ -36,9 +34,10 @@ import ListAttendancePage from '@/pages/admin/attendances';
 import CreateAttendancePage from '@/pages/admin/attendances/create-attendance';
 import UpdateAttendancePage from '@/pages/admin/attendances/update-attendance';
 import ViewAttendancePage from '@/pages/admin/attendances/view-attendance';
-import ListPayrollPage from '@/pages/admin/payroll';
-import GeneratePayrollPage from '@/pages/admin/payroll/generate';
-import PayrollDetailPage from '@/pages/admin/payroll/detail';
+import PayrollList from '@/pages/payroll/PayrollList';
+import PayrollDetail from '@/pages/payroll/PayrollDetail';
+import MyPayroll from '@/pages/payroll/MyPayroll';
+import RewardPenaltyManager from '@/pages/reward-penalty/RewardPenaltyManager';
 
 // Layout
 import AppLayout from '@/layout';
@@ -310,10 +309,18 @@ export const routes: RouteObject[] = [
       },
       // Payroll routes
       {
-        path: '/payroll',
+        path: '/my-payroll',
         element: (
           <ProtectedRoute>
-            <PayrollPage />
+            <MyPayroll />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/payroll/:id',
+        element: (
+          <ProtectedRoute>
+            <PayrollDetail />
           </ProtectedRoute>
         ),
       },
@@ -322,23 +329,15 @@ export const routes: RouteObject[] = [
         path: '/admin/payroll',
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
-            <ListPayrollPage />
+            <PayrollList />
           </ProtectedRoute>
         ),
       },
       {
-        path: '/admin/payroll/generate',
+        path: '/admin/reward-penalty',
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
-            <GeneratePayrollPage />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: '/admin/payroll/:id',
-        element: (
-          <ProtectedRoute requiredRole={['ADMIN', 'HR', 'EMPLOYEE']}>
-            <PayrollDetailPage />
+            <RewardPenaltyManager />
           </ProtectedRoute>
         ),
       },

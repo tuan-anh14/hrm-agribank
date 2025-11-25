@@ -6,6 +6,7 @@ import type { Attendance, CreateAttendancePayload, UpdateAttendancePayload, Quer
 import type { Shift, ShiftListResponse, QueryShiftParams, CreateShiftPayload, UpdateShiftPayload } from '@/types/shift';
 import type { WorkSchedule, WorkScheduleListResponse, QueryWorkScheduleParams, CreateWorkSchedulePayload, UpdateWorkSchedulePayload, ApproveWorkSchedulePayload } from '@/types/workschedule';
 import type { Payroll, GeneratePayrollPayload, QueryPayrollParams, PayrollListResponse } from '@/types/payroll';
+import type { RewardPenalty, CreateRewardPenaltyDto } from '@/types/reward-penalty';
 
 export const loginAPI = (username: string, password: string) => {
     const urlBackend = "/api/v1/auth/login"
@@ -250,4 +251,30 @@ export const getAllPayrollsAPI = (params?: QueryPayrollParams) => {
 export const getPayrollByIdAPI = (id: string) => {
     const urlBackend = `/api/v1/payroll/${id}`;
     return axios.get<IBackendRes<Payroll>>(urlBackend);
+}
+
+export const updatePayrollStatusAPI = (id: string, status: string) => {
+    const urlBackend = `/api/v1/payroll/${id}/status`;
+    return axios.patch<IBackendRes<Payroll>>(urlBackend, { status });
+}
+
+export const payPayrollAPI = (id: string) => {
+    const urlBackend = `/api/v1/payroll/${id}/pay`;
+    return axios.post<IBackendRes<Payroll>>(urlBackend, {});
+}
+
+// RewardPenalty APIs
+export const createRewardPenaltyAPI = (payload: CreateRewardPenaltyDto) => {
+    const urlBackend = "/api/v1/reward-penalty";
+    return axios.post<IBackendRes<RewardPenalty>>(urlBackend, payload);
+}
+
+export const getAllRewardPenaltiesAPI = () => {
+    const urlBackend = "/api/v1/reward-penalty";
+    return axios.get<RewardPenalty[]>(urlBackend);
+}
+
+export const deleteRewardPenaltyAPI = (id: string) => {
+    const urlBackend = `/api/v1/reward-penalty/${id}`;
+    return axios.delete<IBackendRes<RewardPenalty>>(urlBackend);
 }

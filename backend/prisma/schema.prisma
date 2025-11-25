@@ -118,6 +118,7 @@ model Position {
   baseSalary  Float
   description String?
   allowance   Float?     @default(0)
+  businessSalary Float?  @default(0) // Lương kinh doanh chuẩn
   gradeLevel  Int? // thêm cấp bậc chức vụ
   employees   Employee[]
   createdAt   DateTime   @default(now())
@@ -185,12 +186,20 @@ model Payroll {
   standardWorkHours Float @default(0)
   overtimeHours     Float @default(0)
 
+  salaryV1          Float? @default(0) // Lương ngạch bậc
+  salaryV2          Float? @default(0) // Lương kinh doanh thực tế
+  actualWorkDays    Float? @default(0) // Số ngày công thực tế
+
   // Các khoản tiền
   totalWorkAmount Float  @default(0)
   totalOTAmount   Float  @default(0)
   bonus           Float? @default(0)
   allowance       Float? @default(0)
-  deduction       Float? @default(0)
+  
+  // Các khoản trừ
+  insuranceDeduction Float? @default(0) // BHXH, BHYT, BHTN
+  taxDeduction       Float? @default(0) // Thuế TNCN
+  otherDeduction     Float? @default(0) // Phạt khác
 
   totalSalary Float
   status      String? @default("pending")

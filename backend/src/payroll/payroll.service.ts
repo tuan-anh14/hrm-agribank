@@ -1,11 +1,14 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { CreatePayrollDto } from './dto/create-payroll.dto';
-import { EmployeeType, Prisma } from '@prisma/client';
+import { RewardPenaltyService } from '../reward-penalty/reward-penalty.service';
+import { EmployeeType, Prisma, RewardPenaltyType } from '@prisma/client';
 
 @Injectable()
 export class PayrollService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private rewardPenaltyService: RewardPenaltyService
+    ) { }
 
     async generatePayrollForMonth(month: number, year: number) {
         // 1. Get all active employees with their position
@@ -19,12 +22,14 @@ export class PayrollService {
         const endDate = new Date(year, month, 0);
 
         // Calculate standard work days (excluding weekends - Sat/Sun)
-        // Agribank rule: Standard working days usually exclude weekends
         let standardDays = 0;
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
             const day = d.getDay();
             if (day !== 0 && day !== 6) standardDays++;
         }
+        // Fallback if standardDays is 0 (e.g. error in loop), though unlikely
+        if (standardDays === 0) standardDays = 22;
+
         const standardWorkHours = standardDays * 8;
 
         // 3. Batch fetch all attendances for the month
@@ -44,52 +49,107 @@ export class PayrollService {
             attendanceMap.get(att.employeeId)!.push(att);
         });
 
-        // 4. Process each employee (Parallel processing)
+        // 4. Process each employee
         const payrollPromises = employees.map(async (employee) => {
             const empAttendances = attendanceMap.get(employee.id) || [];
 
+            // --- A. Calculate Time & Attendance ---
             let totalWorkHours = 0;
-            // Calculate actual work hours
+            let actualWorkDays = 0;
+            let lateMinutes = 0;
+            let earlyMinutes = 0;
+
             for (const att of empAttendances) {
                 if (att?.checkInTime && att?.checkOutTime) {
                     const diff = att.checkOutTime.getTime() - att.checkInTime.getTime();
-                    // Convert to hours and round to 2 decimal places
                     const hours = Math.round((diff / (1000 * 60 * 60)) * 100) / 100;
                     totalWorkHours += hours;
+
+                    // Count as 1 day if worked >= 4 hours, else 0.5 or 0? 
+                    // Agribank: usually count by half-day blocks. 
+                    // Simplified: > 4h = 1 day, > 0 = 0.5 day
+                    if (hours >= 4) actualWorkDays += 1;
+                    else if (hours > 0) actualWorkDays += 0.5;
                 }
+                lateMinutes += att.lateMinutes || 0;
+                earlyMinutes += att.earlyMinutes || 0;
             }
 
-            // Calculate Salary
-            let totalSalary = 0;
+            // --- B. Fetch Rewards & Penalties ---
+            const rewardsPenalties = await this.rewardPenaltyService.getMonthlyRewards(employee.id, month, year);
+            const totalReward = rewardsPenalties
+                .filter(r => r.type === RewardPenaltyType.REWARD)
+                .reduce((sum, r) => sum + r.amount, 0);
+            const totalPenalty = rewardsPenalties
+                .filter(r => r.type === RewardPenaltyType.PENALTY)
+                .reduce((sum, r) => sum + r.amount, 0);
+
+            // --- C. Calculate Salary Components ---
+            let salaryV1 = 0; // Lương ngạch bậc
+            let salaryV2 = 0; // Lương kinh doanh
+            let allowance = employee.position?.allowance || 0;
             let totalWorkAmount = 0;
-            let deduction = 0;
+            let insuranceDeduction = 0;
+            let taxDeduction = 0;
+            let otherDeduction = 0;
+            let totalSalary = 0;
 
             if (employee.type === EmployeeType.FULL_TIME) {
-                // Full-time: Base Salary * Coefficient
+                // 1. Salary V1: Base * Coefficient
                 const base = employee.position?.baseSalary || 0;
                 const coeff = employee.salaryCoefficient || 1.0;
-                const salaryPerMonth = base * coeff;
+                salaryV1 = base * coeff;
 
-                // Deduction logic for missing hours (Simple version)
-                // If actual hours < standard hours, deduct proportionally?
-                // For Agribank (State-owned), usually fixed unless unpaid leave.
-                // Let's keep it fixed for now but ready for deduction logic.
+                // 2. Salary V2: Business Salary * (Actual Days / Standard Days)
+                const businessBase = employee.position?.businessSalary || 0;
+                // Cap actual days at standard days for calculation? Or allow extra?
+                // Usually V2 is proportional.
+                const workRatio = standardDays > 0 ? (actualWorkDays / standardDays) : 0;
+                salaryV2 = businessBase * workRatio;
 
-                totalWorkAmount = salaryPerMonth;
+                // 3. Total Work Amount (Gross before deductions)
+                totalWorkAmount = salaryV1 + salaryV2 + allowance;
 
-                // Example deduction: Late/Early penalties could be added here
-                // deduction = ...
+                // 4. Deductions
+                // a. Insurance: 10.5% of V1 (Social 8% + Health 1.5% + Unemployment 1%)
+                // Note: Usually capped at 20x Base Salary, but simplified here.
+                insuranceDeduction = salaryV1 * 0.105;
 
-                totalSalary = totalWorkAmount + (employee.position?.allowance || 0) - deduction;
+                // b. Other Deductions (Late/Early + Penalties)
+                // Late fine: e.g. 50,000 VND per late instance? Or just use the penalty amount from DB?
+                // Let's assume lateMinutes are converted to money. 
+                // Simplified: 1000 VND per minute late.
+                const lateFine = lateMinutes * 1000;
+                otherDeduction = totalPenalty + lateFine;
+
+                // c. Tax (PIT)
+                // Taxable Income = Total - Insurance - Personal Deduction (11M) - Dependent Deduction (4.4M/person)
+                // Simplified: Taxable = Total - Insurance - 11,000,000
+                const taxableIncome = totalWorkAmount + totalReward - insuranceDeduction - 11000000;
+                if (taxableIncome > 0) {
+                    // Simplified progressive tax (5% for first 5M, 10% next, etc.)
+                    // For demo: flat 5% on taxable
+                    taxDeduction = taxableIncome * 0.05;
+                }
+
+                // 5. Final Net Salary
+                totalSalary = totalWorkAmount + totalReward - insuranceDeduction - taxDeduction - otherDeduction;
+
             } else {
                 // Part-time: Hourly Rate * Actual Hours
                 const rate = employee.hourlyRate || 0;
                 totalWorkAmount = rate * totalWorkHours;
-                totalSalary = totalWorkAmount;
+
+                // No V1/V2/Insurance for Part-time usually
+                totalSalary = totalWorkAmount + totalReward - totalPenalty;
             }
 
-            // Round final amounts
-            totalWorkAmount = Math.round(totalWorkAmount);
+            // Rounding
+            salaryV1 = Math.round(salaryV1);
+            salaryV2 = Math.round(salaryV2);
+            insuranceDeduction = Math.round(insuranceDeduction);
+            taxDeduction = Math.round(taxDeduction);
+            otherDeduction = Math.round(otherDeduction);
             totalSalary = Math.round(totalSalary);
 
             // Prepare data
@@ -100,21 +160,24 @@ export class PayrollService {
                 salaryCoefficient: employee.salaryCoefficient,
                 baseSalary: employee.position?.baseSalary,
                 standardWorkHours,
-                overtimeHours: 0, // TODO: Implement OT logic
+                overtimeHours: 0, // TODO
+
+                salaryV1,
+                salaryV2,
+                actualWorkDays,
+
                 totalWorkAmount,
                 totalOTAmount: 0,
-                allowance: employee.position?.allowance || 0,
-                bonus: 0,
-                deduction,
+                allowance,
+                bonus: totalReward,
+
+                insuranceDeduction,
+                taxDeduction,
+                otherDeduction,
+
                 totalSalary,
                 status: 'pending',
             };
-
-            // Upsert (Check existing inside the transaction or logic)
-            // Since we are inside a map, we can't easily use a single transaction for all.
-            // But we can use upsert if we had a unique constraint on (employeeId, month, year).
-            // Currently schema doesn't enforce unique(employeeId, month, year) but it should.
-            // We will use findFirst + update/create pattern but optimized.
 
             const existing = await this.prisma.payroll.findFirst({
                 where: { employeeId: employee.id, month, year }
@@ -133,7 +196,6 @@ export class PayrollService {
             }
         });
 
-        // Execute all promises
         return Promise.all(payrollPromises);
     }
 
@@ -152,5 +214,33 @@ export class PayrollService {
         });
         if (!payroll) throw new NotFoundException('Payroll not found');
         return payroll;
+    }
+
+    async updateStatus(id: string, status: string) {
+        return this.prisma.payroll.update({
+            where: { id },
+            data: { status },
+        });
+    }
+
+    async pay(id: string) {
+        const payroll = await this.getById(id);
+        if (payroll.status !== 'approved') {
+            throw new BadRequestException('Payroll must be approved before payment');
+        }
+
+        // Create Payment record
+        await this.prisma.payment.create({
+            data: {
+                payrollId: id,
+                amount: payroll.totalSalary,
+                note: `Payment for payroll ${payroll.month}/${payroll.year}`,
+            }
+        });
+
+        return this.prisma.payroll.update({
+            where: { id },
+            data: { status: 'paid' },
+        });
     }
 }

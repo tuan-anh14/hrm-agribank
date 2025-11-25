@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Patch } from '@nestjs/common';
 import { PayrollService } from './payroll.service';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
@@ -60,5 +60,20 @@ export class PayrollController {
     @ApiParam({ name: 'id', description: 'ID của bảng lương' })
     async getById(@Param('id') id: string) {
         return this.payrollService.getById(id);
+    }
+
+    @Patch(':id/status')
+    @Roles(Role.ADMIN, Role.HR)
+    @ApiOperation({ summary: 'Cập nhật trạng thái bảng lương (Duyệt/Từ chối)' })
+    @ApiBody({ schema: { type: 'object', properties: { status: { type: 'string', enum: ['approved', 'rejected'] } } } })
+    async updateStatus(@Param('id') id: string, @Body('status') status: string) {
+        return this.payrollService.updateStatus(id, status);
+    }
+
+    @Post(':id/pay')
+    @Roles(Role.ADMIN, Role.HR)
+    @ApiOperation({ summary: 'Thanh toán lương' })
+    async pay(@Param('id') id: string) {
+        return this.payrollService.pay(id);
     }
 }

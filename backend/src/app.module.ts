@@ -11,6 +11,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { WorkscheduleModule } from './workschedule/workschedule.module';
 import { ShiftModule } from './shift/shift.module';
 import { PayrollModule } from './payroll/payroll.module';
+import { RewardPenaltyModule } from './reward-penalty/reward-penalty.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PayrollModule } from './payroll/payroll.module';
     WorkscheduleModule,
     ShiftModule,
     PayrollModule,
+    RewardPenaltyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

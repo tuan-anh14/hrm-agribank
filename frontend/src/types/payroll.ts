@@ -3,31 +3,41 @@ export interface Payroll {
     employeeId: string;
     month: number;
     year: number;
+
     salaryCoefficient?: number;
     baseSalary?: number;
+
     standardWorkHours: number;
     overtimeHours: number;
+
+    salaryV1?: number;
+    salaryV2?: number;
+    actualWorkDays?: number;
+
     totalWorkAmount: number;
     totalOTAmount: number;
     bonus?: number;
     allowance?: number;
-    deduction?: number;
+
+    insuranceDeduction?: number;
+    taxDeduction?: number;
+    otherDeduction?: number;
+
     totalSalary: number;
-    status: string;
+    status: 'pending' | 'approved' | 'rejected' | 'paid';
+
     employee?: {
         id: string;
         fullName: string;
         employeeCode: string;
-        type?: string;
         department?: {
-            id: string;
             name: string;
         };
         position?: {
-            id: string;
             title: string;
         };
     };
+
     createdAt: string;
     updatedAt: string;
 }
@@ -45,5 +55,5 @@ export interface QueryPayrollParams {
 
 export interface PayrollListResponse {
     data: Payroll[];
-    total?: number;
+    meta?: any;
 }
