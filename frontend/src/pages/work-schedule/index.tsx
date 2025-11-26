@@ -24,9 +24,11 @@ import { useNavigate } from "react-router-dom";
 import dayjs, { type Dayjs } from "dayjs";
 import {
     getAllWorkSchedulesAPI,
+    getMyWorkSchedulesAPI,
     deleteWorkScheduleAPI,
     approveWorkScheduleAPI,
     getAllEmployeesAPI,
+    getEmployeeByIdAPI,
     getAllShiftsAPI,
 } from "@/services/api";
 import type { WorkSchedule, WorkScheduleListResponse, WorkScheduleStatus, ApproveWorkSchedulePayload } from "@/types/workschedule";
@@ -54,9 +56,10 @@ interface FetchWorkSchedulesParams {
     status?: WorkScheduleStatus;
 }
 
-async function fetchWorkSchedules(params: FetchWorkSchedulesParams): Promise<WorkScheduleListResponse> {
+async function fetchWorkSchedules(params: FetchWorkSchedulesParams, isEmployee: boolean): Promise<WorkScheduleListResponse> {
     try {
-        const res = await getAllWorkSchedulesAPI(params);
+        const api = isEmployee ? getMyWorkSchedulesAPI : getAllWorkSchedulesAPI;
+        const res = await api(params);
         if (res && typeof res === "object" && "data" in res) {
             return res;
         }
@@ -87,7 +90,7 @@ interface UseWorkSchedulesState {
     error: string | null;
 }
 
-function useWorkSchedules(initialLimit: number = 10) {
+function useWorkSchedules(initialLimit: number = 10, isEmployee: boolean = false) {
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(initialLimit);
     const [employeeId, setEmployeeId] = useState<string | undefined>();
@@ -112,7 +115,7 @@ function useWorkSchedules(initialLimit: number = 10) {
                 status,
                 startDate,
                 endDate,
-            });
+            }, isEmployee);
             setData(resp.data);
             setTotal(resp.total);
         } catch (e) {
@@ -120,7 +123,7 @@ function useWorkSchedules(initialLimit: number = 10) {
         } finally {
             setLoading(false);
         }
-    }, [page, limit, employeeId, shiftId, status, startDate, endDate]);
+    }, [page, limit, employeeId, shiftId, status, startDate, endDate, isEmployee]);
 
     useEffect(() => {
         load();
@@ -172,7 +175,11 @@ import { useCurrentApp } from "@/components/context/app.context";
 
 const ListWorkSchedulePage: React.FC = () => {
     const { user } = useCurrentApp();
-    const { state, actions } = useWorkSchedules(10);
+    const isAdmin = user?.role === "ADMIN";
+    const isHR = user?.role === "HR";
+    const isEmployee = !isAdmin && !isHR;
+
+    const { state, actions } = useWorkSchedules(10, isEmployee);
     const { data, total, page, limit, loading, error, employeeId, shiftId, status } = state;
     const navigate = useNavigate();
     const screens = Grid.useBreakpoint();
@@ -187,9 +194,7 @@ const ListWorkSchedulePage: React.FC = () => {
     const [selectedSchedule, setSelectedSchedule] = useState<WorkSchedule | null>(null);
     const [form] = Form.useForm<{ note?: string }>();
 
-    const isAdmin = user?.role === "ADMIN";
-    const isHR = user?.role === "HR";
-    const isEmployee = !isAdmin && !isHR;
+
 
     // Actions: Admin/HR can Approve/Reject/Delete. Employee can only View.
     const canAction = isAdmin || isHR;
@@ -203,7 +208,28 @@ const ListWorkSchedulePage: React.FC = () => {
 
     useEffect(() => {
         const loadEmployees = async () => {
-            if (isEmployee) return; // Employees don't need to load other employees
+            if (isEmployee) {
+                // Fetch current employee info to get type (FULL_TIME/PART_TIME) for calendar logic
+                if (user?.id) {
+                    try {
+                        const res = await getEmployeeByIdAPI(user.id);
+                        let employeeData: Employee | null = null;
+                        if (res && typeof res === 'object') {
+                            if ('data' in res && (res as any).data) {
+                                employeeData = (res as any).data as Employee;
+                            } else if ('id' in res && 'fullName' in res) {
+                                employeeData = res as unknown as Employee;
+                            }
+                        }
+                        if (employeeData) {
+                            setEmployees([employeeData]);
+                        }
+                    } catch (err) {
+                        console.error("Failed to load employee info", err);
+                    }
+                }
+                return;
+            }
             try {
                 const res = await getAllEmployeesAPI();
                 const list: Employee[] = Array.isArray(res)

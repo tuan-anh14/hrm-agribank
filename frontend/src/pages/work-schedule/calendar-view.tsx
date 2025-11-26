@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Card, Typography, Space, Button, message, Row, Col, Select, Popover, Radio, Alert, Spin, Grid, Tag } from "antd";
 import { LeftOutlined, RightOutlined, SaveOutlined, ReloadOutlined } from "@ant-design/icons";
 import dayjs, { type Dayjs } from "dayjs";
-import { getAllWorkSchedulesAPI, createWorkScheduleAPI, updateWorkScheduleAPI } from "@/services/api";
+import { getAllWorkSchedulesAPI, createWorkScheduleAPI, updateWorkScheduleAPI, getMyWorkSchedulesAPI, createMyWorkScheduleAPI } from "@/services/api";
 import type { WorkSchedule } from "@/types/workschedule";
 import type { Shift } from "@/types/shift";
 import { ShiftType } from "@/types/shift";
@@ -61,8 +61,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
             const startDate = currentMonth.startOf("month").format("YYYY-MM-DD");
             const endDate = currentMonth.endOf("month").format("YYYY-MM-DD");
 
-            const res = await getAllWorkSchedulesAPI({
-                employeeId,
+            const isViewingOwnSchedule = isEmployee && employeeId === user?.id;
+            const api = isViewingOwnSchedule ? getMyWorkSchedulesAPI : getAllWorkSchedulesAPI;
+
+            const res = await api({
+                employeeId: isViewingOwnSchedule ? undefined : employeeId, // getMyWorkSchedulesAPI doesn't need employeeId
                 startDate,
                 endDate,
                 page: 1,
@@ -171,12 +174,28 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
                 const shiftId = value === "OFF" ? null : value;
 
                 if (existingSchedule) {
-                    // Update
+                    // Update - Note: Employees might not have permission to update via this API if not allowed by backend
+                    // But for now we keep it as is, or we could disable update for employees if backend forbids it.
+                    // Assuming updateWorkScheduleAPI is Admin/HR only based on previous findings.
+                    if (isEmployee) {
+                        // If employee tries to update, we might need a specific API or they can't update.
+                        // For now, let's try updateWorkScheduleAPI, if it fails, we catch error.
+                        // Actually, based on controller, update is Admin/HR only.
+                        // So Employee cannot update.
+                        throw new Error("Bạn không có quyền chỉnh sửa lịch đã đăng ký. Vui lòng liên hệ quản lý.");
+                    }
                     return updateWorkScheduleAPI(existingSchedule.id, {
                         shiftId,
                     });
                 } else {
                     // Create
+                    if (isEmployee) {
+                        return createMyWorkScheduleAPI({
+                            shiftId,
+                            date: dateStr,
+                            note: "Đăng ký qua lịch",
+                        });
+                    }
                     return createWorkScheduleAPI({
                         employeeId,
                         shiftId,

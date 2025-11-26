@@ -24,17 +24,17 @@ import { UserRole } from '@/auth/constants/roles.constants';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('shift')
 export class ShiftController {
-  constructor(private readonly shiftService: ShiftService) {}
+  constructor(private readonly shiftService: ShiftService) { }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.HR)
+  @Roles(UserRole.ADMIN, UserRole.HR, UserRole.EMPLOYEE)
   @ApiOperation({ summary: 'Danh sách ca làm việc' })
   getAll(@Query() query: QueryShiftDto) {
     return this.shiftService.getAll(query);
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.HR)
+  @Roles(UserRole.ADMIN, UserRole.HR, UserRole.EMPLOYEE)
   @ApiOperation({ summary: 'Chi tiết ca làm việc' })
   getById(@Param('id') id: string) {
     return this.shiftService.getById(id);
