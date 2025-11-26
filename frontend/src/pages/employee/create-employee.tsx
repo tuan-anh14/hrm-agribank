@@ -107,7 +107,7 @@ const CreateEmployeePage: React.FC = () => {
 
             if (handleApiSuccess(res, "Tạo nhân viên và tài khoản thành công!", "Có lỗi xảy ra khi tạo nhân viên")) {
                 form.resetFields();
-                setTimeout(() => navigate("/admin/employees"), 1500);
+                setTimeout(() => navigate("/employee"), 1500);
             }
         } catch (error: any) {
             notifyError(error, "Có lỗi xảy ra khi tạo nhân viên");
@@ -302,7 +302,7 @@ const CreateEmployeePage: React.FC = () => {
                                 <Button type="primary" htmlType="submit" loading={isSubmitting}>
                                     Tạo tài khoản
                                 </Button>
-                                <Button onClick={() => navigate("/admin/employees")}>
+                                <Button onClick={() => navigate("/employee")}>
                                     Hủy
                                 </Button>
                             </Space>

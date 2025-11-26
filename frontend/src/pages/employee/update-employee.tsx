@@ -175,7 +175,7 @@ const UpdateEmployeePage: React.FC = () => {
 
             if (handleApiSuccess(res, "Cập nhật nhân viên thành công!", "Có lỗi xảy ra khi cập nhật nhân viên")) {
                 setTimeout(() => {
-                    navigate("/admin/employees");
+                    navigate("/employee");
                 }, 1500);
             }
         } catch (error: any) {
@@ -207,7 +207,7 @@ const UpdateEmployeePage: React.FC = () => {
                         message="Lỗi"
                         description={error}
                         action={
-                            <Button size="small" onClick={() => navigate("/admin/employees")}>
+                            <Button size="small" onClick={() => navigate("/employee")}>
                                 Quay lại
                             </Button>
                         }
@@ -388,7 +388,7 @@ const UpdateEmployeePage: React.FC = () => {
                                 <Button type="primary" htmlType="submit" loading={isSubmitting}>
                                     Cập nhật
                                 </Button>
-                                <Button onClick={() => navigate("/admin/employees")}>
+                                <Button onClick={() => navigate("/employee")}>
                                     Hủy
                                 </Button>
                             </Space>

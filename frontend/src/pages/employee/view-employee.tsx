@@ -30,7 +30,7 @@ const ViewEmployeePage: React.FC = () => {
                 // Axios interceptor unwraps response.data
                 // Backend returns Employee directly, so res might be Employee or IBackendRes<Employee>
                 let employeeData: Employee | null = null;
-                
+
                 if (res && typeof res === 'object') {
                     // Check if res is IBackendRes (has data field)
                     if ('data' in res && res.data) {
@@ -41,19 +41,19 @@ const ViewEmployeePage: React.FC = () => {
                         employeeData = res as unknown as Employee;
                     }
                 }
-                
+
                 if (employeeData) {
                     setEmployee(employeeData);
                 } else {
-                    const errorMsg = (res as any)?.message 
+                    const errorMsg = (res as any)?.message
                         ? (Array.isArray((res as any).message) ? (res as any).message[0] : (res as any).message)
                         : "Không tìm thấy thông tin nhân viên";
                     setError(errorMsg);
                 }
             } catch (error: any) {
                 console.error("Error fetching employee:", error);
-                const errorMessage = error?.response?.data?.message 
-                    || error?.message 
+                const errorMessage = error?.response?.data?.message
+                    || error?.message
                     || "Không thể tải thông tin nhân viên";
                 setError(errorMessage);
             } finally {
@@ -86,7 +86,7 @@ const ViewEmployeePage: React.FC = () => {
                         message="Lỗi"
                         description={error || "Không tìm thấy thông tin nhân viên"}
                         action={
-                            <Button size="small" onClick={() => navigate("/admin/employees")}>
+                            <Button size="small" onClick={() => navigate("/employee")}>
                                 Quay lại
                             </Button>
                         }
@@ -107,14 +107,14 @@ const ViewEmployeePage: React.FC = () => {
                         <Space>
                             <Button
                                 icon={<ArrowLeftOutlined />}
-                                onClick={() => navigate("/admin/employees")}
+                                onClick={() => navigate("/employee")}
                             >
                                 Quay lại
                             </Button>
                             <Button
                                 type="primary"
                                 icon={<EditOutlined />}
-                                onClick={() => navigate(`/admin/employees/${id}/edit`)}
+                                onClick={() => navigate(`/employee/edit/${id}`)}
                                 style={{ backgroundColor: '#faad14', borderColor: '#faad14' }}
                             >
                                 Chỉnh sửa

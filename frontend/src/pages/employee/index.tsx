@@ -30,51 +30,51 @@ interface FetchEmployeesParams {
 
 async function fetchEmployees(params: FetchEmployeesParams): Promise<EmployeesResponse> {
     const { page, pageSize, search, sortBy, sortOrder } = params;
-    
+
     try {
         const raw = await getAllEmployeesAPI();
-        const list: Employee[] = Array.isArray(raw) 
-            ? raw 
-            : Array.isArray((raw as any)?.data) 
-                ? (raw as any).data 
+        const list: Employee[] = Array.isArray(raw)
+            ? raw
+            : Array.isArray((raw as any)?.data)
+                ? (raw as any).data
                 : [];
-        
+
         // Client-side search
         const q = search.trim().toLowerCase();
         const filtered = q
             ? list.filter((e) => [
-                  e.fullName,
-                  e.email,
-                  e.phone,
-                  e.department?.name,
-                  e.position?.title,
-              ].some((v) => (v || "").toLowerCase().includes(q)))
+                e.fullName,
+                e.email,
+                e.phone,
+                e.department?.name,
+                e.position?.title,
+            ].some((v) => (v || "").toLowerCase().includes(q)))
             : list;
-        
+
         // Client-side sort
         const sorted = [...filtered].sort((a, b) => {
             const key = sortBy;
             const av = (a as any)[key] ?? "";
             const bv = (b as any)[key] ?? "";
-            
+
             if (key === "createdAt") {
                 const ad = new Date(av).getTime();
                 const bd = new Date(bv).getTime();
                 return sortOrder === "asc" ? ad - bd : bd - ad;
             }
-            
+
             const as = String(av).toLowerCase();
             const bs = String(bv).toLowerCase();
             if (as < bs) return sortOrder === "asc" ? -1 : 1;
             if (as > bs) return sortOrder === "asc" ? 1 : -1;
             return 0;
         });
-        
+
         // Client-side paginate
         const start = (page - 1) * pageSize;
         const end = start + pageSize;
         const paged = sorted.slice(start, end);
-        
+
         return { data: paged, total: sorted.length, page, pageSize };
     } catch (error) {
         throw new Error("Không thể tải danh sách nhân viên");
@@ -124,12 +124,12 @@ function useEmployees(initialPageSize: number = 10): UseEmployeesReturn {
         if (abortRef.current) {
             abortRef.current.abort();
         }
-        
+
         const controller = new AbortController();
         abortRef.current = controller;
         setLoading(true);
         setError(null);
-        
+
         try {
             const resp = await fetchEmployees({
                 page,
@@ -214,7 +214,7 @@ const ListEmployeePage: React.FC = () => {
         if (pagination.pageSize && pagination.pageSize !== pageSize) {
             actions.setPageSize(pagination.pageSize);
         }
-        
+
         const s = Array.isArray(sorter) ? sorter[0] : sorter;
         if (s && s.order && s.field) {
             const key = String(s.field) as keyof Employee | "createdAt";
@@ -233,7 +233,7 @@ const ListEmployeePage: React.FC = () => {
 
     const columns: ColumnsType<Employee> = useMemo(() => {
         const antOrder = sortOrder === "asc" ? "ascend" : "descend";
-        
+
         return [
             {
                 title: "Họ và tên",
@@ -313,7 +313,7 @@ const ListEmployeePage: React.FC = () => {
                         <Button
                             type="link"
                             icon={<EyeOutlined />}
-                            onClick={() => navigate(`/admin/employees/${record.id}`)}
+                            onClick={() => navigate(`/employee/${record.id}`)}
                             size="small"
                         >
                             Xem
@@ -321,7 +321,7 @@ const ListEmployeePage: React.FC = () => {
                         <Button
                             type="link"
                             icon={<EditOutlined />}
-                            onClick={() => navigate(`/admin/employees/${record.id}/edit`)}
+                            onClick={() => navigate(`/employee/edit/${record.id}`)}
                             size="small"
                             style={{ color: '#faad14' }}
                         >
@@ -358,7 +358,7 @@ const ListEmployeePage: React.FC = () => {
                     <Button
                         type="primary"
                         icon={<PlusOutlined />}
-                        onClick={() => navigate("/admin/employees/create")}
+                        onClick={() => navigate("/employee/create")}
                     >
                         Tạo nhân viên
                     </Button>

@@ -11,6 +11,7 @@ import ListEmployeePage from '@/pages/employee';
 import CreateEmployeePage from '@/pages/employee/create-employee';
 import UpdateEmployeePage from '@/pages/employee/update-employee';
 import ViewEmployeePage from '@/pages/employee/view-employee';
+import NotAuthorized from '@/pages/errors/NotAuthorized';
 import ListDepartmentPage from '@/pages/department';
 import CreateDepartmentPage from '@/pages/department/create-department';
 import UpdateDepartmentPage from '@/pages/department/update-department';
@@ -91,7 +92,7 @@ export const routes: RouteObject[] = [
         ),
       },
       {
-        path: '/employee/:id/edit',
+        path: '/employee/edit/:id',
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
             <UpdateEmployeePage />
@@ -300,6 +301,10 @@ export const routes: RouteObject[] = [
         <LoginPage />
       </PublicRoute>
     ),
+  },
+  {
+    path: '/403',
+    element: <NotAuthorized />,
   },
 ];
 
