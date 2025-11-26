@@ -3,7 +3,7 @@ import type { FormProps } from "antd";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
-import { getAllEmployeesAPI, getAllShiftsAPI, createWorkScheduleAPI } from "@/services/api";
+import { getAllEmployeesAPI, getAllShiftsAPI, createWorkScheduleAPI, createMyWorkScheduleAPI } from "@/services/api";
 import type { Employee } from "@/types/employee";
 import type { Shift } from "@/types/shift";
 import type { CreateWorkSchedulePayload } from "@/types/workschedule";
@@ -86,7 +86,14 @@ const CreateWorkSchedulePage: React.FC = () => {
                 note: values.note?.trim() || undefined,
             };
 
-            const res = await createWorkScheduleAPI(payload);
+            let res;
+            if (isEmployee) {
+                // Remove employeeId for self-registration
+                const { employeeId, ...rest } = payload;
+                res = await createMyWorkScheduleAPI(rest);
+            } else {
+                res = await createWorkScheduleAPI(payload);
+            }
             const successMsg = isEmployee ? "Đăng ký lịch thành công!" : "Tạo lịch làm việc thành công!";
             if (handleApiSuccess(res, successMsg, "Có lỗi xảy ra khi tạo lịch")) {
                 form.resetFields();
