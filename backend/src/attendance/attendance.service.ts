@@ -22,12 +22,20 @@ import { QueryAttendanceDto } from './dto/query-attendance.dto';
 import { CheckInDto } from './dto/check-in.dto';
 import { CheckOutDto } from './dto/check-out.dto';
 import { AuditLogService } from '@/audit-log/audit-log.service';
+import { NotificationService } from '@/notification/notification.service';
+import {
+  notifyCheckInEarly,
+  notifyCheckInLate,
+  notifyCheckOutLate,
+  notifyForgotCheckOut,
+} from '@/notification/notification-templates.helper';
 
 @Injectable()
 export class AttendanceService {
   constructor(
     private prisma: PrismaService,
     private readonly auditLogService: AuditLogService,
+    private readonly notificationService: NotificationService,
   ) { }
 
   /**
@@ -384,6 +392,19 @@ export class AttendanceService {
         throw new ConflictException('Already checked in today');
       }
 
+      // Calculate late minutes for existing record
+      let lateMinutes = 0;
+      if (activeShift && activeShift.startTime) {
+        const shiftStart = new Date(checkInTime);
+        const shiftTime = new Date(activeShift.startTime);
+        shiftStart.setHours(shiftTime.getHours(), shiftTime.getMinutes(), 0, 0);
+
+        if (checkInTime > shiftStart) {
+          const diffMs = checkInTime.getTime() - shiftStart.getTime();
+          lateMinutes = Math.floor(diffMs / 60000);
+        }
+      }
+
       // Update existing record with check-in
       const status = this.calculateStatus(checkInTime);
       const updated = await this.prisma.attendance.update({
@@ -392,6 +413,7 @@ export class AttendanceService {
           checkInTime,
           status,
           note: data.note || existing.note,
+          lateMinutes,
         },
         include: {
           employee: {
@@ -414,6 +436,34 @@ export class AttendanceService {
         afterData: updated,
         description: `Check-in cho nhân sự ${updated.employeeId} ngày ${updated.date.toISOString().split('T')[0]}`,
       });
+
+      // Gửi notification check-in sớm/muộn
+      try {
+        if (activeShift && activeShift.startTime) {
+          const shiftStart = new Date(checkInTime);
+          const shiftTime = new Date(activeShift.startTime);
+          shiftStart.setHours(shiftTime.getHours(), shiftTime.getMinutes(), 0, 0);
+
+          if (lateMinutes > 0) {
+            // Check-in muộn
+            await notifyCheckInLate(
+              this.notificationService,
+              employeeId,
+              checkInTime,
+              lateMinutes,
+            );
+          } else if (checkInTime < shiftStart) {
+            // Check-in sớm
+            await notifyCheckInEarly(
+              this.notificationService,
+              employeeId,
+              checkInTime,
+            );
+          }
+        }
+      } catch (error) {
+        console.error('Error sending notification for check-in:', error);
+      }
 
       return updated;
     }
@@ -462,6 +512,34 @@ export class AttendanceService {
       afterData: attendance,
       description: `Check-in tạo mới cho nhân sự ${attendance.employeeId} ngày ${attendance.date.toISOString().split('T')[0]}`,
     });
+
+    // Gửi notification check-in sớm/muộn
+    try {
+      if (activeShift && activeShift.startTime) {
+        const shiftStart = new Date(checkInTime);
+        const shiftTime = new Date(activeShift.startTime);
+        shiftStart.setHours(shiftTime.getHours(), shiftTime.getMinutes(), 0, 0);
+
+        if (lateMinutes > 0) {
+          // Check-in muộn
+          await notifyCheckInLate(
+            this.notificationService,
+            employeeId,
+            checkInTime,
+            lateMinutes,
+          );
+        } else if (checkInTime < shiftStart) {
+          // Check-in sớm
+          await notifyCheckInEarly(
+            this.notificationService,
+            employeeId,
+            checkInTime,
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error sending notification for check-in:', error);
+    }
 
     return attendance;
   }
@@ -540,8 +618,9 @@ export class AttendanceService {
       throw new BadRequestException('Check-out time must be after check-in time');
     }
 
-    // Calculate early minutes
+    // Calculate early minutes and check if late
     let earlyMinutes = 0;
+    let isLateCheckOut = false;
     if (activeShift && activeShift.endTime) {
       const shiftEnd = new Date(checkOutTime);
       const shiftTime = new Date(activeShift.endTime);
@@ -550,6 +629,9 @@ export class AttendanceService {
       if (checkOutTime < shiftEnd) {
         const diffMs = shiftEnd.getTime() - checkOutTime.getTime();
         earlyMinutes = Math.floor(diffMs / 60000);
+      } else if (checkOutTime > shiftEnd) {
+        // Check-out muộn
+        isLateCheckOut = true;
       }
     }
 
@@ -582,6 +664,19 @@ export class AttendanceService {
       afterData: updated,
       description: `Check-out cho nhân sự ${updated.employeeId} ngày ${updated.date.toISOString().split('T')[0]}`,
     });
+
+    // Gửi notification check-out muộn
+    try {
+      if (isLateCheckOut) {
+        await notifyCheckOutLate(
+          this.notificationService,
+          employeeId,
+          checkOutTime,
+        );
+      }
+    } catch (error) {
+      console.error('Error sending notification for check-out:', error);
+    }
 
     return updated;
   }
@@ -742,5 +837,61 @@ export class AttendanceService {
       }
       throw new BadRequestException('Failed to delete attendance record');
     }
+  }
+
+  /**
+   * Phát hiện và gửi notification cho employees quên checkout ngày hôm trước
+   * Có thể gọi từ scheduled job hoặc manual
+   */
+  async checkForgotCheckOut(targetDate?: Date): Promise<{ count: number }> {
+    // Nếu không có targetDate, dùng ngày hôm trước
+    const yesterday = targetDate || new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+
+    const endOfYesterday = new Date(yesterday);
+    endOfYesterday.setHours(23, 59, 59, 999);
+
+    // Tìm tất cả attendance có checkInTime nhưng không có checkOutTime của ngày hôm trước
+    const forgotCheckOuts = await this.prisma.attendance.findMany({
+      where: {
+        date: {
+          gte: yesterday,
+          lte: endOfYesterday,
+        },
+        checkInTime: {
+          not: null,
+        },
+        checkOutTime: null,
+      },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    // Gửi notification cho từng employee
+    let notificationCount = 0;
+    for (const attendance of forgotCheckOuts) {
+      try {
+        await notifyForgotCheckOut(
+          this.notificationService,
+          attendance.employeeId,
+          attendance.date,
+        );
+        notificationCount++;
+      } catch (error) {
+        console.error(
+          `Error sending forgot checkout notification for employee ${attendance.employeeId}:`,
+          error,
+        );
+      }
+    }
+
+    return { count: notificationCount };
   }
 }

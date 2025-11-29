@@ -4,6 +4,11 @@ import { Employee, Account, Prisma, EmployeeType, AuditAction, AuditModule, Audi
 import * as bcrypt from 'bcrypt';
 import { AuditLogService } from '@/audit-log/audit-log.service';
 import { writeAuditLog, getActorContextFromUser } from '@/audit-log/audit-log.helper';
+import { NotificationService } from '@/notification/notification.service';
+import {
+  notifyEmployeeCreated,
+  notifyEmployeeUpdated,
+} from '@/notification/notification-templates.helper';
 
 type EmployeeWithAccount = Employee & {
   account?: Account | null;
@@ -16,6 +21,7 @@ export class EmployeeService {
   constructor(
     private prisma: PrismaService,
     private readonly auditLogService: AuditLogService,
+    private readonly notificationService: NotificationService,
   ) { }
 
   private normalizeEmployeeDates<T extends { dateOfBirth?: string | Date | null; startDate?: string | Date | null }>(data: T): T {
@@ -89,6 +95,16 @@ export class EmployeeService {
         actor: actorContext,
       });
 
+      // Gửi notification cho employee mới
+      try {
+        await notifyEmployeeCreated(
+          this.notificationService,
+          employee.id,
+        );
+      } catch (error) {
+        console.error(`Error sending notification for employee creation ${employee.id}:`, error);
+      }
+
       return employee;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -129,6 +145,16 @@ export class EmployeeService {
         },
         actor: actorContext,
       });
+
+      // Gửi notification cho employee được cập nhật
+      try {
+        await notifyEmployeeUpdated(
+          this.notificationService,
+          employee.id,
+        );
+      } catch (error) {
+        console.error(`Error sending notification for employee update ${employee.id}:`, error);
+      }
 
       return employee;
     } catch (error) {
@@ -287,6 +313,17 @@ export class EmployeeService {
         });
 
         return { employee, account };
+      }).then(async (result) => {
+        // Gửi notification sau khi transaction commit thành công
+        try {
+          await notifyEmployeeCreated(
+            this.notificationService,
+            result.employee.id,
+          );
+        } catch (error) {
+          console.error(`Error sending notification for employee creation ${result.employee.id}:`, error);
+        }
+        return result;
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {

@@ -7,6 +7,8 @@ import { RegisterDto } from '@/auth/dto/register.dto';
 import { ActivateAccountDto } from '@/auth/dto/activate-account.dto';
 import { AuditLogService } from '@/audit-log/audit-log.service';
 import { AuditAction, AuditModule, AuditStatus } from '@prisma/client';
+import { NotificationService } from '@/notification/notification.service';
+import { notifyPasswordReset } from '@/notification/notification-templates.helper';
 
 @Injectable()
 export class AuthService {
@@ -14,7 +16,8 @@ export class AuthService {
         private employeeService: EmployeeService,
         private jwtService: JwtService,
         private configService: ConfigService,
-    private readonly auditLogService: AuditLogService,
+        private readonly auditLogService: AuditLogService,
+        private readonly notificationService: NotificationService,
     ) { }
 
     //username/ pass là 2 tham số thư viện passport nó ném về
@@ -161,6 +164,17 @@ export class AuthService {
             entityId: account.id,
             description: `Kích hoạt tài khoản cho nhân sự ${employee.fullName} (${employee.email})`,
         });
+
+        // Gửi notification cho employee khi reset password
+        try {
+            await notifyPasswordReset(
+                this.notificationService,
+                employee.id,
+                new Date(),
+            );
+        } catch (error) {
+            console.error(`Error sending notification for password reset ${employee.id}:`, error);
+        }
 
         return {
             user: {

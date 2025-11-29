@@ -18,6 +18,7 @@ import { CreateWorkScheduleDto } from './dto/create-workschedule.dto';
 import { UpdateWorkScheduleDto } from './dto/update-workschedule.dto';
 import { QueryWorkScheduleDto } from './dto/query-workschedule.dto';
 import { ApproveWorkScheduleDto } from './dto/approve-workschedule.dto';
+import { NotifyMonthAvailableDto } from './dto/notify-month-available.dto';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
 import { Roles } from '@/auth/decorator/roles.decorator';
@@ -122,5 +123,37 @@ export class WorkscheduleController {
   @ApiOperation({ summary: 'Xoá lịch làm việc' })
   async delete(@Param('id') id: string) {
     return this.workscheduleService.delete(id);
+  }
+
+  @Post('notify-month-available')
+  @Roles(UserRole.ADMIN, UserRole.HR)
+  @ApiOperation({
+    summary: 'Gửi notification cho tất cả employees về lịch làm việc tháng mới (Admin/HR)',
+    description: 'Gửi system notification cho tất cả employees đang làm việc về lịch làm việc tháng mới. Có thể gọi manual hoặc từ scheduled job.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Đã gửi notification thành công',
+    schema: {
+      type: 'object',
+      properties: {
+        count: { type: 'number', description: 'Số lượng notification đã gửi' },
+        month: { type: 'number', description: 'Tháng' },
+        year: { type: 'number', description: 'Năm' },
+      },
+    },
+  })
+  async notifyMonthAvailable(
+    @Body() dto: NotifyMonthAvailableDto,
+  ): Promise<{ count: number; month: number; year: number }> {
+    const result = await this.workscheduleService.notifyWorkScheduleMonthAvailable(
+      dto.month,
+      dto.year,
+    );
+    return {
+      ...result,
+      month: dto.month,
+      year: dto.year,
+    };
   }
 }

@@ -12,12 +12,20 @@ import { UpdateWorkScheduleDto } from './dto/update-workschedule.dto';
 import { QueryWorkScheduleDto } from './dto/query-workschedule.dto';
 import { ApproveWorkScheduleDto } from './dto/approve-workschedule.dto';
 import { AuditLogService } from '@/audit-log/audit-log.service';
+import { NotificationService } from '@/notification/notification.service';
+import {
+  notifyWorkScheduleCreated,
+  notifyWorkScheduleApproved,
+  notifyWorkScheduleRejected,
+  notifyWorkScheduleMonthAvailable,
+} from '@/notification/notification-templates.helper';
 
 @Injectable()
 export class WorkscheduleService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLogService: AuditLogService,
+    private readonly notificationService: NotificationService,
   ) { }
 
   private readonly includeRelations: Prisma.WorkScheduleInclude = {
@@ -188,6 +196,20 @@ export class WorkscheduleService {
         description: `Tạo lịch làm việc cho nhân sự ${schedule.employeeId} ngày ${schedule.date.toISOString().split('T')[0]}`,
       });
 
+      // Gửi notification cho ADMIN/HR để duyệt
+      try {
+        await notifyWorkScheduleCreated(
+          this.notificationService,
+          this.prisma,
+          schedule.employee.fullName,
+          schedule.date,
+          schedule.shift?.name,
+        );
+      } catch (error) {
+        // Log error nhưng không throw để không ảnh hưởng đến flow chính
+        console.error('Error sending notification for work schedule creation:', error);
+      }
+
       return schedule;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -306,6 +328,29 @@ export class WorkscheduleService {
       description: `Duyệt lịch làm việc ${updated.id} với trạng thái ${dto.status}`,
     });
 
+    // Gửi notification cho employee
+    try {
+      if (dto.status === RequestStatus.APPROVED) {
+        await notifyWorkScheduleApproved(
+          this.notificationService,
+          schedule.employeeId,
+          schedule.date,
+          updated.shift?.name,
+        );
+      } else if (dto.status === RequestStatus.REJECTED) {
+        await notifyWorkScheduleRejected(
+          this.notificationService,
+          schedule.employeeId,
+          schedule.date,
+          updated.shift?.name,
+          dto.note,
+        );
+      }
+    } catch (error) {
+      // Log error nhưng không throw để không ảnh hưởng đến flow chính
+      console.error('Error sending notification for work schedule approval:', error);
+    }
+
     return updated;
   }
 
@@ -338,5 +383,18 @@ export class WorkscheduleService {
     } catch (error) {
       throw new BadRequestException('Không thể xoá lịch làm việc');
     }
+  }
+
+  /**
+   * Gửi system notification cho tất cả employees về lịch làm việc tháng mới
+   * Có thể gọi từ scheduled job hoặc manual
+   */
+  async notifyWorkScheduleMonthAvailable(month: number, year: number): Promise<{ count: number }> {
+    return await notifyWorkScheduleMonthAvailable(
+      this.notificationService,
+      this.prisma,
+      month,
+      year,
+    );
   }
 }

@@ -162,4 +162,24 @@ export class AttendanceController {
   async delete(@Param('id') id: string) {
     return this.attendanceService.delete(id);
   }
+
+  @Post('check-forgot-checkout')
+  @Roles(UserRole.ADMIN, UserRole.HR)
+  @ApiOperation({
+    summary: 'Kiểm tra và gửi notification cho employees quên checkout (Admin/HR)',
+    description: 'Kiểm tra attendance của ngày hôm trước có check-in nhưng không có check-out, sau đó gửi notification cho từng employee',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Đã kiểm tra và gửi notification',
+    schema: {
+      type: 'object',
+      properties: {
+        count: { type: 'number', description: 'Số lượng notification đã gửi' },
+      },
+    },
+  })
+  async checkForgotCheckOut() {
+    return this.attendanceService.checkForgotCheckOut();
+  }
 }

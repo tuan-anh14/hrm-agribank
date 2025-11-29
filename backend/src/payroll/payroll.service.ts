@@ -10,6 +10,11 @@ import {
     RewardPenaltyType,
 } from '@prisma/client';
 import { AuditLogService } from '@/audit-log/audit-log.service';
+import { NotificationService } from '@/notification/notification.service';
+import {
+    notifyPayrollCreated,
+    notifyPayrollPaid,
+} from '@/notification/notification-templates.helper';
 
 @Injectable()
 export class PayrollService {
@@ -17,6 +22,7 @@ export class PayrollService {
         private prisma: PrismaService,
         private rewardPenaltyService: RewardPenaltyService,
         private readonly auditLogService: AuditLogService,
+        private readonly notificationService: NotificationService,
     ) { }
 
     async generatePayrollForMonth(month: number, year: number) {
@@ -215,6 +221,19 @@ export class PayrollService {
                     description: `Tạo/cập nhật bảng lương tháng ${month}/${year} cho nhân sự ${employee.id}`,
                 });
 
+                // Gửi notification cho employee
+                try {
+                    await notifyPayrollCreated(
+                        this.notificationService,
+                        employee.id,
+                        month,
+                        year,
+                        totalSalary,
+                    );
+                } catch (error) {
+                    console.error(`Error sending notification for payroll creation for employee ${employee.id}:`, error);
+                }
+
                 return payroll;
         });
 
@@ -293,6 +312,25 @@ export class PayrollService {
             afterData: payrollUpdated,
             description: `Thanh toán bảng lương ${payroll.month}/${payroll.year} cho nhân sự ${payroll.employeeId}`,
         });
+
+        // Gửi notification cho employee
+        try {
+            const payment = await this.prisma.payment.findFirst({
+                where: { payrollId: id },
+                orderBy: { createdAt: 'desc' },
+            });
+
+            await notifyPayrollPaid(
+                this.notificationService,
+                payroll.employeeId,
+                payroll.month,
+                payroll.year,
+                payroll.totalSalary,
+                payment?.paidDate || new Date(),
+            );
+        } catch (error) {
+            console.error(`Error sending notification for payroll payment for employee ${payroll.employeeId}:`, error);
+        }
 
         return payrollUpdated;
     }

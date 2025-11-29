@@ -9,11 +9,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtStrategy } from '@/auth/passport/jwt.strategy';
 import { RolesGuard } from '@/auth/guards/roles.guard';
 import { AuditLogModule } from '@/audit-log/audit-log.module';
+import { NotificationModule } from '@/notification/notification.module';
 
 @Module({
   imports: [
     EmployeeModule, 
     AuditLogModule,
+    NotificationModule,
     PassportModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

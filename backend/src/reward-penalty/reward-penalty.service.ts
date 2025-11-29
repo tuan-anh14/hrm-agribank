@@ -2,14 +2,20 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRewardPenaltyDto } from './dto/create-reward-penalty.dto';
 import { UpdateRewardPenaltyDto } from './dto/update-reward-penalty.dto';
-import { AuditAction, AuditModule, AuditStatus } from '@prisma/client';
+import { AuditAction, AuditModule, AuditStatus, RewardPenaltyType } from '@prisma/client';
 import { AuditLogService } from '@/audit-log/audit-log.service';
+import { NotificationService } from '@/notification/notification.service';
+import {
+    notifyRewardCreated,
+    notifyPenaltyCreated,
+} from '@/notification/notification-templates.helper';
 
 @Injectable()
 export class RewardPenaltyService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly auditLogService: AuditLogService,
+        private readonly notificationService: NotificationService,
     ) { }
 
     async create(createRewardPenaltyDto: CreateRewardPenaltyDto) {
@@ -26,6 +32,27 @@ export class RewardPenaltyService {
             afterData: rewardPenalty,
             description: `Tạo thưởng/phạt cho nhân sự ${rewardPenalty.employeeId}`,
         });
+
+        // Gửi notification cho employee
+        try {
+            if (rewardPenalty.type === RewardPenaltyType.REWARD) {
+                await notifyRewardCreated(
+                    this.notificationService,
+                    rewardPenalty.employeeId,
+                    rewardPenalty.amount,
+                    rewardPenalty.reason || undefined,
+                );
+            } else if (rewardPenalty.type === RewardPenaltyType.PENALTY) {
+                await notifyPenaltyCreated(
+                    this.notificationService,
+                    rewardPenalty.employeeId,
+                    rewardPenalty.amount,
+                    rewardPenalty.reason || undefined,
+                );
+            }
+        } catch (error) {
+            console.error(`Error sending notification for reward/penalty ${rewardPenalty.id}:`, error);
+        }
 
         return rewardPenalty;
     }
