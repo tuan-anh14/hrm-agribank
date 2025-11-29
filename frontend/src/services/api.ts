@@ -8,6 +8,7 @@ import type { WorkSchedule, WorkScheduleListResponse, QueryWorkScheduleParams, C
 import type { Payroll, GeneratePayrollPayload, QueryPayrollParams, PayrollListResponse } from '@/types/payroll';
 import type { RewardPenalty, CreateRewardPenaltyDto } from '@/types/reward-penalty';
 import type { AuditLog, AuditLogDetail, QueryAuditLogParams, AuditLogListResponse, AuditLogDetailResponse } from '@/types/audit-log';
+import type { Notification, NotificationListResponse, NotificationDetailResponse, UnreadCountResponse, QueryNotificationParams, CreateNotificationPayload, UpdateNotificationPayload } from '@/types/notification';
 
 export const loginAPI = (username: string, password: string) => {
     const urlBackend = "/api/v1/auth/login"
@@ -289,4 +290,50 @@ export const getAuditLogsAPI = (params?: QueryAuditLogParams) => {
 export const getAuditLogDetailAPI = (id: string) => {
     const urlBackend = `/api/v1/audit-log/${id}`;
     return axios.get<AuditLogDetailResponse>(urlBackend);
+}
+
+// Notification APIs
+export const getAllNotificationsAPI = (params?: QueryNotificationParams) => {
+    const urlBackend = "/api/v1/notifications";
+    return axios.get<NotificationListResponse>(urlBackend, { params });
+}
+
+export const getUnreadNotificationsAPI = (params?: QueryNotificationParams) => {
+    const urlBackend = "/api/v1/notifications/unread";
+    return axios.get<NotificationListResponse>(urlBackend, { params });
+}
+
+export const getUnreadCountAPI = () => {
+    const urlBackend = "/api/v1/notifications/unread-count";
+    return axios.get<UnreadCountResponse>(urlBackend);
+}
+
+export const getNotificationByIdAPI = (id: string) => {
+    const urlBackend = `/api/v1/notifications/${id}`;
+    return axios.get<NotificationDetailResponse>(urlBackend);
+}
+
+export const markNotificationAsReadAPI = (id: string) => {
+    const urlBackend = `/api/v1/notifications/${id}/read`;
+    return axios.patch<NotificationDetailResponse>(urlBackend, {});
+}
+
+export const markAllNotificationsAsReadAPI = () => {
+    const urlBackend = "/api/v1/notifications/read-all";
+    return axios.patch<{ count: number }>(urlBackend, {});
+}
+
+export const createNotificationAPI = (payload: CreateNotificationPayload) => {
+    const urlBackend = "/api/v1/notifications";
+    return axios.post<IBackendRes<Notification>>(urlBackend, payload);
+}
+
+export const updateNotificationAPI = (id: string, payload: UpdateNotificationPayload) => {
+    const urlBackend = `/api/v1/notifications/${id}`;
+    return axios.patch<NotificationDetailResponse>(urlBackend, payload);
+}
+
+export const deleteNotificationAPI = (id: string) => {
+    const urlBackend = `/api/v1/notifications/${id}`;
+    return axios.delete<IBackendRes<{ message: string }>>(urlBackend);
 }

@@ -45,6 +45,12 @@
         flex-wrap: wrap;
     }
 
+    .notification-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
     .user-dropdown {
             cursor: pointer;
         }

@@ -7,6 +7,7 @@ import { useResponsive } from "@/hooks/useResponsive";
 import { useNavigate } from "react-router-dom";
 import { removeToken } from "@/utils/token.util";
 import { useState, useMemo } from "react";
+import NotificationDropdown from "@/components/notification/NotificationDropdown";
 import "./app.header.scss";
 
 const { Header } = Layout;
@@ -72,6 +73,7 @@ const AppHeader = () => {
                         <Button type="text" icon={<SettingOutlined />} />
                     </>
                 )}
+                <NotificationDropdown className="notification-btn" />
                 <Dropdown menu={{ items: userMenuItems, onClick: handleMenuClick }} trigger={['click']} placement="bottomRight">
                     <Space className="user-dropdown" size="small">
                         <Avatar

@@ -1,0 +1,70 @@
+.notification-dropdown {
+  width: 400px;
+  max-width: 90vw;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  .notification-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .notification-list-container {
+    min-height: 200px;
+    max-height: 400px;
+  }
+
+  .notification-item {
+    transition: background-color 0.2s;
+
+    &:hover {
+      background-color: #f5f5f5 !important;
+    }
+
+    &.unread {
+      background-color: #fff1f0 !important;
+
+      &:hover {
+        background-color: #ffe7e5 !important;
+      }
+    }
+  }
+}
+
+.notification-popover-overlay {
+  .ant-popover-inner {
+    padding: 0;
+  }
+  
+  .ant-popover-inner-content {
+    padding: 0;
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .notification-dropdown {
+    width: calc(100vw - 32px);
+    max-width: calc(100vw - 32px);
+  }
+}
+
+@media (max-width: 576px) {
+  .notification-dropdown {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    
+    .notification-header {
+      padding: 12px;
+    }
+    
+    .notification-list-container {
+      max-height: 60vh;
+    }
+  }
+}
+
