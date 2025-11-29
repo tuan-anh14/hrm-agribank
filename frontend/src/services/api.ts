@@ -7,6 +7,7 @@ import type { Shift, ShiftListResponse, QueryShiftParams, CreateShiftPayload, Up
 import type { WorkSchedule, WorkScheduleListResponse, QueryWorkScheduleParams, CreateWorkSchedulePayload, UpdateWorkSchedulePayload, ApproveWorkSchedulePayload } from '@/types/workschedule';
 import type { Payroll, GeneratePayrollPayload, QueryPayrollParams, PayrollListResponse } from '@/types/payroll';
 import type { RewardPenalty, CreateRewardPenaltyDto } from '@/types/reward-penalty';
+import type { AuditLog, AuditLogDetail, QueryAuditLogParams, AuditLogListResponse, AuditLogDetailResponse } from '@/types/audit-log';
 
 export const loginAPI = (username: string, password: string) => {
     const urlBackend = "/api/v1/auth/login"
@@ -277,4 +278,15 @@ export const getAllRewardPenaltiesAPI = () => {
 export const deleteRewardPenaltyAPI = (id: string) => {
     const urlBackend = `/api/v1/reward-penalty/${id}`;
     return axios.delete<IBackendRes<RewardPenalty>>(urlBackend);
+}
+
+// Audit Log APIs
+export const getAuditLogsAPI = (params?: QueryAuditLogParams) => {
+    const urlBackend = "/api/v1/audit-log";
+    return axios.get<AuditLogListResponse>(urlBackend, { params });
+}
+
+export const getAuditLogDetailAPI = (id: string) => {
+    const urlBackend = `/api/v1/audit-log/${id}`;
+    return axios.get<AuditLogDetailResponse>(urlBackend);
 }

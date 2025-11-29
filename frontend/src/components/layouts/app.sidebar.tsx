@@ -9,6 +9,7 @@ import {
     DollarOutlined,
     FieldTimeOutlined,
     ScheduleOutlined,
+    FileSearchOutlined,
 } from '@ant-design/icons';
 import { useSidebar } from '@/components/context/sidebar.context';
 import { useCurrentApp } from '@/components/context/app.context';
@@ -95,6 +96,11 @@ const AppSidebar = () => {
                     key: '/reward-penalty',
                     icon: <DollarOutlined />,
                     label: 'Khen thưởng / Kỷ luật',
+                },
+                {
+                    key: '/audit-log',
+                    icon: <FileSearchOutlined />,
+                    label: 'Nhật ký hệ thống',
                 }
             );
         }

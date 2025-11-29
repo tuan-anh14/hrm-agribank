@@ -36,6 +36,8 @@ import PayrollList from '@/pages/payroll/PayrollList';
 import PayrollDetail from '@/pages/payroll/PayrollDetail';
 // import MyPayroll from '@/pages/payroll/MyPayroll'; // Merged into PayrollList
 import RewardPenaltyManager from '@/pages/reward-penalty/RewardPenaltyManager';
+import AuditLogPage from '@/pages/audit-log';
+import AuditLogDetailPage from '@/pages/audit-log/detail';
 
 // Layout
 import AppLayout from '@/layout';
@@ -288,6 +290,23 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
             <RewardPenaltyManager />
+          </ProtectedRoute>
+        ),
+      },
+      // Audit Log routes (Admin/HR only)
+      {
+        path: '/audit-log',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <AuditLogPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/audit-log/:id',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <AuditLogDetailPage />
           </ProtectedRoute>
         ),
       },
