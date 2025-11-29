@@ -38,6 +38,14 @@ import PayrollDetail from '@/pages/payroll/PayrollDetail';
 import RewardPenaltyManager from '@/pages/reward-penalty/RewardPenaltyManager';
 import AuditLogPage from '@/pages/audit-log';
 import AuditLogDetailPage from '@/pages/audit-log/detail';
+import ListRequestPage from '@/pages/request';
+import CreateRequestPage from '@/pages/request/create-request';
+import ViewRequestPage from '@/pages/request/view-request';
+import UpdateRequestPage from '@/pages/request/update-request';
+import ListRequestTypePage from '@/pages/request-type';
+import CreateRequestTypePage from '@/pages/request-type/create-request-type';
+import UpdateRequestTypePage from '@/pages/request-type/update-request-type';
+import ViewRequestTypePage from '@/pages/request-type/view-request-type';
 
 // Layout
 import AppLayout from '@/layout';
@@ -290,6 +298,72 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
             <RewardPenaltyManager />
+          </ProtectedRoute>
+        ),
+      },
+      // Request routes (Unified)
+      {
+        path: '/request',
+        element: (
+          <ProtectedRoute>
+            <ListRequestPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/request/create',
+        element: (
+          <ProtectedRoute>
+            <CreateRequestPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/request/:id',
+        element: (
+          <ProtectedRoute>
+            <ViewRequestPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/request/:id/edit',
+        element: (
+          <ProtectedRoute>
+            <UpdateRequestPage />
+          </ProtectedRoute>
+        ),
+      },
+      // RequestType routes (Admin/HR only)
+      {
+        path: '/request-type',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR', 'EMPLOYEE']}>
+            <ListRequestTypePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/request-type/create',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <CreateRequestTypePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/request-type/:id',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR', 'EMPLOYEE']}>
+            <ViewRequestTypePage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/request-type/:id/edit',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+            <UpdateRequestTypePage />
           </ProtectedRoute>
         ),
       },

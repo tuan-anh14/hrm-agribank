@@ -9,6 +9,7 @@ import type { Payroll, GeneratePayrollPayload, QueryPayrollParams, PayrollListRe
 import type { RewardPenalty, CreateRewardPenaltyDto } from '@/types/reward-penalty';
 import type { AuditLog, AuditLogDetail, QueryAuditLogParams, AuditLogListResponse, AuditLogDetailResponse } from '@/types/audit-log';
 import type { Notification, NotificationListResponse, NotificationDetailResponse, UnreadCountResponse, QueryNotificationParams, CreateNotificationPayload, UpdateNotificationPayload } from '@/types/notification';
+import type { Request, RequestListResponse, QueryRequestParams, CreateRequestPayload, UpdateRequestPayload, ApproveRequestPayload, RequestType, CreateRequestTypePayload, UpdateRequestTypePayload } from '@/types/request';
 
 export const loginAPI = (username: string, password: string) => {
     const urlBackend = "/api/v1/auth/login"
@@ -336,4 +337,77 @@ export const updateNotificationAPI = (id: string, payload: UpdateNotificationPay
 export const deleteNotificationAPI = (id: string) => {
     const urlBackend = `/api/v1/notifications/${id}`;
     return axios.delete<IBackendRes<{ message: string }>>(urlBackend);
+}
+
+// RequestType APIs - CRUD Operations
+export const getAllRequestTypesAPI = () => {
+    const urlBackend = "/api/v1/request-type";
+    // Backend returns a plain array (not wrapped in IBackendRes)
+    return axios.get<RequestType[]>(urlBackend);
+}
+
+export const getRequestTypeByIdAPI = (id: string) => {
+    const urlBackend = `/api/v1/request-type/${id}`;
+    return axios.get<IBackendRes<RequestType>>(urlBackend);
+}
+
+export const createRequestTypeAPI = (payload: CreateRequestTypePayload) => {
+    const urlBackend = "/api/v1/request-type";
+    return axios.post<IBackendRes<RequestType>>(urlBackend, payload);
+}
+
+export const updateRequestTypeAPI = (id: string, payload: UpdateRequestTypePayload) => {
+    const urlBackend = `/api/v1/request-type/${id}`;
+    return axios.put<IBackendRes<RequestType>>(urlBackend, payload);
+}
+
+export const deleteRequestTypeAPI = (id: string) => {
+    const urlBackend = `/api/v1/request-type/${id}`;
+    return axios.delete<IBackendRes<RequestType>>(urlBackend);
+}
+
+// Request APIs - CRUD Operations
+export const getAllRequestsAPI = (params?: QueryRequestParams) => {
+    const urlBackend = "/api/v1/request";
+    return axios.get<RequestListResponse>(urlBackend, { params });
+}
+
+export const getRequestByIdAPI = (id: string) => {
+    const urlBackend = `/api/v1/request/${id}`;
+    return axios.get<IBackendRes<Request>>(urlBackend);
+}
+
+export const getRequestsByEmployeeIdAPI = (employeeId: string, params?: QueryRequestParams) => {
+    const urlBackend = `/api/v1/request/employee/${employeeId}`;
+    return axios.get<RequestListResponse>(urlBackend, { params });
+}
+
+export const getMyRequestsAPI = (params?: QueryRequestParams) => {
+    const urlBackend = "/api/v1/request/me";
+    return axios.get<RequestListResponse>(urlBackend, { params });
+}
+
+export const createRequestAPI = (payload: CreateRequestPayload) => {
+    const urlBackend = "/api/v1/request";
+    return axios.post<IBackendRes<Request>>(urlBackend, payload);
+}
+
+export const createMyRequestAPI = (payload: Omit<CreateRequestPayload, 'employeeId'>) => {
+    const urlBackend = "/api/v1/request/me";
+    return axios.post<IBackendRes<Request>>(urlBackend, payload);
+}
+
+export const updateRequestAPI = (id: string, payload: UpdateRequestPayload) => {
+    const urlBackend = `/api/v1/request/${id}`;
+    return axios.put<IBackendRes<Request>>(urlBackend, payload);
+}
+
+export const approveRequestAPI = (id: string, payload: ApproveRequestPayload) => {
+    const urlBackend = `/api/v1/request/${id}/approve`;
+    return axios.patch<IBackendRes<Request>>(urlBackend, payload);
+}
+
+export const deleteRequestAPI = (id: string) => {
+    const urlBackend = `/api/v1/request/${id}`;
+    return axios.delete<IBackendRes<Request>>(urlBackend);
 }

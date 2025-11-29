@@ -10,6 +10,8 @@ import {
     FieldTimeOutlined,
     ScheduleOutlined,
     FileSearchOutlined,
+    FileDoneOutlined,
+    FormOutlined,
 } from '@ant-design/icons';
 import { useSidebar } from '@/components/context/sidebar.context';
 import { useCurrentApp } from '@/components/context/app.context';
@@ -83,6 +85,11 @@ const AppSidebar = () => {
                 label: isEmployee ? 'Chấm công' : 'Quản lý chấm công',
             },
             {
+                key: '/request',
+                icon: <FormOutlined />,
+                label: isEmployee ? 'Đơn của tôi' : 'Quản lý đơn',
+            },
+            {
                 key: '/payroll',
                 icon: <DollarOutlined />,
                 label: isEmployee ? 'Bảng lương' : 'Quản lý lương',
@@ -92,6 +99,11 @@ const AppSidebar = () => {
         // Extra Admin/HR items that don't fit into the unified list above or are separate
         if (!isEmployee) {
             baseItems.push(
+                {
+                    key: '/request-type',
+                    icon: <FileDoneOutlined />,
+                    label: 'Loại đơn',
+                },
                 {
                     key: '/reward-penalty',
                     icon: <DollarOutlined />,
