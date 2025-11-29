@@ -5,16 +5,20 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
-import { Prisma, RequestStatus } from '@prisma/client';
+import { AuditAction, AuditModule, AuditStatus, Prisma, RequestStatus } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateWorkScheduleDto } from './dto/create-workschedule.dto';
 import { UpdateWorkScheduleDto } from './dto/update-workschedule.dto';
 import { QueryWorkScheduleDto } from './dto/query-workschedule.dto';
 import { ApproveWorkScheduleDto } from './dto/approve-workschedule.dto';
+import { AuditLogService } from '@/audit-log/audit-log.service';
 
 @Injectable()
 export class WorkscheduleService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLogService: AuditLogService,
+  ) { }
 
   private readonly includeRelations: Prisma.WorkScheduleInclude = {
     employee: {
@@ -164,7 +168,7 @@ export class WorkscheduleService {
     await this.validateDuplicateSchedule(data.employeeId, scheduleDate);
 
     try {
-      return await this.prisma.workSchedule.create({
+      const schedule = await this.prisma.workSchedule.create({
         data: {
           employeeId: data.employeeId,
           shiftId: data.shiftId,
@@ -173,6 +177,18 @@ export class WorkscheduleService {
         },
         include: this.includeRelations,
       });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.WORKSCHEDULE,
+        action: AuditAction.CREATE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'WorkSchedule',
+        entityId: schedule.id,
+        afterData: schedule,
+        description: `Tạo lịch làm việc cho nhân sự ${schedule.employeeId} ngày ${schedule.date.toISOString().split('T')[0]}`,
+      });
+
+      return schedule;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -230,11 +246,24 @@ export class WorkscheduleService {
     }
 
     try {
-      return await this.prisma.workSchedule.update({
+      const updated = await this.prisma.workSchedule.update({
         where: { id },
         data: updateData,
         include: this.includeRelations,
       });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.WORKSCHEDULE,
+        action: AuditAction.UPDATE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'WorkSchedule',
+        entityId: updated.id,
+        beforeData: schedule,
+        afterData: updated,
+        description: `Cập nhật lịch làm việc ${updated.id}`,
+      });
+
+      return updated;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -255,7 +284,7 @@ export class WorkscheduleService {
       throw new BadRequestException('Lịch làm việc đã được xử lý trước đó');
     }
 
-    return this.prisma.workSchedule.update({
+    const updated = await this.prisma.workSchedule.update({
       where: { id },
       data: {
         status: dto.status,
@@ -265,6 +294,19 @@ export class WorkscheduleService {
       },
       include: this.includeRelations,
     });
+
+    await this.auditLogService.createLog({
+      module: AuditModule.WORKSCHEDULE,
+      action: dto.status === RequestStatus.APPROVED ? AuditAction.APPROVE : AuditAction.REJECT,
+      status: AuditStatus.SUCCESS,
+      entityName: 'WorkSchedule',
+      entityId: updated.id,
+      beforeData: schedule,
+      afterData: updated,
+      description: `Duyệt lịch làm việc ${updated.id} với trạng thái ${dto.status}`,
+    });
+
+    return updated;
   }
 
   async delete(id: string) {
@@ -278,9 +320,21 @@ export class WorkscheduleService {
     }
 
     try {
-      return await this.prisma.workSchedule.delete({
+      const deleted = await this.prisma.workSchedule.delete({
         where: { id },
       });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.WORKSCHEDULE,
+        action: AuditAction.DELETE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'WorkSchedule',
+        entityId: id,
+        beforeData: schedule,
+        description: `Xóa lịch làm việc ${id}`,
+      });
+
+      return deleted;
     } catch (error) {
       throw new BadRequestException('Không thể xoá lịch làm việc');
     }

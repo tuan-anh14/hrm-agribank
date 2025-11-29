@@ -2,11 +2,12 @@ import { Module } from '@nestjs/common';
 import { RewardPenaltyService } from './reward-penalty.service';
 import { RewardPenaltyController } from './reward-penalty.controller';
 import { PrismaModule } from '../prisma/prisma.module';
+import { AuditLogModule } from '@/audit-log/audit-log.module';
 
 @Module({
-    imports: [PrismaModule],
-    controllers: [RewardPenaltyController],
-    providers: [RewardPenaltyService],
-    exports: [RewardPenaltyService],
+  imports: [PrismaModule, AuditLogModule],
+  controllers: [RewardPenaltyController],
+  providers: [RewardPenaltyService],
+  exports: [RewardPenaltyService],
 })
-export class RewardPenaltyModule { }
+export class RewardPenaltyModule {}

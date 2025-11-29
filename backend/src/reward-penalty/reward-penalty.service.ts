@@ -1,16 +1,33 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRewardPenaltyDto } from './dto/create-reward-penalty.dto';
 import { UpdateRewardPenaltyDto } from './dto/update-reward-penalty.dto';
+import { AuditAction, AuditModule, AuditStatus } from '@prisma/client';
+import { AuditLogService } from '@/audit-log/audit-log.service';
 
 @Injectable()
 export class RewardPenaltyService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly auditLogService: AuditLogService,
+    ) { }
 
-    create(createRewardPenaltyDto: CreateRewardPenaltyDto) {
-        return this.prisma.rewardPenalty.create({
+    async create(createRewardPenaltyDto: CreateRewardPenaltyDto) {
+        const rewardPenalty = await this.prisma.rewardPenalty.create({
             data: createRewardPenaltyDto,
         });
+
+        await this.auditLogService.createLog({
+            module: AuditModule.REWARD_PENALTY,
+            action: AuditAction.CREATE,
+            status: AuditStatus.SUCCESS,
+            entityName: 'RewardPenalty',
+            entityId: rewardPenalty.id,
+            afterData: rewardPenalty,
+            description: `Tạo thưởng/phạt cho nhân sự ${rewardPenalty.employeeId}`,
+        });
+
+        return rewardPenalty;
     }
 
     findAll() {
@@ -43,17 +60,49 @@ export class RewardPenaltyService {
         });
     }
 
-    update(id: string, updateRewardPenaltyDto: UpdateRewardPenaltyDto) {
-        return this.prisma.rewardPenalty.update({
+    async update(id: string, updateRewardPenaltyDto: UpdateRewardPenaltyDto) {
+        const before = await this.prisma.rewardPenalty.findUnique({ where: { id } });
+        if (!before) {
+            throw new NotFoundException(`RewardPenalty with ID ${id} not found`);
+        }
+
+        const rewardPenalty = await this.prisma.rewardPenalty.update({
             where: { id },
             data: updateRewardPenaltyDto,
         });
+
+        await this.auditLogService.createLog({
+            module: AuditModule.REWARD_PENALTY,
+            action: AuditAction.UPDATE,
+            status: AuditStatus.SUCCESS,
+            entityName: 'RewardPenalty',
+            entityId: rewardPenalty.id,
+            beforeData: before,
+            afterData: rewardPenalty,
+            description: `Cập nhật thưởng/phạt ${rewardPenalty.id}`,
+        });
+
+        return rewardPenalty;
     }
 
-    remove(id: string) {
-        return this.prisma.rewardPenalty.delete({
+    async remove(id: string) {
+        const before = await this.prisma.rewardPenalty.findUnique({ where: { id } });
+
+        const rewardPenalty = await this.prisma.rewardPenalty.delete({
             where: { id },
         });
+
+        await this.auditLogService.createLog({
+            module: AuditModule.REWARD_PENALTY,
+            action: AuditAction.DELETE,
+            status: AuditStatus.SUCCESS,
+            entityName: 'RewardPenalty',
+            entityId: id,
+            beforeData: before ?? undefined,
+            description: `Xóa thưởng/phạt ${id}`,
+        });
+
+        return rewardPenalty;
     }
 
     async getMonthlyRewards(employeeId: string, month: number, year: number) {

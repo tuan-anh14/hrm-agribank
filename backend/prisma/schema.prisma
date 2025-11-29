@@ -14,6 +14,41 @@ enum Role {
   EMPLOYEE
 }
 
+enum AuditModule {
+  AUTH
+  EMPLOYEE
+  DEPARTMENT
+  POSITION
+  ATTENDANCE
+  WORKSCHEDULE
+  SHIFT
+  PAYROLL
+  REWARD_PENALTY
+  REQUEST
+  NOTIFICATION
+}
+
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  ACTIVATE_ACCOUNT
+  CREATE
+  UPDATE
+  DELETE
+  CHECK_IN
+  CHECK_OUT
+  APPROVE
+  REJECT
+  GENERATE_PAYROLL
+  UPDATE_STATUS
+  PAY
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILED
+}
+
 enum RequestStatus {
   PENDING
   APPROVED
@@ -273,4 +308,28 @@ model Notification {
   employee  Employee @relation(fields: [employeeId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id              String       @id @default(uuid())
+  actorAccountId  String?
+  actorEmployeeId String?
+  actorUsername   String?
+  actorRole       Role?
+
+  module   AuditModule
+  action   AuditAction
+  entityName    String?
+  entityId      String?
+  description   String?
+  beforeData    Json?
+  afterData     Json?
+  changedFields Json?
+
+  ipAddress   String?
+  userAgent   String?
+  status      AuditStatus @default(SUCCESS)
+  errorMessage String?
+
+  createdAt DateTime @default(now())
 }

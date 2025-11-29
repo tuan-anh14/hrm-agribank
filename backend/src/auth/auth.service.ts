@@ -5,6 +5,8 @@ import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from '@/auth/dto/login.dto';
 import { RegisterDto } from '@/auth/dto/register.dto';
 import { ActivateAccountDto } from '@/auth/dto/activate-account.dto';
+import { AuditLogService } from '@/audit-log/audit-log.service';
+import { AuditAction, AuditModule, AuditStatus } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -12,6 +14,7 @@ export class AuthService {
         private employeeService: EmployeeService,
         private jwtService: JwtService,
         private configService: ConfigService,
+    private readonly auditLogService: AuditLogService,
     ) { }
 
     //username/ pass là 2 tham số thư viện passport nó ném về
@@ -79,10 +82,18 @@ export class AuthService {
     }
 
     async login(data: LoginDto) {
-        const user = await this.validateUser(data.username, data.password);
-        if (!user) {
-            throw new UnauthorizedException('Tên đăng nhập hoặc mật khẩu không đúng');
-        }
+    const user = await this.validateUser(data.username, data.password);
+    if (!user) {
+        // Ghi audit cho login thất bại (không lộ mật khẩu/chi tiết nhạy cảm)
+        await this.auditLogService.createLog({
+            module: AuditModule.AUTH,
+            action: AuditAction.LOGIN,
+            status: AuditStatus.FAILED,
+            description: `Đăng nhập thất bại cho username=${data.username}`,
+        });
+
+        throw new UnauthorizedException('Tên đăng nhập hoặc mật khẩu không đúng');
+    }
 
         const payload = {
             username: user.email,
@@ -96,17 +107,31 @@ export class AuthService {
         // Calculate expires_in in seconds based on JWT_ACCESS_EXPIRE
         const expiresIn = this.getExpiresInSeconds();
         
-        return {
-            access_token: accessToken,
-            token_type: 'Bearer',
-            expires_in: expiresIn,
-            user: {
-                id: user.id,
-                email: user.email,
-                fullName: user.fullName,
-                role: user.account?.role || 'EMPLOYEE'
-            }
-        };
+    const result = {
+        access_token: accessToken,
+        token_type: 'Bearer',
+        expires_in: expiresIn,
+        user: {
+            id: user.id,
+            email: user.email,
+            fullName: user.fullName,
+            role: user.account?.role || 'EMPLOYEE'
+        }
+    };
+
+    // Ghi audit cho login thành công (chưa có context request nên mới log mức tối thiểu)
+    await this.auditLogService.createLog({
+        module: AuditModule.AUTH,
+        action: AuditAction.LOGIN,
+        status: AuditStatus.SUCCESS,
+        actorAccountId: user.account?.id ?? null,
+        actorEmployeeId: user.id,
+        actorUsername: user.account?.username ?? user.email ?? null,
+        actorRole: user.account?.role ?? null,
+        description: `Đăng nhập thành công cho tài khoản ${user.account?.username ?? user.email}`,
+    });
+
+    return result;
     }
 
     async activate(data: ActivateAccountDto) {
@@ -116,12 +141,26 @@ export class AuthService {
             throw new NotFoundException('Không tìm thấy nhân sự với email này');
         }
 
-        await this.employeeService.upsertAccountForEmployee(
+        const account = await this.employeeService.upsertAccountForEmployee(
             employee.id,
             employee.email as string,
             data.newPassword,
             employee.account?.role || 'EMPLOYEE'
         );
+
+        // Ghi audit cho kích hoạt tài khoản
+        await this.auditLogService.createLog({
+            module: AuditModule.AUTH,
+            action: AuditAction.ACTIVATE_ACCOUNT,
+            status: AuditStatus.SUCCESS,
+            actorAccountId: account.id,
+            actorEmployeeId: employee.id,
+            actorUsername: account.username,
+            actorRole: account.role,
+            entityName: 'Account',
+            entityId: account.id,
+            description: `Kích hoạt tài khoản cho nhân sự ${employee.fullName} (${employee.email})`,
+        });
 
         return {
             user: {

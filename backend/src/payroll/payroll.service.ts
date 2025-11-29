@@ -1,13 +1,22 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { RewardPenaltyService } from '../reward-penalty/reward-penalty.service';
-import { EmployeeType, Prisma, RewardPenaltyType } from '@prisma/client';
+import {
+    AuditAction,
+    AuditModule,
+    AuditStatus,
+    EmployeeType,
+    Prisma,
+    RewardPenaltyType,
+} from '@prisma/client';
+import { AuditLogService } from '@/audit-log/audit-log.service';
 
 @Injectable()
 export class PayrollService {
     constructor(
         private prisma: PrismaService,
-        private rewardPenaltyService: RewardPenaltyService
+        private rewardPenaltyService: RewardPenaltyService,
+        private readonly auditLogService: AuditLogService,
     ) { }
 
     async generatePayrollForMonth(month: number, year: number) {
@@ -183,17 +192,30 @@ export class PayrollService {
                 where: { employeeId: employee.id, month, year }
             });
 
-            if (existing) {
-                return this.prisma.payroll.update({
-                    where: { id: existing.id },
-                    data: {
-                        ...data,
-                        employee: undefined,
-                    } as Prisma.PayrollUpdateInput,
+                let payroll;
+                if (existing) {
+                    payroll = await this.prisma.payroll.update({
+                        where: { id: existing.id },
+                        data: {
+                            ...data,
+                            employee: undefined,
+                        } as Prisma.PayrollUpdateInput,
+                    });
+                } else {
+                    payroll = await this.prisma.payroll.create({ data });
+                }
+
+                await this.auditLogService.createLog({
+                    module: AuditModule.PAYROLL,
+                    action: AuditAction.GENERATE_PAYROLL,
+                    status: AuditStatus.SUCCESS,
+                    entityName: 'Payroll',
+                    entityId: payroll.id,
+                    afterData: payroll,
+                    description: `Tạo/cập nhật bảng lương tháng ${month}/${year} cho nhân sự ${employee.id}`,
                 });
-            } else {
-                return this.prisma.payroll.create({ data });
-            }
+
+                return payroll;
         });
 
         return Promise.all(payrollPromises);
@@ -217,10 +239,28 @@ export class PayrollService {
     }
 
     async updateStatus(id: string, status: string) {
-        return this.prisma.payroll.update({
+        const before = await this.prisma.payroll.findUnique({ where: { id } });
+        if (!before) {
+            throw new NotFoundException('Payroll not found');
+        }
+
+        const payroll = await this.prisma.payroll.update({
             where: { id },
             data: { status },
         });
+
+        await this.auditLogService.createLog({
+            module: AuditModule.PAYROLL,
+            action: AuditAction.UPDATE_STATUS,
+            status: AuditStatus.SUCCESS,
+            entityName: 'Payroll',
+            entityId: payroll.id,
+            beforeData: before,
+            afterData: payroll,
+            description: `Cập nhật trạng thái bảng lương ${payroll.id} thành ${status}`,
+        });
+
+        return payroll;
     }
 
     async pay(id: string) {
@@ -238,9 +278,22 @@ export class PayrollService {
             }
         });
 
-        return this.prisma.payroll.update({
+        const payrollUpdated = await this.prisma.payroll.update({
             where: { id },
             data: { status: 'paid' },
         });
+
+        await this.auditLogService.createLog({
+            module: AuditModule.PAYROLL,
+            action: AuditAction.PAY,
+            status: AuditStatus.SUCCESS,
+            entityName: 'Payroll',
+            entityId: id,
+            beforeData: payroll,
+            afterData: payrollUpdated,
+            description: `Thanh toán bảng lương ${payroll.month}/${payroll.year} cho nhân sự ${payroll.employeeId}`,
+        });
+
+        return payrollUpdated;
     }
 }

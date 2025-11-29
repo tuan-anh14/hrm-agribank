@@ -1,10 +1,14 @@
 import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Prisma, Department } from '@prisma/client';
+import { Prisma, Department, AuditAction, AuditModule, AuditStatus } from '@prisma/client';
+import { AuditLogService } from '@/audit-log/audit-log.service';
 
 @Injectable()
 export class DepartmentService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly auditLogService: AuditLogService,
+  ) {}
 
   async getAll(): Promise<Department[]> {
     return this.prisma.department.findMany({
@@ -32,7 +36,19 @@ export class DepartmentService {
       throw new ConflictException('Department name already exists');
     }
     try {
-      return await this.prisma.department.create({ data });
+      const department = await this.prisma.department.create({ data });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.DEPARTMENT,
+        action: AuditAction.CREATE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'Department',
+        entityId: department.id,
+        afterData: department,
+        description: `Tạo phòng ban ${department.name}`,
+      });
+
+      return department;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -56,7 +72,25 @@ export class DepartmentService {
       }
     }
     try {
-      return await this.prisma.department.update({ where: { id }, data });
+      const before = await this.prisma.department.findUnique({ where: { id } });
+      if (!before) {
+        throw new NotFoundException(`Department with ID ${id} not found`);
+      }
+
+      const department = await this.prisma.department.update({ where: { id }, data });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.DEPARTMENT,
+        action: AuditAction.UPDATE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'Department',
+        entityId: department.id,
+        beforeData: before,
+        afterData: department,
+        description: `Cập nhật phòng ban ${department.name}`,
+      });
+
+      return department;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {
@@ -73,7 +107,21 @@ export class DepartmentService {
       throw new BadRequestException('Cannot delete department with assigned employees');
     }
     try {
-      return await this.prisma.department.delete({ where: { id } });
+      const before = await this.prisma.department.findUnique({ where: { id } });
+
+      const department = await this.prisma.department.delete({ where: { id } });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.DEPARTMENT,
+        action: AuditAction.DELETE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'Department',
+        entityId: id,
+        beforeData: before ?? undefined,
+        description: `Xóa phòng ban với ID ${id}`,
+      });
+
+      return department;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {

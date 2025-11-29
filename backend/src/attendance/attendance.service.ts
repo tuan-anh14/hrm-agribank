@@ -5,16 +5,30 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Attendance, AttendanceStatus, Prisma, RequestStatus, EmployeeType, ShiftType } from '@prisma/client';
+import {
+  Attendance,
+  AttendanceStatus,
+  Prisma,
+  RequestStatus,
+  EmployeeType,
+  ShiftType,
+  AuditAction,
+  AuditModule,
+  AuditStatus,
+} from '@prisma/client';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
 import { QueryAttendanceDto } from './dto/query-attendance.dto';
 import { CheckInDto } from './dto/check-in.dto';
 import { CheckOutDto } from './dto/check-out.dto';
+import { AuditLogService } from '@/audit-log/audit-log.service';
 
 @Injectable()
 export class AttendanceService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private readonly auditLogService: AuditLogService,
+  ) { }
 
   /**
    * Normalize date strings to Date objects for Prisma
@@ -266,7 +280,7 @@ export class AttendanceService {
     }
 
     try {
-      return await this.prisma.attendance.create({
+      const attendance = await this.prisma.attendance.create({
         data: {
           employeeId: data.employeeId,
           date: attendanceDate,
@@ -285,6 +299,18 @@ export class AttendanceService {
           },
         },
       });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.ATTENDANCE,
+        action: AuditAction.CREATE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'Attendance',
+        entityId: attendance.id,
+        afterData: attendance,
+        description: `Tạo bản ghi chấm công cho nhân sự ${attendance.employeeId} ngày ${attendance.date.toISOString().split('T')[0]}`,
+      });
+
+      return attendance;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -360,7 +386,7 @@ export class AttendanceService {
 
       // Update existing record with check-in
       const status = this.calculateStatus(checkInTime);
-      return await this.prisma.attendance.update({
+      const updated = await this.prisma.attendance.update({
         where: { id: existing.id },
         data: {
           checkInTime,
@@ -377,6 +403,19 @@ export class AttendanceService {
           },
         },
       });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.ATTENDANCE,
+        action: AuditAction.CHECK_IN,
+        status: AuditStatus.SUCCESS,
+        entityName: 'Attendance',
+        entityId: updated.id,
+        beforeData: existing,
+        afterData: updated,
+        description: `Check-in cho nhân sự ${updated.employeeId} ngày ${updated.date.toISOString().split('T')[0]}`,
+      });
+
+      return updated;
     }
 
     // Calculate late minutes
@@ -394,7 +433,7 @@ export class AttendanceService {
 
     // Create new attendance record
     const status = this.calculateStatus(checkInTime);
-    return await this.prisma.attendance.create({
+    const attendance = await this.prisma.attendance.create({
       data: {
         employeeId,
         date: today,
@@ -413,6 +452,18 @@ export class AttendanceService {
         },
       },
     });
+
+    await this.auditLogService.createLog({
+      module: AuditModule.ATTENDANCE,
+      action: AuditAction.CHECK_IN,
+      status: AuditStatus.SUCCESS,
+      entityName: 'Attendance',
+      entityId: attendance.id,
+      afterData: attendance,
+      description: `Check-in tạo mới cho nhân sự ${attendance.employeeId} ngày ${attendance.date.toISOString().split('T')[0]}`,
+    });
+
+    return attendance;
   }
 
   /**
@@ -503,7 +554,7 @@ export class AttendanceService {
     }
 
     // Update attendance with check-out
-    return await this.prisma.attendance.update({
+    const updated = await this.prisma.attendance.update({
       where: { id: existing.id },
       data: {
         checkOutTime,
@@ -520,6 +571,19 @@ export class AttendanceService {
         },
       },
     });
+
+    await this.auditLogService.createLog({
+      module: AuditModule.ATTENDANCE,
+      action: AuditAction.CHECK_OUT,
+      status: AuditStatus.SUCCESS,
+      entityName: 'Attendance',
+      entityId: updated.id,
+      beforeData: existing,
+      afterData: updated,
+      description: `Check-out cho nhân sự ${updated.employeeId} ngày ${updated.date.toISOString().split('T')[0]}`,
+    });
+
+    return updated;
   }
 
   /**
@@ -603,7 +667,7 @@ export class AttendanceService {
         ...(data.note !== undefined && { note: data.note }),
       };
 
-      return await this.prisma.attendance.update({
+      const updated = await this.prisma.attendance.update({
         where: { id },
         data: updateData,
         include: {
@@ -616,6 +680,19 @@ export class AttendanceService {
           },
         },
       });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.ATTENDANCE,
+        action: AuditAction.UPDATE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'Attendance',
+        entityId: updated.id,
+        beforeData: existing,
+        afterData: updated,
+        description: `Cập nhật bản ghi chấm công ${updated.id}`,
+      });
+
+      return updated;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {
@@ -642,9 +719,21 @@ export class AttendanceService {
     }
 
     try {
-      return await this.prisma.attendance.delete({
+      const deleted = await this.prisma.attendance.delete({
         where: { id },
       });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.ATTENDANCE,
+        action: AuditAction.DELETE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'Attendance',
+        entityId: id,
+        beforeData: attendance,
+        description: `Xóa bản ghi chấm công ${id}`,
+      });
+
+      return deleted;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {

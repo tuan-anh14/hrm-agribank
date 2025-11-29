@@ -8,11 +8,15 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { CreateShiftDto } from './dto/create-shift.dto';
 import { UpdateShiftDto } from './dto/update-shift.dto';
 import { QueryShiftDto } from './dto/query-shift.dto';
-import { Prisma, ShiftType } from '@prisma/client';
+import { AuditAction, AuditModule, AuditStatus, Prisma, ShiftType } from '@prisma/client';
+import { AuditLogService } from '@/audit-log/audit-log.service';
 
 @Injectable()
 export class ShiftService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLogService: AuditLogService,
+  ) { }
 
   private normalizeDateTime(value: string | Date): Date {
     const date = typeof value === 'string' ? new Date(value) : value;
@@ -87,7 +91,7 @@ export class ShiftService {
     this.validateTimeRange(start, end);
 
     try {
-      return await this.prisma.shift.create({
+      const shift = await this.prisma.shift.create({
         data: {
           name: dto.name.trim(),
           type: dto.type || ShiftType.FULL_DAY,
@@ -95,6 +99,18 @@ export class ShiftService {
           endTime: end,
         },
       });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.SHIFT,
+        action: AuditAction.CREATE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'Shift',
+        entityId: shift.id,
+        afterData: shift,
+        description: `Tạo ca làm việc ${shift.name}`,
+      });
+
+      return shift;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -137,10 +153,23 @@ export class ShiftService {
     this.validateTimeRange(start, end);
 
     try {
-      return await this.prisma.shift.update({
+      const updated = await this.prisma.shift.update({
         where: { id },
         data: updateData,
       });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.SHIFT,
+        action: AuditAction.UPDATE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'Shift',
+        entityId: updated.id,
+        beforeData: shift,
+        afterData: updated,
+        description: `Cập nhật ca làm việc ${updated.name}`,
+      });
+
+      return updated;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -165,6 +194,18 @@ export class ShiftService {
       throw new BadRequestException('Không thể xoá ca làm việc đang được sử dụng trong lịch làm việc');
     }
 
-    return this.prisma.shift.delete({ where: { id } });
+    const deleted = await this.prisma.shift.delete({ where: { id } });
+
+    await this.auditLogService.createLog({
+      module: AuditModule.SHIFT,
+      action: AuditAction.DELETE,
+      status: AuditStatus.SUCCESS,
+      entityName: 'Shift',
+      entityId: id,
+      beforeData: shift,
+      description: `Xóa ca làm việc ${id}`,
+    });
+
+    return deleted;
   }
 }

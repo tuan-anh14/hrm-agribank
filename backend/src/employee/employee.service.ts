@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
-import { Employee, Account, Prisma, EmployeeType } from '@prisma/client';
+import { Employee, Account, Prisma, EmployeeType, AuditAction, AuditModule, AuditStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { AuditLogService } from '@/audit-log/audit-log.service';
 
 type EmployeeWithAccount = Employee & {
   account?: Account | null;
@@ -11,7 +12,10 @@ type EmployeeWithAccount = Employee & {
 
 @Injectable()
 export class EmployeeService {
-  constructor(private prisma: PrismaService) { }
+  constructor(
+    private prisma: PrismaService,
+    private readonly auditLogService: AuditLogService,
+  ) { }
 
   private normalizeEmployeeDates<T extends { dateOfBirth?: string | Date | null; startDate?: string | Date | null }>(data: T): T {
     const normalized: any = { ...data };
@@ -64,9 +68,21 @@ export class EmployeeService {
         normalizedData.employeeCode = this.generateEmployeeCode();
       }
 
-      return await this.prisma.employee.create({
+      const employee = await this.prisma.employee.create({
         data: normalizedData,
       });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.EMPLOYEE,
+        action: AuditAction.CREATE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'Employee',
+        entityId: employee.id,
+        afterData: normalizedData,
+        description: `Tạo mới nhân sự ${employee.fullName} (${employee.email})`,
+      });
+
+      return employee;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
@@ -79,11 +95,29 @@ export class EmployeeService {
 
   async update(id: string, data: any): Promise<Employee> {
     try {
+      const before = await this.prisma.employee.findUnique({ where: { id } });
+      if (!before) {
+        throw new NotFoundException(`Employee with ID ${id} not found`);
+      }
+
       const normalizedData = this.normalizeEmployeeDates(data);
-      return await this.prisma.employee.update({
+      const employee = await this.prisma.employee.update({
         where: { id },
         data: normalizedData,
       });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.EMPLOYEE,
+        action: AuditAction.UPDATE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'Employee',
+        entityId: employee.id,
+        beforeData: before,
+        afterData: { ...before, ...normalizedData },
+        description: `Cập nhật thông tin nhân sự ${employee.fullName} (${employee.email})`,
+      });
+
+      return employee;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {
@@ -99,9 +133,23 @@ export class EmployeeService {
 
   async delete(id: string): Promise<Employee> {
     try {
-      return await this.prisma.employee.delete({
+      const before = await this.prisma.employee.findUnique({ where: { id } });
+
+      const employee = await this.prisma.employee.delete({
         where: { id },
       });
+
+      await this.auditLogService.createLog({
+        module: AuditModule.EMPLOYEE,
+        action: AuditAction.DELETE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'Employee',
+        entityId: id,
+        beforeData: before ?? undefined,
+        description: `Xóa nhân sự với ID ${id}`,
+      });
+
+      return employee;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
         if (error.code === 'P2025') {
