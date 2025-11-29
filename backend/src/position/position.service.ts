@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, ConflictException, NotFoundException }
 import { PrismaService } from '@/prisma/prisma.service';
 import { Prisma, Position, AuditAction, AuditModule, AuditStatus } from '@prisma/client';
 import { AuditLogService } from '@/audit-log/audit-log.service';
+import { writeAuditLog, getActorContextFromUser } from '@/audit-log/audit-log.helper';
 
 @Injectable()
 export class PositionService {
@@ -28,7 +29,7 @@ export class PositionService {
     return position;
   }
 
-  async create(data: { title: string; baseSalary: number; allowance?: number; gradeLevel?: number }): Promise<Position> {
+  async create(data: { title: string; baseSalary: number; allowance?: number; gradeLevel?: number }, user?: any): Promise<Position> {
     const existing = await this.prisma.position.findFirst({
       where: { title: { equals: data.title, mode: 'insensitive' } },
     });
@@ -38,14 +39,18 @@ export class PositionService {
     try {
       const position = await this.prisma.position.create({ data });
 
-      await this.auditLogService.createLog({
-        module: AuditModule.POSITION,
-        action: AuditAction.CREATE,
-        status: AuditStatus.SUCCESS,
-        entityName: 'Position',
-        entityId: position.id,
-        afterData: position,
-        description: `Tạo chức danh ${position.title}`,
+      const actorContext = await getActorContextFromUser(this.prisma, user);
+      await writeAuditLog(this.auditLogService, {
+        base: {
+          module: AuditModule.POSITION,
+          action: AuditAction.CREATE,
+          status: AuditStatus.SUCCESS,
+          entityName: 'Position',
+          entityId: position.id,
+          afterData: position,
+          description: `Tạo chức danh ${position.title}`,
+        },
+        actor: actorContext,
       });
 
       return position;
@@ -59,7 +64,7 @@ export class PositionService {
     }
   }
 
-  async update(id: string, data: { title?: string; baseSalary?: number; allowance?: number; gradeLevel?: number }): Promise<Position> {
+  async update(id: string, data: { title?: string; baseSalary?: number; allowance?: number; gradeLevel?: number }, user?: any): Promise<Position> {
     if (data.title) {
       const conflict = await this.prisma.position.findFirst({
         where: {
@@ -79,15 +84,19 @@ export class PositionService {
 
       const position = await this.prisma.position.update({ where: { id }, data });
 
-      await this.auditLogService.createLog({
-        module: AuditModule.POSITION,
-        action: AuditAction.UPDATE,
-        status: AuditStatus.SUCCESS,
-        entityName: 'Position',
-        entityId: position.id,
-        beforeData: before,
-        afterData: position,
-        description: `Cập nhật chức danh ${position.title}`,
+      const actorContext = await getActorContextFromUser(this.prisma, user);
+      await writeAuditLog(this.auditLogService, {
+        base: {
+          module: AuditModule.POSITION,
+          action: AuditAction.UPDATE,
+          status: AuditStatus.SUCCESS,
+          entityName: 'Position',
+          entityId: position.id,
+          beforeData: before,
+          afterData: position,
+          description: `Cập nhật chức danh ${position.title}`,
+        },
+        actor: actorContext,
       });
 
       return position;
@@ -101,7 +110,7 @@ export class PositionService {
     }
   }
 
-  async delete(id: string): Promise<Position> {
+  async delete(id: string, user?: any): Promise<Position> {
     const employeeCount = await this.prisma.employee.count({ where: { positionId: id } });
     if (employeeCount > 0) {
       throw new BadRequestException('Cannot delete position with assigned employees');
@@ -111,14 +120,18 @@ export class PositionService {
 
       const position = await this.prisma.position.delete({ where: { id } });
 
-      await this.auditLogService.createLog({
-        module: AuditModule.POSITION,
-        action: AuditAction.DELETE,
-        status: AuditStatus.SUCCESS,
-        entityName: 'Position',
-        entityId: id,
-        beforeData: before ?? undefined,
-        description: `Xóa chức danh với ID ${id}`,
+      const actorContext = await getActorContextFromUser(this.prisma, user);
+      await writeAuditLog(this.auditLogService, {
+        base: {
+          module: AuditModule.POSITION,
+          action: AuditAction.DELETE,
+          status: AuditStatus.SUCCESS,
+          entityName: 'Position',
+          entityId: id,
+          beforeData: before ?? undefined,
+          description: `Xóa chức danh với ID ${id}`,
+        },
+        actor: actorContext,
       });
 
       return position;

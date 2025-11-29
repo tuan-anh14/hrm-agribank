@@ -10,6 +10,7 @@ import { UpdateShiftDto } from './dto/update-shift.dto';
 import { QueryShiftDto } from './dto/query-shift.dto';
 import { AuditAction, AuditModule, AuditStatus, Prisma, ShiftType } from '@prisma/client';
 import { AuditLogService } from '@/audit-log/audit-log.service';
+import { writeAuditLog, getActorContextFromUser } from '@/audit-log/audit-log.helper';
 
 @Injectable()
 export class ShiftService {
@@ -85,7 +86,7 @@ export class ShiftService {
     return shift;
   }
 
-  async create(dto: CreateShiftDto) {
+  async create(dto: CreateShiftDto, user?: any) {
     const start = this.normalizeDateTime(dto.startTime);
     const end = this.normalizeDateTime(dto.endTime);
     this.validateTimeRange(start, end);
@@ -100,14 +101,18 @@ export class ShiftService {
         },
       });
 
-      await this.auditLogService.createLog({
-        module: AuditModule.SHIFT,
-        action: AuditAction.CREATE,
-        status: AuditStatus.SUCCESS,
-        entityName: 'Shift',
-        entityId: shift.id,
-        afterData: shift,
-        description: `Tạo ca làm việc ${shift.name}`,
+      const actorContext = await getActorContextFromUser(this.prisma, user);
+      await writeAuditLog(this.auditLogService, {
+        base: {
+          module: AuditModule.SHIFT,
+          action: AuditAction.CREATE,
+          status: AuditStatus.SUCCESS,
+          entityName: 'Shift',
+          entityId: shift.id,
+          afterData: shift,
+          description: `Tạo ca làm việc ${shift.name}`,
+        },
+        actor: actorContext,
       });
 
       return shift;
@@ -121,7 +126,7 @@ export class ShiftService {
     }
   }
 
-  async update(id: string, dto: UpdateShiftDto) {
+  async update(id: string, dto: UpdateShiftDto, user?: any) {
     const shift = await this.prisma.shift.findUnique({ where: { id } });
     if (!shift) {
       throw new NotFoundException(`Không tìm thấy ca làm việc ID ${id}`);
@@ -158,15 +163,19 @@ export class ShiftService {
         data: updateData,
       });
 
-      await this.auditLogService.createLog({
-        module: AuditModule.SHIFT,
-        action: AuditAction.UPDATE,
-        status: AuditStatus.SUCCESS,
-        entityName: 'Shift',
-        entityId: updated.id,
-        beforeData: shift,
-        afterData: updated,
-        description: `Cập nhật ca làm việc ${updated.name}`,
+      const actorContext = await getActorContextFromUser(this.prisma, user);
+      await writeAuditLog(this.auditLogService, {
+        base: {
+          module: AuditModule.SHIFT,
+          action: AuditAction.UPDATE,
+          status: AuditStatus.SUCCESS,
+          entityName: 'Shift',
+          entityId: updated.id,
+          beforeData: shift,
+          afterData: updated,
+          description: `Cập nhật ca làm việc ${updated.name}`,
+        },
+        actor: actorContext,
       });
 
       return updated;
@@ -180,7 +189,7 @@ export class ShiftService {
     }
   }
 
-  async delete(id: string) {
+  async delete(id: string, user?: any) {
     const shift = await this.prisma.shift.findUnique({ where: { id } });
     if (!shift) {
       throw new NotFoundException(`Không tìm thấy ca làm việc ID ${id}`);
@@ -196,14 +205,18 @@ export class ShiftService {
 
     const deleted = await this.prisma.shift.delete({ where: { id } });
 
-    await this.auditLogService.createLog({
-      module: AuditModule.SHIFT,
-      action: AuditAction.DELETE,
-      status: AuditStatus.SUCCESS,
-      entityName: 'Shift',
-      entityId: id,
-      beforeData: shift,
-      description: `Xóa ca làm việc ${id}`,
+    const actorContext = await getActorContextFromUser(this.prisma, user);
+    await writeAuditLog(this.auditLogService, {
+      base: {
+        module: AuditModule.SHIFT,
+        action: AuditAction.DELETE,
+        status: AuditStatus.SUCCESS,
+        entityName: 'Shift',
+        entityId: id,
+        beforeData: shift,
+        description: `Xóa ca làm việc ${id}`,
+      },
+      actor: actorContext,
     });
 
     return deleted;

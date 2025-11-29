@@ -17,6 +17,7 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 import { RolesGuard } from '@/auth/guards/roles.guard';
 import { Roles } from '@/auth/decorator/roles.decorator';
 import { UserRole } from '@/auth/constants/roles.constants';
+import { CurrentUser } from '@/decorator/customize';
 
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -48,8 +49,8 @@ export class EmployeeController {
   @ApiOperation({ summary: 'Tạo mới nhân viên' })
   @ApiResponse({ status: 201, description: 'Tạo nhân viên thành công' })
   @ApiResponse({ status: 403, description: 'Không có quyền tạo nhân viên' })
-  async create(@Body() data: CreateEmployeeDto) {
-    return this.employeeService.create(data);
+  async create(@Body() data: CreateEmployeeDto, @CurrentUser() user: any) {
+    return this.employeeService.create(data, user);
   }
 
   @Post('with-account')
@@ -81,8 +82,8 @@ export class EmployeeController {
   @ApiOperation({ summary: 'Cập nhật nhân viên' })
   @ApiResponse({ status: 200, description: 'Cập nhật thành công' })
   @ApiResponse({ status: 403, description: 'Không có quyền cập nhật nhân viên' })
-  async update(@Param('id') id: string, @Body() data: UpdateEmployeeDto) {
-    return this.employeeService.update(id, data);
+  async update(@Param('id') id: string, @Body() data: UpdateEmployeeDto, @CurrentUser() user: any) {
+    return this.employeeService.update(id, data, user);
   }
 
   @Delete(':id')
@@ -90,7 +91,7 @@ export class EmployeeController {
   @ApiOperation({ summary: 'Xoá nhân viên' })
   @ApiResponse({ status: 200, description: 'Xoá thành công' })
   @ApiResponse({ status: 403, description: 'Chỉ ADMIN mới có quyền xoá nhân viên' })
-  async delete(@Param('id') id: string) {
-    return this.employeeService.delete(id);
+  async delete(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.employeeService.delete(id, user);
   }
 }

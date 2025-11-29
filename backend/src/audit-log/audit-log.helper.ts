@@ -6,6 +6,7 @@ import {
   AuditRequestContext,
   BaseAuditLogPayload,
 } from '@/audit-log/audit-log.types';
+import { PrismaService } from '@/prisma/prisma.service';
 
 interface JwtUserPayload {
   userId?: string;
@@ -13,6 +14,7 @@ interface JwtUserPayload {
   employeeId?: string;
   username?: string;
   role?: Role;
+  id?: string; // accountId from JWT
   [key: string]: any;
 }
 
@@ -20,10 +22,46 @@ export function extractActorFromRequest(req: Request): AuditActorContext {
   const user = (req.user || {}) as JwtUserPayload;
 
   return {
-    accountId: user.accountId ?? user.userId ?? null,
+    accountId: user.accountId ?? user.userId ?? user.id ?? null,
     employeeId: user.employeeId ?? null,
     username: user.username ?? null,
     role: user.role ?? null,
+  };
+}
+
+/**
+ * Get actor context from user (from JWT)
+ * user.id is accountId (sub in JWT payload)
+ */
+export async function getActorContextFromUser(
+  prisma: PrismaService,
+  user?: any,
+): Promise<AuditActorContext | undefined> {
+  if (!user?.id) {
+    return undefined;
+  }
+
+  // user.id from JWT is accountId (sub in payload)
+  const account = await prisma.account.findUnique({
+    where: { id: user.id },
+    select: { id: true, username: true, role: true, employeeId: true },
+  });
+
+  if (account) {
+    return {
+      accountId: account.id,
+      employeeId: account.employeeId,
+      username: account.username,
+      role: account.role,
+    };
+  }
+
+  // Fallback to user data from JWT
+  return {
+    accountId: user.id,
+    username: user.username,
+    role: user.role,
+    employeeId: null,
   };
 }
 

@@ -3,6 +3,7 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { Employee, Account, Prisma, EmployeeType, AuditAction, AuditModule, AuditStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { AuditLogService } from '@/audit-log/audit-log.service';
+import { writeAuditLog, getActorContextFromUser } from '@/audit-log/audit-log.helper';
 
 type EmployeeWithAccount = Employee & {
   account?: Account | null;
@@ -59,7 +60,7 @@ export class EmployeeService {
     return employee;
   }
 
-  async create(data: any): Promise<Employee> {
+  async create(data: any, user?: any): Promise<Employee> {
     try {
       const normalizedData = this.normalizeEmployeeDates(data);
 
@@ -72,14 +73,20 @@ export class EmployeeService {
         data: normalizedData,
       });
 
-      await this.auditLogService.createLog({
-        module: AuditModule.EMPLOYEE,
-        action: AuditAction.CREATE,
-        status: AuditStatus.SUCCESS,
-        entityName: 'Employee',
-        entityId: employee.id,
-        afterData: normalizedData,
-        description: `Tạo mới nhân sự ${employee.fullName} (${employee.email})`,
+      // Get actor context from user
+      const actorContext = await getActorContextFromUser(this.prisma, user);
+
+      await writeAuditLog(this.auditLogService, {
+        base: {
+          module: AuditModule.EMPLOYEE,
+          action: AuditAction.CREATE,
+          status: AuditStatus.SUCCESS,
+          entityName: 'Employee',
+          entityId: employee.id,
+          afterData: normalizedData,
+          description: `Tạo mới nhân sự ${employee.fullName} (${employee.email})`,
+        },
+        actor: actorContext,
       });
 
       return employee;
@@ -93,7 +100,7 @@ export class EmployeeService {
     }
   }
 
-  async update(id: string, data: any): Promise<Employee> {
+  async update(id: string, data: any, user?: any): Promise<Employee> {
     try {
       const before = await this.prisma.employee.findUnique({ where: { id } });
       if (!before) {
@@ -106,15 +113,21 @@ export class EmployeeService {
         data: normalizedData,
       });
 
-      await this.auditLogService.createLog({
-        module: AuditModule.EMPLOYEE,
-        action: AuditAction.UPDATE,
-        status: AuditStatus.SUCCESS,
-        entityName: 'Employee',
-        entityId: employee.id,
-        beforeData: before,
-        afterData: { ...before, ...normalizedData },
-        description: `Cập nhật thông tin nhân sự ${employee.fullName} (${employee.email})`,
+      // Get actor context from user
+      const actorContext = await getActorContextFromUser(this.prisma, user);
+
+      await writeAuditLog(this.auditLogService, {
+        base: {
+          module: AuditModule.EMPLOYEE,
+          action: AuditAction.UPDATE,
+          status: AuditStatus.SUCCESS,
+          entityName: 'Employee',
+          entityId: employee.id,
+          beforeData: before,
+          afterData: { ...before, ...normalizedData },
+          description: `Cập nhật thông tin nhân sự ${employee.fullName} (${employee.email})`,
+        },
+        actor: actorContext,
       });
 
       return employee;
@@ -131,7 +144,7 @@ export class EmployeeService {
     }
   }
 
-  async delete(id: string): Promise<Employee> {
+  async delete(id: string, user?: any): Promise<Employee> {
     try {
       const before = await this.prisma.employee.findUnique({ where: { id } });
 
@@ -139,14 +152,20 @@ export class EmployeeService {
         where: { id },
       });
 
-      await this.auditLogService.createLog({
-        module: AuditModule.EMPLOYEE,
-        action: AuditAction.DELETE,
-        status: AuditStatus.SUCCESS,
-        entityName: 'Employee',
-        entityId: id,
-        beforeData: before ?? undefined,
-        description: `Xóa nhân sự với ID ${id}`,
+      // Get actor context from user
+      const actorContext = await getActorContextFromUser(this.prisma, user);
+
+      await writeAuditLog(this.auditLogService, {
+        base: {
+          module: AuditModule.EMPLOYEE,
+          action: AuditAction.DELETE,
+          status: AuditStatus.SUCCESS,
+          entityName: 'Employee',
+          entityId: id,
+          beforeData: before ?? undefined,
+          description: `Xóa nhân sự với ID ${id}`,
+        },
+        actor: actorContext,
       });
 
       return employee;

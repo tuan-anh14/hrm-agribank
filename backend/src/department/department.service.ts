@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, ConflictException, NotFoundException }
 import { PrismaService } from '@/prisma/prisma.service';
 import { Prisma, Department, AuditAction, AuditModule, AuditStatus } from '@prisma/client';
 import { AuditLogService } from '@/audit-log/audit-log.service';
+import { writeAuditLog, getActorContextFromUser } from '@/audit-log/audit-log.helper';
 
 @Injectable()
 export class DepartmentService {
@@ -28,7 +29,7 @@ export class DepartmentService {
     return department;
   }
 
-  async create(data: { name: string; description?: string }): Promise<Department> {
+  async create(data: { name: string; description?: string }, user?: any): Promise<Department> {
     const existing = await this.prisma.department.findFirst({
       where: { name: { equals: data.name, mode: 'insensitive' } },
     });
@@ -38,14 +39,18 @@ export class DepartmentService {
     try {
       const department = await this.prisma.department.create({ data });
 
-      await this.auditLogService.createLog({
-        module: AuditModule.DEPARTMENT,
-        action: AuditAction.CREATE,
-        status: AuditStatus.SUCCESS,
-        entityName: 'Department',
-        entityId: department.id,
-        afterData: department,
-        description: `Tạo phòng ban ${department.name}`,
+      const actorContext = await getActorContextFromUser(this.prisma, user);
+      await writeAuditLog(this.auditLogService, {
+        base: {
+          module: AuditModule.DEPARTMENT,
+          action: AuditAction.CREATE,
+          status: AuditStatus.SUCCESS,
+          entityName: 'Department',
+          entityId: department.id,
+          afterData: department,
+          description: `Tạo phòng ban ${department.name}`,
+        },
+        actor: actorContext,
       });
 
       return department;
@@ -59,7 +64,7 @@ export class DepartmentService {
     }
   }
 
-  async update(id: string, data: { name?: string; description?: string }): Promise<Department> {
+  async update(id: string, data: { name?: string; description?: string }, user?: any): Promise<Department> {
     if (data.name) {
       const conflict = await this.prisma.department.findFirst({
         where: {
@@ -79,15 +84,19 @@ export class DepartmentService {
 
       const department = await this.prisma.department.update({ where: { id }, data });
 
-      await this.auditLogService.createLog({
-        module: AuditModule.DEPARTMENT,
-        action: AuditAction.UPDATE,
-        status: AuditStatus.SUCCESS,
-        entityName: 'Department',
-        entityId: department.id,
-        beforeData: before,
-        afterData: department,
-        description: `Cập nhật phòng ban ${department.name}`,
+      const actorContext = await getActorContextFromUser(this.prisma, user);
+      await writeAuditLog(this.auditLogService, {
+        base: {
+          module: AuditModule.DEPARTMENT,
+          action: AuditAction.UPDATE,
+          status: AuditStatus.SUCCESS,
+          entityName: 'Department',
+          entityId: department.id,
+          beforeData: before,
+          afterData: department,
+          description: `Cập nhật phòng ban ${department.name}`,
+        },
+        actor: actorContext,
       });
 
       return department;
@@ -101,7 +110,7 @@ export class DepartmentService {
     }
   }
 
-  async delete(id: string): Promise<Department> {
+  async delete(id: string, user?: any): Promise<Department> {
     const employeeCount = await this.prisma.employee.count({ where: { departmentId: id } });
     if (employeeCount > 0) {
       throw new BadRequestException('Cannot delete department with assigned employees');
@@ -111,14 +120,18 @@ export class DepartmentService {
 
       const department = await this.prisma.department.delete({ where: { id } });
 
-      await this.auditLogService.createLog({
-        module: AuditModule.DEPARTMENT,
-        action: AuditAction.DELETE,
-        status: AuditStatus.SUCCESS,
-        entityName: 'Department',
-        entityId: id,
-        beforeData: before ?? undefined,
-        description: `Xóa phòng ban với ID ${id}`,
+      const actorContext = await getActorContextFromUser(this.prisma, user);
+      await writeAuditLog(this.auditLogService, {
+        base: {
+          module: AuditModule.DEPARTMENT,
+          action: AuditAction.DELETE,
+          status: AuditStatus.SUCCESS,
+          entityName: 'Department',
+          entityId: id,
+          beforeData: before ?? undefined,
+          description: `Xóa phòng ban với ID ${id}`,
+        },
+        actor: actorContext,
       });
 
       return department;
