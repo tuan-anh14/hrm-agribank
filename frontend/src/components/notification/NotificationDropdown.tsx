@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Badge, Popover, Tabs, List, Empty, Button, Spin, Modal, Descriptions, Typography } from 'antd';
+import { Badge, Popover, Tabs, List, Empty, Button, Spin, Modal, Descriptions, Typography, Pagination } from 'antd';
 import { BellOutlined } from '@ant-design/icons';
 import type { Notification } from '@/types/notification';
 import { NotificationType } from '@/types/notification';
@@ -28,6 +28,10 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ className }
   const [loading, setLoading] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [limit] = useState(10); // 10 items per page
+  const [popoverOpen, setPopoverOpen] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Load notifications based on active tab
@@ -36,9 +40,9 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ className }
     try {
       let response: any;
       if (activeTab === 'unread') {
-        response = await getUnreadNotificationsAPI({ page: 1, limit: 20 });
+        response = await getUnreadNotificationsAPI({ page, limit });
       } else {
-        const params = activeTab === 'read' ? { isRead: 'true', page: 1, limit: 20 } : { page: 1, limit: 20 };
+        const params = activeTab === 'read' ? { isRead: 'true', page, limit } : { page, limit };
         response = await getAllNotificationsAPI(params);
       }
       
@@ -46,16 +50,23 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ className }
       // Response structure: { data: Notification[], total, page, limit, totalPages }
       if (response && response.data && Array.isArray(response.data)) {
         setNotifications(response.data);
+        setTotal(response.total || 0);
       } else if (Array.isArray(response)) {
         // Fallback: if response is directly an array
         setNotifications(response);
+        setTotal(response.length);
+      } else {
+        setNotifications([]);
+        setTotal(0);
       }
     } catch (error) {
       console.error('Error loading notifications:', error);
+      setNotifications([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, page, limit]);
 
   // Load unread count
   const loadUnreadCount = useCallback(async () => {
@@ -69,6 +80,11 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ className }
       console.error('Error loading unread count:', error);
     }
   }, []);
+
+  // Reset page when tab changes
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab]);
 
   // Load notifications and unread count
   useEffect(() => {
@@ -96,6 +112,8 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ className }
   const handleNotificationClick = async (notification: Notification) => {
     setSelectedNotification(notification);
     setDetailModalOpen(true);
+    // Giữ popover mở khi mở modal
+    setPopoverOpen(true);
 
     // Mark as read if not read
     if (!notification.isRead) {
@@ -149,35 +167,28 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ className }
       <List.Item
         className={`notification-item ${isUnread ? 'unread' : ''}`}
         onClick={() => handleNotificationClick(notification)}
-        style={{
-          cursor: 'pointer',
-          padding: '12px 16px',
-          backgroundColor: isUnread ? '#fff1f0' : 'transparent',
-          borderBottom: '1px solid #f0f0f0',
-        }}
       >
         <List.Item.Meta
           title={
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <Text strong={isUnread} style={{ flex: 1 }}>
+            <div className="notification-item-title">
+              <Text strong={isUnread} className="notification-title-text">
                 {notification.title}
               </Text>
-              <Text type="secondary" style={{ fontSize: '12px', marginLeft: '8px' }}>
+              <Text type="secondary" className="notification-time">
                 {formatRelativeTime(notification.createdAt)}
               </Text>
             </div>
           }
           description={
-            <div>
-              <Text type="secondary" style={{ fontSize: '13px' }}>
+            <div className="notification-item-content">
+              <Text type="secondary" className="notification-content-text">
                 {notification.content}
               </Text>
-              <div style={{ marginTop: '4px' }}>
+              <div className="notification-type-badge">
                 <Text
+                  className="notification-type-text"
                   style={{
-                    fontSize: '11px',
                     color: getNotificationTypeColor(notification.type),
-                    fontWeight: 500,
                   }}
                 >
                   {notification.type}
@@ -188,6 +199,11 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ className }
         />
       </List.Item>
     );
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
   };
 
   // Dropdown content
@@ -204,43 +220,61 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ className }
         )}
       </div>
 
-      <Tabs
-        activeKey={activeTab}
-        onChange={(key) => setActiveTab(key as TabType)}
-        items={[
-          {
-            key: 'all',
-            label: 'Tất cả',
-          },
-          {
-            key: 'unread',
-            label: `Chưa đọc ${unreadCount > 0 ? `(${unreadCount})` : ''}`,
-          },
-          {
-            key: 'read',
-            label: 'Đã đọc',
-          },
-        ]}
-        style={{ marginTop: '8px' }}
-      />
+      <div className="notification-tabs-wrapper">
+        <Tabs
+          activeKey={activeTab}
+          onChange={(key) => setActiveTab(key as TabType)}
+          items={[
+            {
+              key: 'all',
+              label: 'Tất cả',
+            },
+            {
+              key: 'unread',
+              label: `Chưa đọc ${unreadCount > 0 ? `(${unreadCount})` : ''}`,
+            },
+            {
+              key: 'read',
+              label: 'Đã đọc',
+            },
+          ]}
+          className="notification-tabs"
+        />
+      </div>
 
       <div className="notification-list-container">
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
+          <div className="notification-loading">
             <Spin />
           </div>
         ) : notifications.length === 0 ? (
           <Empty
             description="Không có thông báo"
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            style={{ padding: '20px' }}
+            className="notification-empty"
           />
         ) : (
-          <List
-            dataSource={notifications}
-            renderItem={renderNotificationItem}
-            style={{ maxHeight: '400px', overflowY: 'auto' }}
-          />
+          <>
+            <List
+              dataSource={notifications}
+              renderItem={renderNotificationItem}
+              className="notification-list"
+            />
+            {total > limit && (
+              <div className="notification-pagination">
+                <Pagination
+                  current={page}
+                  total={total}
+                  pageSize={limit}
+                  onChange={handlePageChange}
+                  size="small"
+                  showSizeChanger={false}
+                  showQuickJumper={false}
+                  showTotal={(total, range) => `${range[0]}-${range[1]} của ${total}`}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -253,13 +287,26 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ className }
         trigger="click"
         placement="bottomRight"
         overlayClassName="notification-popover-overlay"
+        open={popoverOpen}
         onOpenChange={(open) => {
+          // Nếu modal đang mở, không cho phép đóng popover
+          if (detailModalOpen) {
+            return;
+          }
+          
+          setPopoverOpen(open);
+          
           if (open) {
+            setPage(1); // Reset to first page when opening
             loadNotifications();
             loadUnreadCount();
           }
         }}
         overlayStyle={{ padding: 0 }}
+        align={{
+          offset: [0, 8],
+        }}
+        getPopupContainer={(trigger) => trigger.parentElement || document.body}
       >
         <Badge count={unreadCount} size="small" offset={[-2, 2]}>
           <Button
@@ -281,17 +328,25 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({ className }
         onCancel={() => {
           setDetailModalOpen(false);
           setSelectedNotification(null);
+          // Giữ popover mở khi đóng modal
+          setPopoverOpen(true);
         }}
+        maskClosable={true}
         footer={[
           <Button key="close" onClick={() => {
             setDetailModalOpen(false);
             setSelectedNotification(null);
+            // Giữ popover mở khi đóng modal
+            setPopoverOpen(true);
           }}>
             Đóng
           </Button>,
         ]}
         width="90%"
         style={{ maxWidth: '600px' }}
+        className="notification-detail-modal"
+        zIndex={1050}
+        getContainer={false}
       >
         {selectedNotification && (
           <Descriptions column={1} bordered>
