@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { Layout, Tabs, List, Avatar, Input, Button, Spin, Empty, Badge, Modal, Form, message } from 'antd';
+import { Layout, Tabs, List, Avatar, Input, Button, Spin, Empty, Badge, Modal, Form } from 'antd';
 import { SendOutlined, UserOutlined, PlusOutlined, SearchOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useCurrentApp } from '@/components/context/app.context';
 import { useIsMobile } from '@/hooks/useResponsive';
 import { getChatRoomsAPI, getChatMessagesAPI, createDirectMessageRoomAPI, markRoomAsReadAPI, getAllEmployeesAPI } from '@/services/api';
 import type { Employee } from '@/types/employee';
 import { socketService } from '@/services/socket.service';
-import { ChatClientEvents, ChatServerEvents, SocketIOEvents } from '@/constants/chat.events';
-import type { ChatRoom, ChatMessage, ChatRoomsResponse, ChatMessageListResponse } from '@/types/chat';
+import { ChatClientEvents, ChatServerEvents } from '@/constants/chat.events';
+import type { ChatRoom, ChatMessage, ChatRoomsResponse } from '@/types/chat';
 import { ChatRoomType } from '@/types/chat';
 import { handleApiSuccess, notifyError } from '@/utils/notification';
 import dayjs from 'dayjs';
@@ -48,11 +48,186 @@ const ChatPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const [form] = Form.useForm();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Define all functions first using useCallback
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  const connectSocket = useCallback(() => {
+    console.log('[ChatPage] Connecting socket, isConnected:', socketService.isConnected());
+    if (!socketService.isConnected()) {
+      const socket = socketService.connect();
+      console.log('[ChatPage] Socket connection initiated:', socket?.id);
+    } else {
+      console.log('[ChatPage] Socket already connected:', socketService.getSocket()?.id);
+    }
+  }, []);
+
+  const updateRoomLastMessage = useCallback((roomId: string, message: ChatMessage) => {
+    setRooms((prev) => {
+      if (!prev) return null;
+      
+      const updateRoom = (room: ChatRoom): ChatRoom => {
+        if (room.id !== roomId) return room;
+        return { ...room, lastMessage: message, updatedAt: message.createdAt };
+      };
+
+      return {
+        company: prev.company ? updateRoom(prev.company) : null,
+        departments: prev.departments.map(updateRoom),
+        directMessages: prev.directMessages.map(updateRoom),
+      };
+    });
+  }, []);
+
+  const joinRoom = useCallback((roomId: string) => {
+    console.log('[ChatPage] Joining room via WebSocket:', roomId);
+    if (!socketService.isConnected()) {
+      console.warn('[ChatPage] Socket not connected, cannot join room');
+      return;
+    }
+    socketService.emit(ChatClientEvents.ROOM_JOIN, { roomId });
+  }, []);
+
+  const markRoomAsRead = useCallback(async (roomId: string) => {
+    try {
+      console.log('[ChatPage] Marking room as read:', roomId);
+      await markRoomAsReadAPI(roomId);
+    } catch (error) {
+      console.error('[ChatPage] Error marking room as read:', error);
+    }
+  }, []);
+
+  const loadMessages = useCallback(async (roomId: string, page: number = 1, limit: number = 50, append: boolean = false) => {
+    try {
+      if (append) {
+        setLoadingMore(true);
+      } else {
+        setMessagesLoading(true);
+      }
+      
+      const response = await getChatMessagesAPI(roomId, { page, limit });
+      console.log('Chat messages response:', response);
+      
+      // Parse response - có thể là ChatMessageListResponse trực tiếp hoặc nested trong data
+      let messagesData: { data: ChatMessage[]; totalPages: number } | null = null;
+      
+      if (response) {
+        // Check if response is ChatMessageListResponse directly
+        if (typeof response === 'object' && 'data' in response && 'totalPages' in response) {
+          messagesData = response as unknown as { data: ChatMessage[]; totalPages: number };
+        }
+        // Check if response has nested data
+        else if (typeof response === 'object' && 'data' in response && response.data) {
+          const nestedData = response.data as unknown;
+          if (nestedData && typeof nestedData === 'object' && 'data' in nestedData && 'totalPages' in nestedData) {
+            messagesData = nestedData as { data: ChatMessage[]; totalPages: number };
+          }
+        }
+      }
+      
+      if (messagesData) {
+        const newMessages = Array.isArray(messagesData.data) ? messagesData.data : [];
+        console.log('[ChatPage] Loaded messages:', {
+          roomId,
+          page,
+          append,
+          messageCount: newMessages.length,
+          totalPages: messagesData.totalPages,
+          hasMore: messagesData.totalPages > page,
+        });
+        
+        if (append) {
+          setMessages((prev) => [...newMessages, ...prev]);
+        } else {
+          setMessages(newMessages);
+          setShouldAutoScroll(false);
+        }
+        
+        setCurrentPage(page);
+        setHasMore(messagesData.totalPages > page);
+      } else {
+        console.warn('[ChatPage] No messages data found in response:', response);
+        if (!append) {
+          setMessages([]);
+        }
+      }
+    } catch (error) {
+      notifyError(error, 'Không thể tải tin nhắn');
+      console.error('Error loading messages:', error);
+    } finally {
+      setMessagesLoading(false);
+      setLoadingMore(false);
+    }
+  }, []);
+
+  const loadRooms = useCallback(async (preserveSelectedRoom: boolean = true) => {
+    try {
+      setLoading(true);
+      const response = await getChatRoomsAPI();
+      console.log('[ChatPage] Raw API response:', response);
+      
+      let roomsData: ChatRoomsResponse | null = null;
+      
+      if (response) {
+        if ('data' in response && response.data) {
+          const data = response.data as unknown;
+          if (data && typeof data === 'object' && ('company' in data || 'departments' in data || 'directMessages' in data)) {
+            roomsData = data as ChatRoomsResponse;
+          }
+        }
+        else if ('company' in response || 'departments' in response || 'directMessages' in response) {
+          roomsData = response as unknown as ChatRoomsResponse;
+        }
+      }
+      
+      if (roomsData) {
+        const normalizedRoomsData: ChatRoomsResponse = {
+          company: roomsData.company || null,
+          departments: Array.isArray(roomsData.departments) ? roomsData.departments : [],
+          directMessages: Array.isArray(roomsData.directMessages) ? roomsData.directMessages : [],
+        };
+        
+        setRooms(normalizedRoomsData);
+        
+        // Chỉ update selectedRoom nếu preserveSelectedRoom = true và có selectedRoom
+        if (preserveSelectedRoom) {
+          setSelectedRoom((currentSelectedRoom) => {
+            if (!currentSelectedRoom) {
+              // Auto select first room if no room selected
+              if (normalizedRoomsData.company) {
+                return normalizedRoomsData.company;
+              } else if (normalizedRoomsData.departments.length > 0) {
+                return normalizedRoomsData.departments[0];
+              } else if (normalizedRoomsData.directMessages.length > 0) {
+                return normalizedRoomsData.directMessages[0];
+              }
+              return null;
+            } else {
+              // Update selected room data if it exists in the new rooms list
+              const updatedSelectedRoom = 
+                normalizedRoomsData.company?.id === currentSelectedRoom.id ? normalizedRoomsData.company :
+                normalizedRoomsData.departments.find(r => r.id === currentSelectedRoom.id) ||
+                normalizedRoomsData.directMessages.find(r => r.id === currentSelectedRoom.id);
+              
+              return updatedSelectedRoom || currentSelectedRoom;
+            }
+          });
+        }
+      }
+    } catch (error) {
+      notifyError(error, 'Không thể tải danh sách phòng chat');
+      console.error('Error loading rooms:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Load rooms khi component mount
   useEffect(() => {
     console.log('[ChatPage] Component mounted, loading rooms and connecting socket');
-    console.log('[ChatPage] Current user:', user);
     loadRooms();
     connectSocket();
     
@@ -63,7 +238,7 @@ const ChatPage: React.FC = () => {
       }
       socketService.disconnect();
     };
-  }, []);
+  }, [loadRooms, connectSocket]);
 
   // Load messages khi chọn room
   useEffect(() => {
@@ -83,7 +258,7 @@ const ChatPage: React.FC = () => {
     } else {
       console.log('[ChatPage] No room selected');
     }
-  }, [selectedRoom]);
+  }, [selectedRoom, loadMessages, joinRoom, markRoomAsRead]);
 
   // Auto scroll to bottom chỉ khi có tin nhắn mới (không scroll khi load messages lần đầu)
   useEffect(() => {
@@ -91,7 +266,7 @@ const ChatPage: React.FC = () => {
       scrollToBottom();
       setShouldAutoScroll(false); // Reset sau khi scroll
     }
-  }, [messages, shouldAutoScroll]);
+  }, [messages, shouldAutoScroll, scrollToBottom]);
 
   // Setup WebSocket event handlers
   useEffect(() => {
@@ -127,14 +302,14 @@ const ChatPage: React.FC = () => {
         setShouldAutoScroll(true);
       } else {
         console.log('[ChatPage] ℹ️ Message for different room, updating room list only');
-        // Reload rooms to update unread count for other rooms
-        loadRooms();
+        // Reload rooms to update unread count for other rooms (không update selectedRoom)
+        loadRooms(true);
       }
     };
 
     const handleMessageError = (error: { error: string }) => {
       console.error('[ChatPage] Message error:', error);
-      notifyError(error.error || 'Không thể gửi tin nhắn');
+      notifyError(error, error.error || 'Không thể gửi tin nhắn');
     };
 
     const handleTypingUser = (data: { roomId: string; userId: string; username?: string }) => {
@@ -176,7 +351,7 @@ const ChatPage: React.FC = () => {
 
     const handleRoomsUpdated = () => {
       console.log('[ChatPage] Rooms updated event received, reloading rooms');
-      loadRooms();
+      loadRooms(true);
     };
 
       // Register event listeners
@@ -209,228 +384,23 @@ const ChatPage: React.FC = () => {
       socketService.off(ChatServerEvents.USER_STATUS_CHANGED, handleUserStatusChanged);
       socketService.off(ChatServerEvents.ROOMS_UPDATED, handleRoomsUpdated);
     };
-  }, [selectedRoom, user?.id]);
+  }, [selectedRoom, user?.id, updateRoomLastMessage, loadRooms, joinRoom]);
 
-  const connectSocket = () => {
-    console.log('[ChatPage] Connecting socket, isConnected:', socketService.isConnected());
-    if (!socketService.isConnected()) {
-      const socket = socketService.connect();
-      console.log('[ChatPage] Socket connection initiated:', socket?.id);
-    } else {
-      console.log('[ChatPage] Socket already connected:', socketService.getSocket()?.id);
-    }
-  };
-
-  const loadRooms = async () => {
-    try {
-      setLoading(true);
-      const response = await getChatRoomsAPI();
-      console.log('[ChatPage] Raw API response:', response);
-      console.log('[ChatPage] Response structure:', {
-        hasData: !!response?.data,
-        hasDataData: !!response?.data?.data,
-        keys: response ? Object.keys(response) : [],
-        dataKeys: response?.data ? Object.keys(response.data) : [],
-      });
-      
-      // Response structure có thể là:
-      // 1. { data: ChatRoomsResponse } - từ axios interceptor
-      // 2. { data: { data: ChatRoomsResponse } } - double wrapped
-      // 3. ChatRoomsResponse trực tiếp
-      let roomsData: ChatRoomsResponse | null = null;
-      
-      if (response) {
-        // Case 1: Response có data.data (double wrapped)
-        if (response.data?.data && (response.data.data.company || response.data.data.directMessages || response.data.data.departments)) {
-          roomsData = response.data.data;
-          console.log('[ChatPage] Found rooms in response.data.data');
-        }
-        // Case 2: Response có data (single wrapped)
-        else if (response.data && (response.data.company || response.data.directMessages || response.data.departments)) {
-          roomsData = response.data;
-          console.log('[ChatPage] Found rooms in response.data');
-        }
-        // Case 3: Response trực tiếp là ChatRoomsResponse
-        else if (response.company || response.directMessages || response.departments) {
-          roomsData = response as ChatRoomsResponse;
-          console.log('[ChatPage] Found rooms in response directly');
-        }
-      }
-      
-      if (roomsData) {
-        console.log('[ChatPage] Parsed rooms data:', {
-          company: roomsData.company ? { id: roomsData.company.id, name: roomsData.company.name } : null,
-          departmentsCount: roomsData.departments?.length || 0,
-          directMessagesCount: roomsData.directMessages?.length || 0,
-          directMessages: roomsData.directMessages?.map(d => ({ 
-            id: d.id, 
-            name: d.name,
-            otherParticipant: d.otherParticipant?.fullName,
-            hasLastMessage: !!d.lastMessage,
-          })) || [],
-        });
-        
-        // Đảm bảo directMessages và departments luôn là array
-        const normalizedRoomsData: ChatRoomsResponse = {
-          company: roomsData.company || null,
-          departments: Array.isArray(roomsData.departments) ? roomsData.departments : [],
-          directMessages: Array.isArray(roomsData.directMessages) ? roomsData.directMessages : [],
-        };
-        
-        console.log('[ChatPage] Normalized rooms data:', {
-          directMessagesCount: normalizedRoomsData.directMessages.length,
-          departmentsCount: normalizedRoomsData.departments.length,
-        });
-        
-        setRooms(normalizedRoomsData);
-        // Auto select first room if no room selected
-        if (!selectedRoom) {
-          if (normalizedRoomsData.company) {
-            console.log('[ChatPage] Auto-selecting company room:', normalizedRoomsData.company.id);
-            setSelectedRoom(normalizedRoomsData.company);
-          } else if (normalizedRoomsData.departments && normalizedRoomsData.departments.length > 0) {
-            console.log('[ChatPage] Auto-selecting department room:', normalizedRoomsData.departments[0].id);
-            setSelectedRoom(normalizedRoomsData.departments[0]);
-          } else if (normalizedRoomsData.directMessages && normalizedRoomsData.directMessages.length > 0) {
-            console.log('[ChatPage] Auto-selecting direct message room:', normalizedRoomsData.directMessages[0].id);
-            setSelectedRoom(normalizedRoomsData.directMessages[0]);
-          }
-        } else {
-          // Update selected room data if it exists in the new rooms list
-          const updatedSelectedRoom = 
-            normalizedRoomsData.company?.id === selectedRoom.id ? normalizedRoomsData.company :
-            normalizedRoomsData.departments.find(r => r.id === selectedRoom.id) ||
-            normalizedRoomsData.directMessages.find(r => r.id === selectedRoom.id);
-          
-          if (updatedSelectedRoom) {
-            console.log('[ChatPage] Updating selected room data');
-            setSelectedRoom(updatedSelectedRoom);
-          }
-        }
-      } else {
-        console.warn('[ChatPage] No rooms data found in response:', response);
-      }
-    } catch (error) {
-      notifyError('Không thể tải danh sách phòng chat');
-      console.error('Error loading rooms:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadMessages = async (roomId: string, page: number = 1, limit: number = 50, append: boolean = false) => {
-    try {
-      if (append) {
-        setLoadingMore(true);
-      } else {
-        setMessagesLoading(true);
-      }
-      
-      const response = await getChatMessagesAPI(roomId, { page, limit });
-      console.log('Chat messages response:', response);
-      
-      // Response structure: { data: { data: ChatMessageListResponse, ... } }
-      const messagesData = response?.data?.data || response?.data;
-      
-      if (messagesData) {
-        const newMessages = messagesData.data || messagesData;
-        console.log('[ChatPage] Loaded messages:', {
-          roomId,
-          page,
-          append,
-          messageCount: Array.isArray(newMessages) ? newMessages.length : 0,
-          totalPages: messagesData.totalPages,
-          hasMore: messagesData.totalPages ? messagesData.totalPages > page : undefined,
-        });
-        
-        if (append) {
-          // Prepend older messages
-          setMessages((prev) => {
-            const updated = [...newMessages, ...prev];
-            console.log('[ChatPage] Appended messages, total:', updated.length);
-            return updated;
-          });
-        } else {
-          const messagesArray = Array.isArray(newMessages) ? newMessages : [];
-          console.log('[ChatPage] Setting messages, count:', messagesArray.length);
-          setMessages(messagesArray);
-          // Không auto scroll khi load messages lần đầu
-          setShouldAutoScroll(false);
-        }
-        
-        setCurrentPage(page);
-        if (messagesData.totalPages !== undefined) {
-          setHasMore(messagesData.totalPages > page);
-        } else {
-          setHasMore(Array.isArray(newMessages) && newMessages.length === limit);
-        }
-      } else {
-        console.warn('[ChatPage] No messages data found in response:', response);
-        if (!append) {
-          setMessages([]);
-        }
-      }
-    } catch (error) {
-      notifyError('Không thể tải tin nhắn');
-      console.error('Error loading messages:', error);
-    } finally {
-      setMessagesLoading(false);
-      setLoadingMore(false);
-    }
-  };
-
-  const loadMoreMessages = () => {
+  const loadMoreMessages = useCallback(() => {
     if (!selectedRoom || loadingMore || !hasMore) return;
     loadMessages(selectedRoom.id, currentPage + 1, 50, true);
-  };
+  }, [selectedRoom, loadingMore, hasMore, currentPage, loadMessages]);
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     // Load more when scroll to top
     if (target.scrollTop === 0 && hasMore && !loadingMore) {
       console.log('[ChatPage] Scrolled to top, loading more messages');
       loadMoreMessages();
     }
-  };
+  }, [hasMore, loadingMore, loadMoreMessages]);
 
-  const joinRoom = (roomId: string) => {
-    console.log('[ChatPage] Joining room via WebSocket:', roomId);
-    if (!socketService.isConnected()) {
-      console.warn('[ChatPage] Socket not connected, cannot join room');
-      return;
-    }
-    // Backend expects { roomId: string } not just string
-    socketService.emit(ChatClientEvents.ROOM_JOIN, { roomId });
-  };
-
-  const markRoomAsRead = async (roomId: string) => {
-    try {
-      console.log('[ChatPage] Marking room as read:', roomId);
-      const response = await markRoomAsReadAPI(roomId);
-      console.log('[ChatPage] Room marked as read:', response);
-    } catch (error) {
-      console.error('[ChatPage] Error marking room as read:', error);
-    }
-  };
-
-  const updateRoomLastMessage = (roomId: string, message: ChatMessage) => {
-    setRooms((prev) => {
-      if (!prev) return null;
-      
-      const updateRoom = (room: ChatRoom | null): ChatRoom | null => {
-        if (!room || room.id !== roomId) return room;
-        return { ...room, lastMessage: message, updatedAt: message.createdAt };
-      };
-
-      return {
-        company: updateRoom(prev.company),
-        departments: prev.departments.map(updateRoom),
-        directMessages: prev.directMessages.map(updateRoom),
-      };
-    });
-  };
-
-  const handleSendMessage = () => {
+  const handleSendMessage = useCallback(() => {
     if (!messageInput.trim() || !selectedRoom) {
       console.log('[ChatPage] Cannot send message:', { hasInput: !!messageInput.trim(), hasRoom: !!selectedRoom });
       return;
@@ -479,7 +449,7 @@ const ChatPage: React.FC = () => {
     // Send via WebSocket
     if (!socketService.isConnected()) {
       console.error('[ChatPage] ❌ Socket not connected, cannot send message');
-      notifyError('Không thể kết nối đến server. Vui lòng thử lại.');
+      notifyError(new Error('Socket not connected'), 'Không thể kết nối đến server. Vui lòng thử lại.');
       return;
     }
     
@@ -493,31 +463,28 @@ const ChatPage: React.FC = () => {
       roomId: selectedRoom.id,
       content,
     });
-  };
+  }, [selectedRoom, messageInput, user?.id]);
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
-  };
+  }, [handleSendMessage]);
 
-  const handleTypingStart = () => {
+  const handleTypingStart = useCallback(() => {
     if (!selectedRoom) return;
     console.log('[ChatPage] Typing started in room:', selectedRoom.id);
     socketService.emit(ChatClientEvents.TYPING_START, { roomId: selectedRoom.id });
-  };
+  }, [selectedRoom]);
 
-  const handleTypingStop = () => {
+  const handleTypingStop = useCallback(() => {
     if (!selectedRoom) return;
     console.log('[ChatPage] Typing stopped in room:', selectedRoom.id);
     socketService.emit(ChatClientEvents.TYPING_STOP, { roomId: selectedRoom.id });
-  };
+  }, [selectedRoom]);
 
-  // Debounce typing stop
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  const handleInputChange = (value: string) => {
+  const handleInputChange = useCallback((value: string) => {
     setMessageInput(value);
     
     // Emit typing start
@@ -536,13 +503,9 @@ const ChatPage: React.FC = () => {
     } else {
       handleTypingStop();
     }
-  };
+  }, [selectedRoom, handleTypingStart, handleTypingStop]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const getRoomsForTab = (): ChatRoom[] => {
+  const getRoomsForTab = useCallback((): ChatRoom[] => {
     if (!rooms) {
       console.log('[ChatPage] No rooms available');
       return [];
@@ -570,9 +533,9 @@ const ChatPage: React.FC = () => {
     
     console.log('[ChatPage] Rooms for tab:', { tab: activeTab, count: result.length });
     return result;
-  };
+  }, [rooms, activeTab]);
 
-  const getUnreadCount = (room: ChatRoom): number => {
+  const getUnreadCount = useCallback((room: ChatRoom): number => {
     if (!room.lastMessage || !user?.id) return 0;
     
     // Nếu tin nhắn cuối là của chính mình, không tính unread
@@ -593,64 +556,39 @@ const ChatPage: React.FC = () => {
     
     // Nếu lastMessage mới hơn lastReadAt, có tin nhắn chưa đọc
     return lastMessageAt > lastReadAt ? 1 : 0;
-  };
+  }, [user?.id]);
 
-  const handleCreateDirectMessage = async (otherUserId: string) => {
+  const handleCreateDirectMessage = useCallback(async (otherUserId: string) => {
     console.log('[ChatPage] Creating direct message room with user:', otherUserId);
     try {
       const response = await createDirectMessageRoomAPI({ otherUserId });
       console.log('[ChatPage] Create direct message room response:', response);
-      console.log('[ChatPage] Response type check:', {
-        isArray: Array.isArray(response),
-        hasData: !!response?.data,
-        hasId: !!response?.id,
-        keys: response ? Object.keys(response) : [],
-      });
       
-      // Axios interceptor trả về response.data, và backend có thể trả về:
-      // 1. ChatRoom trực tiếp (nếu backend return ChatRoom)
-      // 2. IBackendRes<ChatRoom> (nếu backend wrap trong IBackendRes)
-      // 3. IBackendRes<ChatRoom> với data.data (nếu double wrapped)
+      // Parse response - có thể là ChatRoom trực tiếp hoặc nested trong data
       let roomData: ChatRoom | null = null;
       
       if (response) {
-        // Case 1: Response là ChatRoom trực tiếp (có id, name, type)
-        // Check: có id và (type hoặc name) để xác định là ChatRoom
-        if (response.id && (response.type || response.name)) {
-          roomData = response as ChatRoom;
-          console.log('[ChatPage] Response is ChatRoom directly:', {
-            id: roomData.id,
-            name: roomData.name,
-            type: roomData.type,
-          });
+        // Case 1: Response là ChatRoom trực tiếp
+        if (typeof response === 'object' && 'id' in response && 'name' in response && 'type' in response) {
+          roomData = response as unknown as ChatRoom;
+          console.log('[ChatPage] Response is ChatRoom directly');
         }
-        // Case 2: Response là IBackendRes<ChatRoom> (có data property)
-        else if (response.data) {
-          // Case 2a: response.data là ChatRoom
-          if (response.data.id && (response.data.type || response.data.name)) {
-            roomData = response.data as ChatRoom;
-            console.log('[ChatPage] Response is IBackendRes<ChatRoom>, data is ChatRoom');
+        // Case 2: Response có nested data
+        else if (typeof response === 'object' && 'data' in response && response.data) {
+          const data = response.data as unknown;
+          // Check if data is ChatRoom
+          if (data && typeof data === 'object' && 'id' in data && 'name' in data && 'type' in data) {
+            roomData = data as ChatRoom;
+            console.log('[ChatPage] Response has nested ChatRoom in data');
           }
-          // Case 2b: response.data.data là ChatRoom (double wrapped)
-          else if (response.data.data && response.data.data.id) {
-            roomData = response.data.data as ChatRoom;
-            console.log('[ChatPage] Response is IBackendRes<ChatRoom>, data.data is ChatRoom');
-          } else {
-            console.log('[ChatPage] response.data exists but not a valid ChatRoom:', {
-              hasId: !!response.data.id,
-              hasType: !!response.data.type,
-              hasName: !!response.data.name,
-              keys: Object.keys(response.data),
-            });
+          // Check if data.data is ChatRoom (double nested)
+          else if (data && typeof data === 'object' && 'data' in data) {
+            const nestedData = (data as { data: unknown }).data;
+            if (nestedData && typeof nestedData === 'object' && 'id' in nestedData && 'name' in nestedData) {
+              roomData = nestedData as ChatRoom;
+              console.log('[ChatPage] Response has double nested ChatRoom');
+            }
           }
-        } else {
-          console.log('[ChatPage] Response exists but no valid structure:', {
-            hasId: !!response.id,
-            hasType: !!response.type,
-            hasName: !!response.name,
-            hasData: !!response.data,
-            keys: Object.keys(response),
-          });
         }
       }
       
@@ -699,20 +637,20 @@ const ChatPage: React.FC = () => {
           }
         });
         
-        // Reload rooms để sync với backend
-        await loadRooms();
-        handleApiSuccess('Đã tạo phòng chat thành công');
+        // Reload rooms để sync với backend (không update selectedRoom vì đã set ở trên)
+        await loadRooms(false);
+        handleApiSuccess(response, 'Đã tạo phòng chat thành công', 'Không thể tạo phòng chat');
       } else {
         console.warn('[ChatPage] No room data in response, full response:', response);
-        notifyError('Không thể tạo phòng chat - dữ liệu không hợp lệ');
+        notifyError(response || new Error('Invalid response'), 'Không thể tạo phòng chat - dữ liệu không hợp lệ');
       }
     } catch (error) {
-      notifyError('Không thể tạo phòng chat');
+      notifyError(error, 'Không thể tạo phòng chat');
       console.error('[ChatPage] Error creating direct message room:', error);
     }
-  };
+  }, [isMobile, loadRooms]);
 
-  const handleSearchEmployees = async (query: string) => {
+  const handleSearchEmployees = useCallback(async (query: string) => {
     console.log('[ChatPage] Searching employees with query:', query);
     setSearchQuery(query);
     if (!query.trim()) {
@@ -748,25 +686,25 @@ const ChatPage: React.FC = () => {
 
       setSearchEmployees(filtered.slice(0, 20)); // Limit to 20 results
     } catch (error) {
-      notifyError('Không thể tìm kiếm nhân viên');
+      notifyError(error, 'Không thể tìm kiếm nhân viên');
       console.error('Error searching employees:', error);
     } finally {
       setSearchLoading(false);
     }
-  };
+  }, [user?.id]);
 
   // Handle room selection (mobile: show chat view)
-  const handleRoomSelect = (room: ChatRoom) => {
+  const handleRoomSelect = useCallback((room: ChatRoom) => {
     setSelectedRoom(room);
     if (isMobile) {
       setShowChatView(true);
     }
-  };
+  }, [isMobile]);
 
   // Handle back to list (mobile only)
-  const handleBackToList = () => {
+  const handleBackToList = useCallback(() => {
     setShowChatView(false);
-  };
+  }, []);
 
   return (
     <Layout className={`chat-layout ${isMobile ? 'mobile' : ''} ${isMobile && showChatView ? 'show-chat-view' : ''}`} style={{ height: 'calc(100vh - 64px)' }}>
