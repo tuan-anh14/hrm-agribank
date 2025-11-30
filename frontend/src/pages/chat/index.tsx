@@ -24,6 +24,54 @@ const { TabPane } = Tabs;
 
 type TabKey = 'company' | 'departments' | 'direct';
 
+// Helper component to render room item (tránh code trùng lặp)
+const RoomItem: React.FC<{
+  room: ChatRoom;
+  isSelected: boolean;
+  onSelect: (room: ChatRoom) => void;
+  getUnreadCount: (room: ChatRoom) => number;
+}> = ({ room, isSelected, onSelect, getUnreadCount }) => {
+  const getRoomTitle = () => {
+    if (room.type === ChatRoomType.DIRECT_MESSAGE) {
+      return room.otherParticipant?.fullName || room.name;
+    }
+    return room.name;
+  };
+
+  return (
+    <List.Item
+      className={`chat-room-item ${isSelected ? 'active' : ''}`}
+      onClick={() => onSelect(room)}
+    >
+      <List.Item.Meta
+        avatar={<Avatar icon={<UserOutlined />} />}
+        title={
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>{getRoomTitle()}</span>
+            {getUnreadCount(room) > 0 && (
+              <Badge count={getUnreadCount(room)} />
+            )}
+          </div>
+        }
+        description={
+          room.lastMessage ? (
+            <div>
+              <div style={{ fontSize: '12px', color: '#666' }}>
+                {room.lastMessage.sender?.fullName || 'Unknown'}: {room.lastMessage.content}
+              </div>
+              <div style={{ fontSize: '11px', color: '#999' }}>
+                {dayjs(room.lastMessage.createdAt).fromNow()}
+              </div>
+            </div>
+          ) : (
+            <span style={{ fontSize: '12px', color: '#999' }}>Chưa có tin nhắn</span>
+          )
+        }
+      />
+    </List.Item>
+  );
+};
+
 const ChatPage: React.FC = () => {
   const { user } = useCurrentApp();
   const isMobile = useIsMobile();
@@ -56,12 +104,8 @@ const ChatPage: React.FC = () => {
   }, []);
 
   const connectSocket = useCallback(() => {
-    console.log('[ChatPage] Connecting socket, isConnected:', socketService.isConnected());
     if (!socketService.isConnected()) {
-      const socket = socketService.connect();
-      console.log('[ChatPage] Socket connection initiated:', socket?.id);
-    } else {
-      console.log('[ChatPage] Socket already connected:', socketService.getSocket()?.id);
+      socketService.connect();
     }
   }, []);
 
@@ -83,9 +127,7 @@ const ChatPage: React.FC = () => {
   }, []);
 
   const joinRoom = useCallback((roomId: string) => {
-    console.log('[ChatPage] Joining room via WebSocket:', roomId);
     if (!socketService.isConnected()) {
-      console.warn('[ChatPage] Socket not connected, cannot join room');
       return;
     }
     socketService.emit(ChatClientEvents.ROOM_JOIN, { roomId });
@@ -93,7 +135,6 @@ const ChatPage: React.FC = () => {
 
   const markRoomAsRead = useCallback(async (roomId: string) => {
     try {
-      console.log('[ChatPage] Marking room as read:', roomId);
       await markRoomAsReadAPI(roomId);
     } catch (error) {
       console.error('[ChatPage] Error marking room as read:', error);
@@ -109,7 +150,6 @@ const ChatPage: React.FC = () => {
       }
       
       const response = await getChatMessagesAPI(roomId, { page, limit });
-      console.log('Chat messages response:', response);
       
       // Parse response - có thể là ChatMessageListResponse trực tiếp hoặc nested trong data
       let messagesData: { data: ChatMessage[]; totalPages: number } | null = null;
@@ -130,14 +170,6 @@ const ChatPage: React.FC = () => {
       
       if (messagesData) {
         const newMessages = Array.isArray(messagesData.data) ? messagesData.data : [];
-        console.log('[ChatPage] Loaded messages:', {
-          roomId,
-          page,
-          append,
-          messageCount: newMessages.length,
-          totalPages: messagesData.totalPages,
-          hasMore: messagesData.totalPages > page,
-        });
         
         if (append) {
           setMessages((prev) => [...newMessages, ...prev]);
@@ -149,7 +181,6 @@ const ChatPage: React.FC = () => {
         setCurrentPage(page);
         setHasMore(messagesData.totalPages > page);
       } else {
-        console.warn('[ChatPage] No messages data found in response:', response);
         if (!append) {
           setMessages([]);
         }
@@ -167,7 +198,6 @@ const ChatPage: React.FC = () => {
     try {
       setLoading(true);
       const response = await getChatRoomsAPI();
-      console.log('[ChatPage] Raw API response:', response);
       
       let roomsData: ChatRoomsResponse | null = null;
       
@@ -227,12 +257,10 @@ const ChatPage: React.FC = () => {
 
   // Load rooms khi component mount
   useEffect(() => {
-    console.log('[ChatPage] Component mounted, loading rooms and connecting socket');
     loadRooms();
     connectSocket();
     
     return () => {
-      console.log('[ChatPage] Component unmounting, cleaning up');
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
@@ -243,20 +271,12 @@ const ChatPage: React.FC = () => {
   // Load messages khi chọn room
   useEffect(() => {
     if (selectedRoom) {
-      console.log('[ChatPage] Room selected:', {
-        roomId: selectedRoom.id,
-        roomName: selectedRoom.name,
-        roomType: selectedRoom.type,
-        lastMessage: selectedRoom.lastMessage,
-      });
       setMessages([]);
       setCurrentPage(1);
       setHasMore(true);
       loadMessages(selectedRoom.id, 1, 50, false);
       joinRoom(selectedRoom.id);
       markRoomAsRead(selectedRoom.id);
-    } else {
-      console.log('[ChatPage] No room selected');
     }
   }, [selectedRoom, loadMessages, joinRoom, markRoomAsRead]);
 
@@ -272,22 +292,11 @@ const ChatPage: React.FC = () => {
   useEffect(() => {
     const socket = socketService.getSocket();
     if (!socket) {
-      console.warn('[ChatPage] Socket is null, cannot setup event listeners');
       return;
     }
 
     // Message handlers
     const handleNewMessage = (message: ChatMessage) => {
-      console.log('[ChatPage] ✨ New message received via WebSocket:', {
-        messageId: message.id,
-        roomId: message.roomId,
-        senderId: message.senderId,
-        senderName: message.sender?.fullName,
-        content: message.content?.substring(0, 50) + '...',
-        isCurrentRoom: message.roomId === selectedRoom?.id,
-        currentSelectedRoomId: selectedRoom?.id,
-      });
-      
       // Always update last message in rooms list (for all rooms)
       updateRoomLastMessage(message.roomId, message);
       
@@ -295,13 +304,11 @@ const ChatPage: React.FC = () => {
         // Remove optimistic message if exists
         setMessages((prev) => {
           const filtered = prev.filter((m) => !m.id.startsWith('temp-'));
-          console.log('[ChatPage] ✅ Adding message to current room, total messages:', filtered.length + 1);
           return [...filtered, message];
         });
         // Chỉ scroll khi có message mới từ WebSocket
         setShouldAutoScroll(true);
       } else {
-        console.log('[ChatPage] ℹ️ Message for different room, updating room list only');
         // Reload rooms to update unread count for other rooms (không update selectedRoom)
         loadRooms(true);
       }
@@ -313,11 +320,9 @@ const ChatPage: React.FC = () => {
     };
 
     const handleTypingUser = (data: { roomId: string; userId: string; username?: string }) => {
-      console.log('[ChatPage] User typing:', data);
       if (data.roomId === selectedRoom?.id && data.userId !== user?.id) {
         setTypingUsers((prev) => {
           const next = new Set(prev).add(data.userId);
-          console.log('[ChatPage] Typing users updated:', Array.from(next));
           return next;
         });
         // Auto remove typing indicator after 3 seconds
@@ -325,7 +330,6 @@ const ChatPage: React.FC = () => {
           setTypingUsers((prev) => {
             const next = new Set(prev);
             next.delete(data.userId);
-            console.log('[ChatPage] Typing stopped for user:', data.userId);
             return next;
           });
         }, 3000);
@@ -333,56 +337,51 @@ const ChatPage: React.FC = () => {
     };
 
     const handleTypingStop = (data: { roomId: string; userId: string }) => {
-      console.log('[ChatPage] User stopped typing:', data);
       if (data.roomId === selectedRoom?.id) {
         setTypingUsers((prev) => {
           const next = new Set(prev);
           next.delete(data.userId);
-          console.log('[ChatPage] Typing users after stop:', Array.from(next));
           return next;
         });
       }
     };
 
-    const handleUserStatusChanged = (data: { userId: string; status: 'online' | 'offline' }) => {
+    const handleUserStatusChanged = (_data: { userId: string; status: 'online' | 'offline' }) => {
       // TODO: Update user online status in UI
-      console.log('[ChatPage] User status changed:', data);
     };
 
     const handleRoomsUpdated = () => {
-      console.log('[ChatPage] Rooms updated event received, reloading rooms');
       loadRooms(true);
     };
 
-      // Register event listeners
-      console.log('[ChatPage] 📡 Registering WebSocket event listeners');
-      socketService.on(ChatServerEvents.MESSAGE_NEW, handleNewMessage);
-      socketService.on(ChatServerEvents.MESSAGE_ERROR, handleMessageError);
-      socketService.on(ChatServerEvents.TYPING_USER, handleTypingUser);
-      socketService.on(ChatServerEvents.TYPING_STOP, handleTypingStop);
-      socketService.on(ChatServerEvents.USER_STATUS_CHANGED, handleUserStatusChanged);
-      socketService.on(ChatServerEvents.ROOMS_UPDATED, handleRoomsUpdated);
-      
-      // Also listen to socket connection events
-      socket.on('connect', () => {
-        console.log('[ChatPage] 🔌 Socket connected, re-joining rooms if needed');
-        if (selectedRoom) {
-          joinRoom(selectedRoom.id);
-        }
-      });
-      
-      socket.on('disconnect', (reason) => {
-        console.log('[ChatPage] 🔌 Socket disconnected:', reason);
-      });
+    // Register event listeners
+    socketService.on(ChatServerEvents.MESSAGE_NEW, handleNewMessage);
+    socketService.on(ChatServerEvents.MESSAGE_ERROR, handleMessageError);
+    socketService.on(ChatServerEvents.TYPING_USER, handleTypingUser);
+    socketService.on(ChatServerEvents.TYPING_STOP, handleTypingStop);
+    socketService.on(ChatServerEvents.USER_STATUS_CHANGED, handleUserStatusChanged);
+    socketService.on(ChatServerEvents.ROOMS_UPDATED, handleRoomsUpdated);
+    
+    // Also listen to socket connection events
+    socket.on('connect', () => {
+      if (selectedRoom) {
+        joinRoom(selectedRoom.id);
+      }
+    });
+    
+    socket.on('disconnect', () => {
+      // Handle disconnect if needed
+    });
     
     return () => {
-      console.log('[ChatPage] 🧹 Cleaning up WebSocket event listeners');
       socketService.off(ChatServerEvents.MESSAGE_NEW, handleNewMessage);
       socketService.off(ChatServerEvents.MESSAGE_ERROR, handleMessageError);
       socketService.off(ChatServerEvents.TYPING_USER, handleTypingUser);
       socketService.off(ChatServerEvents.TYPING_STOP, handleTypingStop);
       socketService.off(ChatServerEvents.USER_STATUS_CHANGED, handleUserStatusChanged);
       socketService.off(ChatServerEvents.ROOMS_UPDATED, handleRoomsUpdated);
+      socket.off('connect');
+      socket.off('disconnect');
     };
   }, [selectedRoom, user?.id, updateRoomLastMessage, loadRooms, joinRoom]);
 
@@ -395,26 +394,26 @@ const ChatPage: React.FC = () => {
     const target = e.currentTarget;
     // Load more when scroll to top
     if (target.scrollTop === 0 && hasMore && !loadingMore) {
-      console.log('[ChatPage] Scrolled to top, loading more messages');
       loadMoreMessages();
     }
   }, [hasMore, loadingMore, loadMoreMessages]);
 
+  const handleTypingStart = useCallback(() => {
+    if (!selectedRoom) return;
+    socketService.emit(ChatClientEvents.TYPING_START, { roomId: selectedRoom.id });
+  }, [selectedRoom]);
+
+  const handleTypingStop = useCallback(() => {
+    if (!selectedRoom) return;
+    socketService.emit(ChatClientEvents.TYPING_STOP, { roomId: selectedRoom.id });
+  }, [selectedRoom]);
+
   const handleSendMessage = useCallback(() => {
     if (!messageInput.trim() || !selectedRoom) {
-      console.log('[ChatPage] Cannot send message:', { hasInput: !!messageInput.trim(), hasRoom: !!selectedRoom });
       return;
     }
 
     const content = messageInput.trim();
-    console.log('[ChatPage] Sending message:', {
-      roomId: selectedRoom.id,
-      roomName: selectedRoom.name,
-      content: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
-      senderId: user?.id,
-      senderName: user?.fullName,
-    });
-    
     setMessageInput('');
     
     // Optimistic update
@@ -433,37 +432,22 @@ const ChatPage: React.FC = () => {
       },
     };
 
-    console.log('[ChatPage] Adding optimistic message:', optimisticMessage.id);
-    setMessages((prev) => {
-      const updated = [...prev, optimisticMessage];
-      console.log('[ChatPage] Messages after optimistic update:', updated.length);
-      return updated;
-    });
-    // Scroll khi gửi message (optimistic update)
+    setMessages((prev) => [...prev, optimisticMessage]);
     setShouldAutoScroll(true);
     scrollToBottom();
-    
-    // Stop typing indicator
     handleTypingStop();
 
     // Send via WebSocket
     if (!socketService.isConnected()) {
-      console.error('[ChatPage] ❌ Socket not connected, cannot send message');
       notifyError(new Error('Socket not connected'), 'Không thể kết nối đến server. Vui lòng thử lại.');
       return;
     }
-    
-    console.log('[ChatPage] 📤 Emitting MESSAGE_SEND event via WebSocket:', {
-      roomId: selectedRoom.id,
-      contentLength: content.length,
-      socketConnected: socketService.isConnected(),
-    });
     
     socketService.emit(ChatClientEvents.MESSAGE_SEND, {
       roomId: selectedRoom.id,
       content,
     });
-  }, [selectedRoom, messageInput, user?.id]);
+  }, [selectedRoom, messageInput, user?.id, scrollToBottom, handleTypingStop]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -471,18 +455,6 @@ const ChatPage: React.FC = () => {
       handleSendMessage();
     }
   }, [handleSendMessage]);
-
-  const handleTypingStart = useCallback(() => {
-    if (!selectedRoom) return;
-    console.log('[ChatPage] Typing started in room:', selectedRoom.id);
-    socketService.emit(ChatClientEvents.TYPING_START, { roomId: selectedRoom.id });
-  }, [selectedRoom]);
-
-  const handleTypingStop = useCallback(() => {
-    if (!selectedRoom) return;
-    console.log('[ChatPage] Typing stopped in room:', selectedRoom.id);
-    socketService.emit(ChatClientEvents.TYPING_STOP, { roomId: selectedRoom.id });
-  }, [selectedRoom]);
 
   const handleInputChange = useCallback((value: string) => {
     setMessageInput(value);
@@ -507,32 +479,19 @@ const ChatPage: React.FC = () => {
 
   const getRoomsForTab = useCallback((): ChatRoom[] => {
     if (!rooms) {
-      console.log('[ChatPage] No rooms available');
       return [];
     }
     
-    let result: ChatRoom[] = [];
     switch (activeTab) {
       case 'company':
-        result = rooms.company ? [rooms.company] : [];
-        break;
+        return rooms.company ? [rooms.company] : [];
       case 'departments':
-        result = Array.isArray(rooms.departments) ? rooms.departments : [];
-        break;
+        return Array.isArray(rooms.departments) ? rooms.departments : [];
       case 'direct':
-        result = Array.isArray(rooms.directMessages) ? rooms.directMessages : [];
-        console.log('[ChatPage] Direct messages:', {
-          count: result.length,
-          rooms: result.map(r => ({ id: r.id, name: r.name })),
-          rawDirectMessages: rooms.directMessages,
-        });
-        break;
+        return Array.isArray(rooms.directMessages) ? rooms.directMessages : [];
       default:
-        result = [];
+        return [];
     }
-    
-    console.log('[ChatPage] Rooms for tab:', { tab: activeTab, count: result.length });
-    return result;
   }, [rooms, activeTab]);
 
   const getUnreadCount = useCallback((room: ChatRoom): number => {
@@ -559,10 +518,8 @@ const ChatPage: React.FC = () => {
   }, [user?.id]);
 
   const handleCreateDirectMessage = useCallback(async (otherUserId: string) => {
-    console.log('[ChatPage] Creating direct message room with user:', otherUserId);
     try {
       const response = await createDirectMessageRoomAPI({ otherUserId });
-      console.log('[ChatPage] Create direct message room response:', response);
       
       // Parse response - có thể là ChatRoom trực tiếp hoặc nested trong data
       let roomData: ChatRoom | null = null;
@@ -571,7 +528,6 @@ const ChatPage: React.FC = () => {
         // Case 1: Response là ChatRoom trực tiếp
         if (typeof response === 'object' && 'id' in response && 'name' in response && 'type' in response) {
           roomData = response as unknown as ChatRoom;
-          console.log('[ChatPage] Response is ChatRoom directly');
         }
         // Case 2: Response có nested data
         else if (typeof response === 'object' && 'data' in response && response.data) {
@@ -579,26 +535,18 @@ const ChatPage: React.FC = () => {
           // Check if data is ChatRoom
           if (data && typeof data === 'object' && 'id' in data && 'name' in data && 'type' in data) {
             roomData = data as ChatRoom;
-            console.log('[ChatPage] Response has nested ChatRoom in data');
           }
           // Check if data.data is ChatRoom (double nested)
           else if (data && typeof data === 'object' && 'data' in data) {
             const nestedData = (data as { data: unknown }).data;
             if (nestedData && typeof nestedData === 'object' && 'id' in nestedData && 'name' in nestedData) {
               roomData = nestedData as ChatRoom;
-              console.log('[ChatPage] Response has double nested ChatRoom');
             }
           }
         }
       }
       
       if (roomData) {
-        console.log('[ChatPage] Direct message room created:', {
-          roomId: roomData.id,
-          roomName: roomData.name,
-          roomType: roomData.type,
-          otherParticipant: roomData.otherParticipant?.fullName,
-        });
         setSelectedRoom(roomData);
         setActiveTab('direct');
         if (isMobile) {
@@ -641,7 +589,6 @@ const ChatPage: React.FC = () => {
         await loadRooms(false);
         handleApiSuccess(response, 'Đã tạo phòng chat thành công', 'Không thể tạo phòng chat');
       } else {
-        console.warn('[ChatPage] No room data in response, full response:', response);
         notifyError(response || new Error('Invalid response'), 'Không thể tạo phòng chat - dữ liệu không hợp lệ');
       }
     } catch (error) {
@@ -651,7 +598,6 @@ const ChatPage: React.FC = () => {
   }, [isMobile, loadRooms]);
 
   const handleSearchEmployees = useCallback(async (query: string) => {
-    console.log('[ChatPage] Searching employees with query:', query);
     setSearchQuery(query);
     if (!query.trim()) {
       setSearchEmployees([]);
@@ -661,15 +607,12 @@ const ChatPage: React.FC = () => {
     try {
       setSearchLoading(true);
       const response = await getAllEmployeesAPI();
-      console.log('[ChatPage] Employees API response:', response);
       
       const allEmployees: Employee[] = Array.isArray(response)
         ? response
         : Array.isArray((response as any)?.data)
           ? (response as any).data
           : [];
-
-      console.log('[ChatPage] Total employees found:', allEmployees.length);
 
       // Filter employees (exclude current user)
       const filtered = allEmployees.filter((emp) => {
@@ -682,8 +625,6 @@ const ChatPage: React.FC = () => {
         );
       });
       
-      console.log('[ChatPage] Filtered employees:', filtered.length);
-
       setSearchEmployees(filtered.slice(0, 20)); // Limit to 20 results
     } catch (error) {
       notifyError(error, 'Không thể tìm kiếm nhân viên');
@@ -731,37 +672,14 @@ const ChatPage: React.FC = () => {
             <List
               loading={loading}
               dataSource={getRoomsForTab()}
+              locale={{ emptyText: 'Chưa có cuộc trò chuyện nào' }}
               renderItem={(room) => (
-                <List.Item
-                  className={`chat-room-item ${selectedRoom?.id === room.id ? 'active' : ''}`}
-                  onClick={() => handleRoomSelect(room)}
-                >
-                  <List.Item.Meta
-                    avatar={<Avatar icon={<UserOutlined />} />}
-                    title={
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{room.name}</span>
-                        {getUnreadCount(room) > 0 && (
-                          <Badge count={getUnreadCount(room)} />
-                        )}
-                      </div>
-                    }
-                    description={
-                      room.lastMessage ? (
-                        <div>
-                          <div style={{ fontSize: '12px', color: '#666' }}>
-                            {room.lastMessage.sender?.fullName || 'Unknown'}: {room.lastMessage.content}
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#999' }}>
-                            {dayjs(room.lastMessage.createdAt).fromNow()}
-                          </div>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '12px', color: '#999' }}>Chưa có tin nhắn</span>
-                      )
-                    }
-                  />
-                </List.Item>
+                <RoomItem
+                  room={room}
+                  isSelected={selectedRoom?.id === room.id}
+                  onSelect={handleRoomSelect}
+                  getUnreadCount={getUnreadCount}
+                />
               )}
             />
           </TabPane>
@@ -769,37 +687,14 @@ const ChatPage: React.FC = () => {
             <List
               loading={loading}
               dataSource={getRoomsForTab()}
+              locale={{ emptyText: 'Chưa có cuộc trò chuyện nào' }}
               renderItem={(room) => (
-                <List.Item
-                  className={`chat-room-item ${selectedRoom?.id === room.id ? 'active' : ''}`}
-                  onClick={() => handleRoomSelect(room)}
-                >
-                  <List.Item.Meta
-                    avatar={<Avatar icon={<UserOutlined />} />}
-                    title={
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{room.name}</span>
-                        {getUnreadCount(room) > 0 && (
-                          <Badge count={getUnreadCount(room)} />
-                        )}
-                      </div>
-                    }
-                    description={
-                      room.lastMessage ? (
-                        <div>
-                          <div style={{ fontSize: '12px', color: '#666' }}>
-                            {room.lastMessage.sender?.fullName || 'Unknown'}: {room.lastMessage.content}
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#999' }}>
-                            {dayjs(room.lastMessage.createdAt).fromNow()}
-                          </div>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '12px', color: '#999' }}>Chưa có tin nhắn</span>
-                      )
-                    }
-                  />
-                </List.Item>
+                <RoomItem
+                  room={room}
+                  isSelected={selectedRoom?.id === room.id}
+                  onSelect={handleRoomSelect}
+                  getUnreadCount={getUnreadCount}
+                />
               )}
             />
           </TabPane>
@@ -807,37 +702,14 @@ const ChatPage: React.FC = () => {
             <List
               loading={loading}
               dataSource={getRoomsForTab()}
+              locale={{ emptyText: 'Chưa có cuộc trò chuyện nào' }}
               renderItem={(room) => (
-                <List.Item
-                  className={`chat-room-item ${selectedRoom?.id === room.id ? 'active' : ''}`}
-                  onClick={() => handleRoomSelect(room)}
-                >
-                  <List.Item.Meta
-                    avatar={<Avatar icon={<UserOutlined />} />}
-                    title={
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{room.otherParticipant?.fullName || room.name}</span>
-                        {getUnreadCount(room) > 0 && (
-                          <Badge count={getUnreadCount(room)} />
-                        )}
-                      </div>
-                    }
-                    description={
-                      room.lastMessage ? (
-                        <div>
-                          <div style={{ fontSize: '12px', color: '#666' }}>
-                            {room.lastMessage.sender?.fullName || 'Unknown'}: {room.lastMessage.content}
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#999' }}>
-                            {dayjs(room.lastMessage.createdAt).fromNow()}
-                          </div>
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: '12px', color: '#999' }}>Chưa có tin nhắn</span>
-                      )
-                    }
-                  />
-                </List.Item>
+                <RoomItem
+                  room={room}
+                  isSelected={selectedRoom?.id === room.id}
+                  onSelect={handleRoomSelect}
+                  getUnreadCount={getUnreadCount}
+                />
               )}
             />
           </TabPane>
