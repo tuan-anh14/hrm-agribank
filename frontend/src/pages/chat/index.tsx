@@ -83,6 +83,7 @@ const ChatPage: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const MAX_MESSAGES_DISPLAY = 200; // Giới hạn số lượng messages hiển thị để tối ưu performance
   const [messageInput, setMessageInput] = useState('');
   const [activeTab, setActiveTab] = useState<TabKey>('company');
   const [searchModalVisible, setSearchModalVisible] = useState(false);
@@ -172,9 +173,21 @@ const ChatPage: React.FC = () => {
         const newMessages = Array.isArray(messagesData.data) ? messagesData.data : [];
         
         if (append) {
-          setMessages((prev) => [...newMessages, ...prev]);
+          // Khi load thêm messages cũ, chỉ giữ lại MAX_MESSAGES_DISPLAY messages gần nhất
+          setMessages((prev) => {
+            const combined = [...newMessages, ...prev];
+            // Chỉ giữ lại MAX_MESSAGES_DISPLAY messages gần nhất (sắp xếp theo thời gian)
+            if (combined.length > MAX_MESSAGES_DISPLAY) {
+              return combined.slice(0, MAX_MESSAGES_DISPLAY);
+            }
+            return combined;
+          });
         } else {
-          setMessages(newMessages);
+          // Khi load messages mới, chỉ giữ lại MAX_MESSAGES_DISPLAY messages gần nhất
+          const limitedMessages = newMessages.length > MAX_MESSAGES_DISPLAY 
+            ? newMessages.slice(-MAX_MESSAGES_DISPLAY) 
+            : newMessages;
+          setMessages(limitedMessages);
           setShouldAutoScroll(false);
         }
         
@@ -304,7 +317,12 @@ const ChatPage: React.FC = () => {
         // Remove optimistic message if exists
         setMessages((prev) => {
           const filtered = prev.filter((m) => !m.id.startsWith('temp-'));
-          return [...filtered, message];
+          const updated = [...filtered, message];
+          // Giới hạn số lượng messages hiển thị
+          if (updated.length > MAX_MESSAGES_DISPLAY) {
+            return updated.slice(-MAX_MESSAGES_DISPLAY);
+          }
+          return updated;
         });
         // Chỉ scroll khi có message mới từ WebSocket
         setShouldAutoScroll(true);
@@ -432,7 +450,14 @@ const ChatPage: React.FC = () => {
       },
     };
 
-    setMessages((prev) => [...prev, optimisticMessage]);
+    setMessages((prev) => {
+      const updated = [...prev, optimisticMessage];
+      // Giới hạn số lượng messages hiển thị
+      if (updated.length > MAX_MESSAGES_DISPLAY) {
+        return updated.slice(-MAX_MESSAGES_DISPLAY);
+      }
+      return updated;
+    });
     setShouldAutoScroll(true);
     scrollToBottom();
     handleTypingStop();
@@ -648,7 +673,7 @@ const ChatPage: React.FC = () => {
   }, []);
 
   return (
-    <Layout className={`chat-layout ${isMobile ? 'mobile' : ''} ${isMobile && showChatView ? 'show-chat-view' : ''}`} style={{ height: 'calc(100vh - 64px)' }}>
+    <Layout className={`chat-layout ${isMobile ? 'mobile' : ''} ${isMobile && showChatView ? 'show-chat-view' : ''}`}>
       <Sider 
         width={300} 
         className={`chat-sidebar ${isMobile && showChatView ? 'hidden' : ''}`} 
@@ -737,30 +762,46 @@ const ChatPage: React.FC = () => {
             
             <div className="chat-messages" ref={messagesContainerRef} onScroll={handleScroll}>
               {loadingMore && (
-                <div style={{ textAlign: 'center', padding: '10px' }}>
+                <div style={{ textAlign: 'center', padding: '16px' }}>
                   <Spin size="small" />
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#8c8c8c' }}>
+                    Đang tải thêm tin nhắn...
+                  </div>
                 </div>
               )}
               {messagesLoading ? (
-                <Spin style={{ display: 'block', textAlign: 'center', padding: '20px' }} />
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', minHeight: '200px' }}>
+                  <Spin size="large" />
+                </div>
               ) : messages.length === 0 ? (
-                <Empty description="Chưa có tin nhắn nào" />
+                <Empty 
+                  description="Chưa có tin nhắn nào" 
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  style={{ marginTop: '60px' }}
+                />
               ) : (
-                messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`chat-message ${msg.senderId === user?.id ? 'own' : 'other'}`}
-                  >
-                    <Avatar icon={<UserOutlined />} />
-                    <div className="message-content">
-                      <div className="message-header">
-                        <span className="sender-name">{msg.sender?.fullName || 'Unknown'}</span>
-                        <span className="message-time">{dayjs(msg.createdAt).format('HH:mm')}</span>
-                      </div>
-                      <div className="message-text">{msg.content}</div>
+                <>
+                  {hasMore && (
+                    <div style={{ textAlign: 'center', padding: '8px', fontSize: '12px', color: '#8c8c8c' }}>
+                      Cuộn lên để xem thêm tin nhắn cũ
                     </div>
-                  </div>
-                ))
+                  )}
+                  {messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`chat-message ${msg.senderId === user?.id ? 'own' : 'other'}`}
+                    >
+                      <Avatar icon={<UserOutlined />} />
+                      <div className="message-content">
+                        <div className="message-header">
+                          <span className="sender-name">{msg.sender?.fullName || 'Unknown'}</span>
+                          <span className="message-time">{dayjs(msg.createdAt).format('HH:mm')}</span>
+                        </div>
+                        <div className="message-text">{msg.content}</div>
+                      </div>
+                    </div>
+                  ))}
+                </>
               )}
               {typingUsers.size > 0 && (
                 <div className="typing-indicator">
