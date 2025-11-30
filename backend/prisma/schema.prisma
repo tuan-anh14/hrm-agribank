@@ -26,6 +26,7 @@ enum AuditModule {
   REWARD_PENALTY
   REQUEST
   NOTIFICATION
+  CHAT
 }
 
 enum AuditAction {
@@ -67,6 +68,7 @@ enum NotificationType {
   ATTENDANCE
   REQUEST
   SHIFT
+  CHAT
 }
 
 enum RewardPenaltyType {
@@ -83,6 +85,12 @@ enum ShiftType {
   MORNING
   AFTERNOON
   FULL_DAY
+}
+
+enum ChatRoomType {
+  COMPANY_WIDE
+  DEPARTMENT_HRM
+  DIRECT_MESSAGE
 }
 
 // ====================== ACCOUNT / EMPLOYEE ======================
@@ -133,6 +141,10 @@ model Employee {
   schedulesApproved WorkSchedule[] @relation("ScheduleApprovedBy")
   requestsApproved  Request[]      @relation("RequestApprovedBy")
 
+  // chat relations
+  sentMessages ChatMessage[]        @relation("ChatMessageSender")
+  chatRooms    ChatRoomParticipant[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -143,6 +155,7 @@ model Department {
   name        String
   description String?
   employees   Employee[]
+  chatRooms   ChatRoom[] // One-to-many: một department có thể có nhiều rooms (nhưng unique constraint đảm bảo chỉ 1 DEPARTMENT_HRM)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }
@@ -332,4 +345,52 @@ model AuditLog {
   errorMessage String?
 
   createdAt DateTime @default(now())
+}
+
+// ====================== CHAT ======================
+model ChatRoom {
+  id          String   @id @default(uuid())
+  departmentId String? // null = chat công ty hoặc 1-1
+  name        String   // Tên phòng chat
+  type        ChatRoomType @default(DEPARTMENT_HRM)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  department  Department? @relation(fields: [departmentId], references: [id])
+  messages    ChatMessage[]
+  participants ChatRoomParticipant[] // Cho chat 1-1 và quản lý quyền truy cập
+  
+  @@unique([departmentId, type]) // Mỗi department chỉ có 1 room DEPARTMENT_HRM
+}
+
+model ChatRoomParticipant {
+  id          String   @id @default(uuid())
+  roomId      String
+  employeeId  String
+  joinedAt    DateTime @default(now())
+  lastReadAt  DateTime? // Thời điểm đọc tin nhắn cuối cùng
+  
+  room        ChatRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  @@unique([roomId, employeeId]) // Mỗi employee chỉ có 1 record trong 1 room
+  @@index([employeeId])
+  @@index([roomId])
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  roomId      String
+  senderId    String   // Employee ID
+  content     String
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  room        ChatRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender      Employee  @relation("ChatMessageSender", fields: [senderId], references: [id])
+  
+  @@index([roomId, createdAt])
+  @@index([senderId])
 }

@@ -16,6 +16,7 @@ import { AuditLogModule } from './audit-log/audit-log.module';
 import { NotificationModule } from './notification/notification.module';
 import { RequestTypeModule } from './request-type/request-type.module';
 import { RequestModule } from './request/request.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { RequestModule } from './request/request.module';
     NotificationModule,
     RequestTypeModule,
     RequestModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
