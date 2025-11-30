@@ -12,6 +12,17 @@ import { QueryMessageDto } from './dto/query-message.dto';
 type ChatRoomWithLastMessage = Prisma.ChatRoomGetPayload<{
   include: {
     department: true;
+    participants: {
+      include: {
+        employee: {
+          select: {
+            id: true;
+            fullName: true;
+            employeeCode: true;
+          };
+        };
+      };
+    };
   };
 }> & {
   lastMessage: (Prisma.ChatMessageGetPayload<{
@@ -262,25 +273,67 @@ export class ChatService {
     const isAdminOrHR = userRole === 'ADMIN' || userRole === 'HR';
 
     // 1. Chat chung toàn công ty - tất cả mọi người đều thấy
-    const companyRoom = await this.getOrCreateCompanyRoom();
-    const companyLastMessage = await this.prisma.chatMessage.findFirst({
-      where: { roomId: companyRoom.id },
-      orderBy: { createdAt: 'desc' },
+    const companyRoom = await this.prisma.chatRoom.findFirst({
+      where: { type: ChatRoomType.COMPANY_WIDE },
       include: {
-        sender: {
-          select: {
-            id: true,
-            fullName: true,
+        department: true,
+        participants: {
+          include: {
+            employee: {
+              select: {
+                id: true,
+                fullName: true,
+                employeeCode: true,
+              },
+            },
           },
         },
       },
     });
 
-    const companyRoomWithLastMessage: ChatRoomWithLastMessage = {
-      ...companyRoom,
-      department: companyRoom.department,
-      lastMessage: companyLastMessage,
-    };
+    // Nếu chưa có room, tạo mới
+    let companyRoomData: ChatRoomWithLastMessage;
+    if (!companyRoom) {
+      const newRoom = await this.getOrCreateCompanyRoom();
+      const companyLastMessage = await this.prisma.chatMessage.findFirst({
+        where: { roomId: newRoom.id },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              fullName: true,
+            },
+          },
+        },
+      });
+      companyRoomData = {
+        ...newRoom,
+        department: newRoom.department,
+        participants: [],
+        lastMessage: companyLastMessage,
+      };
+    } else {
+      const companyLastMessage = await this.prisma.chatMessage.findFirst({
+        where: { roomId: companyRoom.id },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              fullName: true,
+            },
+          },
+        },
+      });
+
+      companyRoomData = {
+        ...companyRoom,
+        department: companyRoom.department,
+        participants: companyRoom.participants,
+        lastMessage: companyLastMessage,
+      };
+    }
 
     // 2. Chat theo phòng ban
     let departmentRooms: ChatRoomWithLastMessage[] = [];
@@ -290,6 +343,17 @@ export class ChatService {
         where: { type: ChatRoomType.DEPARTMENT_HRM },
         include: {
           department: true,
+          participants: {
+            include: {
+              employee: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  employeeCode: true,
+                },
+              },
+            },
+          },
         },
         orderBy: { updatedAt: 'desc' },
       });
@@ -311,26 +375,77 @@ export class ChatService {
           });
           return {
             ...room,
+            participants: room.participants,
             lastMessage,
           };
         }),
       );
     } else if (employee.departmentId) {
       // Employee chỉ thấy room của phòng ban mình
-      const deptRoom = await this.getOrCreateDepartmentRoom(employee.departmentId);
-      const lastMessage = await this.prisma.chatMessage.findFirst({
-        where: { roomId: deptRoom.id },
-        orderBy: { createdAt: 'desc' },
+      const deptRoom = await this.prisma.chatRoom.findFirst({
+        where: {
+          departmentId: employee.departmentId,
+          type: ChatRoomType.DEPARTMENT_HRM,
+        },
         include: {
-          sender: {
-            select: {
-              id: true,
-              fullName: true,
+          department: true,
+          participants: {
+            include: {
+              employee: {
+                select: {
+                  id: true,
+                  fullName: true,
+                  employeeCode: true,
+                },
+              },
             },
           },
         },
       });
-      departmentRooms = [{ ...deptRoom, lastMessage }];
+
+      // Nếu chưa có room, tạo mới
+      let deptRoomData: ChatRoomWithLastMessage;
+      if (!deptRoom) {
+        const newRoom = await this.getOrCreateDepartmentRoom(employee.departmentId);
+        const lastMessage = await this.prisma.chatMessage.findFirst({
+          where: { roomId: newRoom.id },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            sender: {
+              select: {
+                id: true,
+                fullName: true,
+              },
+            },
+          },
+        });
+        deptRoomData = {
+          ...newRoom,
+          department: newRoom.department,
+          participants: [],
+          lastMessage,
+        };
+      } else {
+        const lastMessage = await this.prisma.chatMessage.findFirst({
+          where: { roomId: deptRoom.id },
+          orderBy: { createdAt: 'desc' },
+          include: {
+            sender: {
+              select: {
+                id: true,
+                fullName: true,
+              },
+            },
+          },
+        });
+        deptRoomData = {
+          ...deptRoom,
+          department: deptRoom.department,
+          participants: deptRoom.participants,
+          lastMessage,
+        };
+      }
+      departmentRooms = [deptRoomData];
     }
 
     // 3. Chat 1-1 - lấy tất cả rooms mà user tham gia
@@ -390,7 +505,7 @@ export class ChatService {
 
     // Format lại để frontend dễ sử dụng
     return {
-      company: companyRoomWithLastMessage,
+      company: companyRoomData,
       departments: departmentRooms,
       directMessages: directMessagesWithLastMessage,
     };

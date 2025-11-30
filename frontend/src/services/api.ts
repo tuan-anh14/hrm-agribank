@@ -10,6 +10,7 @@ import type { RewardPenalty, CreateRewardPenaltyDto } from '@/types/reward-penal
 import type { AuditLog, AuditLogDetail, QueryAuditLogParams, AuditLogListResponse, AuditLogDetailResponse } from '@/types/audit-log';
 import type { Notification, NotificationListResponse, NotificationDetailResponse, UnreadCountResponse, QueryNotificationParams, CreateNotificationPayload, UpdateNotificationPayload } from '@/types/notification';
 import type { Request, RequestListResponse, QueryRequestParams, CreateRequestPayload, UpdateRequestPayload, ApproveRequestPayload, RequestType, CreateRequestTypePayload, UpdateRequestTypePayload } from '@/types/request';
+import type { ChatRoomsResponse, ChatMessageListResponse, CreateMessagePayload, CreateDirectMessageRoomPayload, QueryMessageParams, MarkRoomAsReadResponse, ChatMessage, ChatRoom } from '@/types/chat';
 
 export const loginAPI = (username: string, password: string) => {
     const urlBackend = "/api/v1/auth/login"
@@ -410,4 +411,61 @@ export const approveRequestAPI = (id: string, payload: ApproveRequestPayload) =>
 export const deleteRequestAPI = (id: string) => {
     const urlBackend = `/api/v1/request/${id}`;
     return axios.delete<IBackendRes<Request>>(urlBackend);
+}
+
+// ==================== CHAT APIs ====================
+
+/**
+ * Lấy danh sách tất cả rooms mà user có quyền truy cập
+ */
+export const getChatRoomsAPI = () => {
+    const urlBackend = '/api/v1/chat/rooms';
+    return axios.get<IBackendRes<ChatRoomsResponse>>(urlBackend);
+}
+
+/**
+ * Lấy lịch sử tin nhắn trong room với pagination
+ * @param roomId - ID của room
+ * @param params - Query parameters (page, limit)
+ */
+export const getChatMessagesAPI = (roomId: string, params?: QueryMessageParams) => {
+    const urlBackend = `/api/v1/chat/rooms/${roomId}/messages`;
+    return axios.get<IBackendRes<ChatMessageListResponse>>(urlBackend, { params });
+}
+
+/**
+ * Gửi tin nhắn vào room (REST fallback - thường dùng WebSocket)
+ * @param roomId - ID của room
+ * @param payload - Nội dung tin nhắn
+ */
+export const createChatMessageAPI = (roomId: string, payload: CreateMessagePayload) => {
+    const urlBackend = `/api/v1/chat/rooms/${roomId}/messages`;
+    return axios.post<IBackendRes<ChatMessage>>(urlBackend, payload);
+}
+
+/**
+ * Tạo hoặc lấy room chat 1-1 với nhân viên khác
+ * @param payload - otherUserId (Account ID hoặc Employee ID)
+ */
+export const createDirectMessageRoomAPI = (payload: CreateDirectMessageRoomPayload) => {
+    const urlBackend = '/api/v1/chat/rooms/direct-message';
+    return axios.post<IBackendRes<ChatRoom>>(urlBackend, payload);
+}
+
+/**
+ * Đánh dấu một tin nhắn đã đọc
+ * @param messageId - ID của tin nhắn
+ */
+export const markMessageAsReadAPI = (messageId: string) => {
+    const urlBackend = `/api/v1/chat/messages/${messageId}/read`;
+    return axios.patch<IBackendRes<ChatMessage>>(urlBackend);
+}
+
+/**
+ * Đánh dấu tất cả tin nhắn trong room đã đọc
+ * @param roomId - ID của room
+ */
+export const markRoomAsReadAPI = (roomId: string) => {
+    const urlBackend = `/api/v1/chat/rooms/${roomId}/read`;
+    return axios.patch<IBackendRes<MarkRoomAsReadResponse>>(urlBackend);
 }

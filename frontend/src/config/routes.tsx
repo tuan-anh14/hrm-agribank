@@ -46,6 +46,7 @@ import ListRequestTypePage from '@/pages/request-type';
 import CreateRequestTypePage from '@/pages/request-type/create-request-type';
 import UpdateRequestTypePage from '@/pages/request-type/update-request-type';
 import ViewRequestTypePage from '@/pages/request-type/view-request-type';
+import ChatPage from '@/pages/chat';
 
 // Layout
 import AppLayout from '@/layout';
@@ -381,6 +382,15 @@ export const routes: RouteObject[] = [
         element: (
           <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
             <AuditLogDetailPage />
+          </ProtectedRoute>
+        ),
+      },
+      // Chat routes (All authenticated users)
+      {
+        path: '/chat',
+        element: (
+          <ProtectedRoute requiredRole={['ADMIN', 'HR', 'EMPLOYEE']}>
+            <ChatPage />
           </ProtectedRoute>
         ),
       },

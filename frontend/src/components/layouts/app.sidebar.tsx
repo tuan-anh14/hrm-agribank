@@ -12,6 +12,7 @@ import {
     FileSearchOutlined,
     FileDoneOutlined,
     FormOutlined,
+    MessageOutlined,
 } from '@ant-design/icons';
 import { useSidebar } from '@/components/context/sidebar.context';
 import { useCurrentApp } from '@/components/context/app.context';
@@ -93,6 +94,11 @@ const AppSidebar = () => {
                 key: '/payroll',
                 icon: <DollarOutlined />,
                 label: isEmployee ? 'Bảng lương' : 'Quản lý lương',
+            },
+            {
+                key: '/chat',
+                icon: <MessageOutlined />,
+                label: 'Chat',
             }
         );
 
