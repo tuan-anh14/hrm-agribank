@@ -37,12 +37,13 @@ export class PayrollService {
         const endDate = new Date(year, month, 0);
 
         // Calculate standard work days (excluding weekends - Sat/Sun)
+        // Note: In simplified model, we don't strictly use this for Full-time salary anymore,
+        // but we keep it for reference or potential future use.
         let standardDays = 0;
         for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
             const day = d.getDay();
             if (day !== 0 && day !== 6) standardDays++;
         }
-        // Fallback if standardDays is 0 (e.g. error in loop), though unlikely
         if (standardDays === 0) standardDays = 22;
 
         const standardWorkHours = standardDays * 8;
@@ -115,27 +116,21 @@ export class PayrollService {
                 const coeff = employee.salaryCoefficient || 1.0;
                 salaryV1 = base * coeff;
 
-                // 2. Salary V2: Business Salary * (Actual Days / Standard Days)
-                const businessBase = employee.position?.businessSalary || 0;
-                // Cap actual days at standard days for calculation? Or allow extra?
-                // Usually V2 is proportional.
-                const workRatio = standardDays > 0 ? (actualWorkDays / standardDays) : 0;
-                salaryV2 = businessBase * workRatio;
+                // 2. Salary V2: Removed in simplified model.
+                // Full-time employees receive fixed salary regardless of actual days (unless unpaid leave).
+                // "Unpaid leave" should be handled via Penalties or separate logic if needed.
+                salaryV2 = 0;
 
                 // 3. Total Work Amount (Gross before deductions)
-                totalWorkAmount = salaryV1 + salaryV2 + allowance;
+                totalWorkAmount = salaryV1 + allowance;
 
                 // 4. Deductions
                 // a. Insurance: 10.5% of V1 (Social 8% + Health 1.5% + Unemployment 1%)
-                // Note: Usually capped at 20x Base Salary, but simplified here.
                 insuranceDeduction = salaryV1 * 0.105;
 
-                // b. Other Deductions (Late/Early + Penalties)
-                // Late fine: e.g. 50,000 VND per late instance? Or just use the penalty amount from DB?
-                // Let's assume lateMinutes are converted to money. 
-                // Simplified: 1000 VND per minute late.
-                const lateFine = lateMinutes * 1000;
-                otherDeduction = totalPenalty + lateFine;
+                // b. Other Deductions (Penalties only)
+                // Late/Early fines are now auto-generated as Penalties.
+                otherDeduction = totalPenalty;
 
                 // c. Tax (PIT)
                 // Taxable Income = Total - Insurance - Personal Deduction (11M) - Dependent Deduction (4.4M/person)
@@ -198,43 +193,43 @@ export class PayrollService {
                 where: { employeeId: employee.id, month, year }
             });
 
-                let payroll;
-                if (existing) {
-                    payroll = await this.prisma.payroll.update({
-                        where: { id: existing.id },
-                        data: {
-                            ...data,
-                            employee: undefined,
-                        } as Prisma.PayrollUpdateInput,
-                    });
-                } else {
-                    payroll = await this.prisma.payroll.create({ data });
-                }
-
-                await this.auditLogService.createLog({
-                    module: AuditModule.PAYROLL,
-                    action: AuditAction.GENERATE_PAYROLL,
-                    status: AuditStatus.SUCCESS,
-                    entityName: 'Payroll',
-                    entityId: payroll.id,
-                    afterData: payroll,
-                    description: `Tạo/cập nhật bảng lương tháng ${month}/${year} cho nhân sự ${employee.id}`,
+            let payroll;
+            if (existing) {
+                payroll = await this.prisma.payroll.update({
+                    where: { id: existing.id },
+                    data: {
+                        ...data,
+                        employee: undefined,
+                    } as Prisma.PayrollUpdateInput,
                 });
+            } else {
+                payroll = await this.prisma.payroll.create({ data });
+            }
 
-                // Gửi notification cho employee
-                try {
-                    await notifyPayrollCreated(
-                        this.notificationService,
-                        employee.id,
-                        month,
-                        year,
-                        totalSalary,
-                    );
-                } catch (error) {
-                    console.error(`Error sending notification for payroll creation for employee ${employee.id}:`, error);
-                }
+            await this.auditLogService.createLog({
+                module: AuditModule.PAYROLL,
+                action: AuditAction.GENERATE_PAYROLL,
+                status: AuditStatus.SUCCESS,
+                entityName: 'Payroll',
+                entityId: payroll.id,
+                afterData: payroll,
+                description: `Tạo/cập nhật bảng lương tháng ${month}/${year} cho nhân sự ${employee.id}`,
+            });
 
-                return payroll;
+            // Gửi notification cho employee
+            try {
+                await notifyPayrollCreated(
+                    this.notificationService,
+                    employee.id,
+                    month,
+                    year,
+                    totalSalary,
+                );
+            } catch (error) {
+                console.error(`Error sending notification for payroll creation for employee ${employee.id}:`, error);
+            }
+
+            return payroll;
         });
 
         return Promise.all(payrollPromises);
@@ -244,7 +239,7 @@ export class PayrollService {
         return this.prisma.payroll.findMany({
             where: query,
             include: { employee: true },
-            orderBy: { year: 'desc', month: 'desc' },
+            orderBy: [{ year: 'desc' }, { month: 'desc' }],
         });
     }
 

@@ -15,6 +15,7 @@ import {
   AuditAction,
   AuditModule,
   AuditStatus,
+  RewardPenaltyType,
 } from '@prisma/client';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
 import { UpdateAttendanceDto } from './dto/update-attendance.dto';
@@ -23,6 +24,7 @@ import { CheckInDto } from './dto/check-in.dto';
 import { CheckOutDto } from './dto/check-out.dto';
 import { AuditLogService } from '@/audit-log/audit-log.service';
 import { NotificationService } from '@/notification/notification.service';
+import { RewardPenaltyService } from '@/reward-penalty/reward-penalty.service';
 import {
   notifyCheckInEarly,
   notifyCheckInLate,
@@ -36,6 +38,7 @@ export class AttendanceService {
     private prisma: PrismaService,
     private readonly auditLogService: AuditLogService,
     private readonly notificationService: NotificationService,
+    private readonly rewardPenaltyService: RewardPenaltyService,
   ) { }
 
   /**
@@ -452,6 +455,14 @@ export class AttendanceService {
               checkInTime,
               lateMinutes,
             );
+
+            // Tự động tạo phiếu phạt
+            await this.rewardPenaltyService.create({
+              employeeId,
+              amount: lateMinutes * 1000,
+              type: RewardPenaltyType.PENALTY,
+              reason: `Đi muộn ${lateMinutes} phút ngày ${updated.date.toISOString().split('T')[0]}`,
+            });
           } else if (checkInTime < shiftStart) {
             // Check-in sớm
             await notifyCheckInEarly(
@@ -462,7 +473,7 @@ export class AttendanceService {
           }
         }
       } catch (error) {
-        console.error('Error sending notification for check-in:', error);
+        console.error('Error sending notification or creating penalty for check-in:', error);
       }
 
       return updated;
@@ -528,6 +539,14 @@ export class AttendanceService {
             checkInTime,
             lateMinutes,
           );
+
+          // Tự động tạo phiếu phạt
+          await this.rewardPenaltyService.create({
+            employeeId,
+            amount: lateMinutes * 1000,
+            type: RewardPenaltyType.PENALTY,
+            reason: `Đi muộn ${lateMinutes} phút ngày ${attendance.date.toISOString().split('T')[0]}`,
+          });
         } else if (checkInTime < shiftStart) {
           // Check-in sớm
           await notifyCheckInEarly(
@@ -538,7 +557,7 @@ export class AttendanceService {
         }
       }
     } catch (error) {
-      console.error('Error sending notification for check-in:', error);
+      console.error('Error sending notification or creating penalty for check-in:', error);
     }
 
     return attendance;
@@ -674,8 +693,18 @@ export class AttendanceService {
           checkOutTime,
         );
       }
+
+      // Tự động tạo phiếu phạt nếu về sớm
+      if (earlyMinutes > 0) {
+        await this.rewardPenaltyService.create({
+          employeeId,
+          amount: earlyMinutes * 1000,
+          type: RewardPenaltyType.PENALTY,
+          reason: `Về sớm ${earlyMinutes} phút ngày ${updated.date.toISOString().split('T')[0]}`,
+        });
+      }
     } catch (error) {
-      console.error('Error sending notification for check-out:', error);
+      console.error('Error sending notification or creating penalty for check-out:', error);
     }
 
     return updated;

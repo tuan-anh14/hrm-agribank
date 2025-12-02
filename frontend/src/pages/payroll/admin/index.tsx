@@ -69,23 +69,58 @@ const PayrollListPage: React.FC = () => {
             },
         },
         {
-            title: "Giờ công",
-            dataIndex: "standardWorkHours",
-            key: "standardWorkHours",
-            render: (hours: number) => `${hours}h`,
+            title: "Lương cơ bản",
+            dataIndex: "salaryV1",
+            key: "salaryV1",
+            width: 120,
+            render: (amount: number) => formatCurrency(amount || 0),
         },
         {
-            title: "Tăng ca",
-            dataIndex: "overtimeHours",
-            key: "overtimeHours",
-            render: (hours: number) => hours > 0 ? `${hours}h` : '-',
+            title: "Phụ cấp",
+            dataIndex: "allowance",
+            key: "allowance",
+            width: 100,
+            render: (amount: number) => formatCurrency(amount || 0),
         },
         {
-            title: "Tổng lương",
+            title: "Thưởng",
+            dataIndex: "bonus",
+            key: "bonus",
+            width: 100,
+            render: (amount: number) => (
+                <Text type="success">{formatCurrency(amount || 0)}</Text>
+            ),
+        },
+        {
+            title: "Phạt",
+            dataIndex: "otherDeduction",
+            key: "otherDeduction",
+            width: 100,
+            render: (amount: number) => (
+                <Text type="danger">{formatCurrency(amount || 0)}</Text>
+            ),
+        },
+        {
+            title: "Khấu trừ",
+            key: "deductions",
+            width: 120,
+            render: (_, record) => {
+                const total = (record.insuranceDeduction || 0) + (record.taxDeduction || 0);
+                return (
+                    <div title={`BH: ${formatCurrency(record.insuranceDeduction || 0)} - Thuế: ${formatCurrency(record.taxDeduction || 0)}`}>
+                        {formatCurrency(total)}
+                    </div>
+                );
+            },
+        },
+        {
+            title: "Thực nhận",
             dataIndex: "totalSalary",
             key: "totalSalary",
+            width: 140,
+            fixed: "right",
             render: (amount: number) => (
-                <Text strong style={{ color: '#52c41a' }}>
+                <Text strong style={{ color: '#1890ff', fontSize: 16 }}>
                     {formatCurrency(amount)}
                 </Text>
             ),

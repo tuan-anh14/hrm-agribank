@@ -82,6 +82,13 @@ const PayrollList: React.FC = () => {
         }
     };
 
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('vi-VN', {
+            style: 'currency',
+            currency: 'VND'
+        }).format(amount);
+    };
+
     const columns = [
         {
             title: 'Nhân viên',
@@ -101,12 +108,59 @@ const PayrollList: React.FC = () => {
             render: (_: any, record: Payroll) => `${record.month}/${record.year}`
         },
         {
-            title: 'Tổng lương',
+            title: "Lương cơ bản",
+            dataIndex: "salaryV1",
+            key: "salaryV1",
+            width: 120,
+            render: (amount: number) => formatCurrency(amount || 0),
+        },
+        {
+            title: "Phụ cấp",
+            dataIndex: "allowance",
+            key: "allowance",
+            width: 100,
+            render: (amount: number) => formatCurrency(amount || 0),
+        },
+        {
+            title: "Thưởng",
+            dataIndex: "bonus",
+            key: "bonus",
+            width: 100,
+            render: (amount: number) => (
+                <span style={{ color: '#52c41a' }}>{formatCurrency(amount || 0)}</span>
+            ),
+        },
+        {
+            title: "Phạt",
+            dataIndex: "otherDeduction",
+            key: "otherDeduction",
+            width: 100,
+            render: (amount: number) => (
+                <span style={{ color: '#ff4d4f' }}>{formatCurrency(amount || 0)}</span>
+            ),
+        },
+        {
+            title: "Khấu trừ",
+            key: "deductions",
+            width: 120,
+            render: (_: any, record: Payroll) => {
+                const total = (record.insuranceDeduction || 0) + (record.taxDeduction || 0);
+                return (
+                    <div title={`BH: ${formatCurrency(record.insuranceDeduction || 0)} - Thuế: ${formatCurrency(record.taxDeduction || 0)}`}>
+                        {formatCurrency(total)}
+                    </div>
+                );
+            },
+        },
+        {
+            title: 'Thực nhận',
             dataIndex: 'totalSalary',
             key: 'totalSalary',
+            width: 140,
+            fixed: 'right' as const,
             render: (val: number) => (
-                <b style={{ color: '#1890ff' }}>
-                    {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val)}
+                <b style={{ color: '#1890ff', fontSize: 16 }}>
+                    {formatCurrency(val)}
                 </b>
             )
         },
