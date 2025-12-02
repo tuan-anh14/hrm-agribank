@@ -106,7 +106,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
         while (currentDate.isBefore(endDate) || currentDate.isSame(endDate)) {
             const dateStr = currentDate.format("YYYY-MM-DD");
             const schedule = schedules.find(
-                (s) => dayjs(s.date).format("YYYY-MM-DD") === dateStr
+                (s) => dayjs(s.date).format("YYYY-MM-DD") === dateStr && s.status !== 'REJECTED'
             );
 
             // Default logic: If Full-time and no schedule, assume Full Day
@@ -263,7 +263,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
                                         onClick={handleSave}
                                         loading={saving}
                                         disabled={!employeeId || Object.keys(modifiedSchedules).length === 0}
-                                        style={{ backgroundColor: "#a90000", borderColor: "#a90000" }} // Agribank Red
+                                        style={{ backgroundColor: "#a90000", borderColor: "#a90000", color: "#ffffff" }} // Agribank Red
                                         block={isMobile}
                                     >
                                         Đăng ký
