@@ -92,6 +92,9 @@ export class WorkscheduleService {
           lte: end,
         },
         ...(scheduleId && { NOT: { id: scheduleId } }),
+        status: {
+          not: RequestStatus.REJECTED,
+        },
       },
     });
 
