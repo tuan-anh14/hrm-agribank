@@ -425,47 +425,54 @@ const ListAttendancePage: React.FC = () => {
                 </Space>
             </Space>
 
+            {(viewMode === "LIST" || !isEmployee) && (
+                <Card size="small">
+                    <Space wrap>
+                        {!isEmployee && (
+                            <Select
+                                value={employeeId || undefined}
+                                onChange={(v) => actions.setEmployeeId(v || undefined)}
+                                placeholder="Lọc theo nhân viên"
+                                allowClear
+                                showSearch
+                                optionFilterProp="children"
+                                style={{ width: 200 }}
+                                filterOption={(input, option) =>
+                                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                                }
+                                options={employees.map(emp => ({
+                                    value: emp.id,
+                                    label: `${emp.fullName}${emp.email ? ` (${emp.email})` : ''}`,
+                                }))}
+                            />
+                        )}
+                        {viewMode === "LIST" && (
+                            <>
+                                <RangePicker
+                                    value={dateRange}
+                                    onChange={handleDateRangeChange}
+                                    format="DD/MM/YYYY"
+                                    placeholder={['Từ ngày', 'Đến ngày']}
+                                />
+                                <Select
+                                    value={limit}
+                                    onChange={(v) => actions.setLimit(v)}
+                                    style={{ width: 120 }}
+                                    options={[
+                                        { value: 10, label: "10 / trang" },
+                                        { value: 20, label: "20 / trang" },
+                                        { value: 50, label: "50 / trang" },
+                                        { value: 100, label: "100 / trang" },
+                                    ]}
+                                />
+                            </>
+                        )}
+                    </Space>
+                </Card>
+            )}
+
             {viewMode === "LIST" ? (
                 <>
-                    <Card size="small">
-                        <Space wrap>
-                            {!isEmployee && (
-                                <Select
-                                    value={employeeId || undefined}
-                                    onChange={(v) => actions.setEmployeeId(v || undefined)}
-                                    placeholder="Lọc theo nhân viên"
-                                    allowClear
-                                    showSearch
-                                    optionFilterProp="children"
-                                    style={{ width: 200 }}
-                                    filterOption={(input, option) =>
-                                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                                    }
-                                    options={employees.map(emp => ({
-                                        value: emp.id,
-                                        label: `${emp.fullName}${emp.email ? ` (${emp.email})` : ''}`,
-                                    }))}
-                                />
-                            )}
-                            <RangePicker
-                                value={dateRange}
-                                onChange={handleDateRangeChange}
-                                format="DD/MM/YYYY"
-                                placeholder={['Từ ngày', 'Đến ngày']}
-                            />
-                            <Select
-                                value={limit}
-                                onChange={(v) => actions.setLimit(v)}
-                                style={{ width: 120 }}
-                                options={[
-                                    { value: 10, label: "10 / trang" },
-                                    { value: 20, label: "20 / trang" },
-                                    { value: 50, label: "50 / trang" },
-                                    { value: 100, label: "100 / trang" },
-                                ]}
-                            />
-                        </Space>
-                    </Card>
 
                     {error && (
                         <Alert type="error" showIcon message="Lỗi khi tải danh sách chấm công" description={error} />

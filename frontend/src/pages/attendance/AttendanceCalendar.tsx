@@ -402,7 +402,9 @@ const AttendanceCalendar: React.FC<AttendanceCalendarProps> = ({ employeeId }) =
                             {visibleCalendarDays.map((day, index) => {
                                 const statusInfo = getStatusInfo(day.attendance);
                                 const hasAttendance = !!day.attendance;
-                                const isAbsent = day.attendance?.status === "ABSENT";
+                                const isPastDate = day.date.isBefore(dayjs(), 'day');
+                                const isWeekend = day.date.day() === 0 || day.date.day() === 6;
+                                const isAbsent = day.attendance?.status === "ABSENT" || (!day.attendance && isPastDate && !isWeekend);
 
                                 return (
                                     <Col span={24 / 7} key={index}>
