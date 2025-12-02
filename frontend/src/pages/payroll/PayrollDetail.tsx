@@ -19,7 +19,8 @@ const PayrollDetail: React.FC = () => {
         setLoading(true);
         try {
             const res = await getPayrollByIdAPI(payrollId);
-            setData(res.data || null);
+            const payrollData = (res as any).data || res;
+            setData(payrollData || null);
         } catch (error) {
             message.error('Failed to fetch payroll detail');
         } finally {
@@ -39,56 +40,57 @@ const PayrollDetail: React.FC = () => {
     return (
         <div style={{ padding: 20, maxWidth: 800, margin: '0 auto' }}>
             <Button icon={<ArrowLeftOutlined />} onClick={() => navigate(-1)} style={{ marginBottom: 16 }}>
-                Back
+                Quay lại
             </Button>
 
             <Card
                 title={
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>Payslip: {data.month}/{data.year}</span>
-                        <Tag color={data.status === 'paid' ? 'green' : 'blue'}>{data.status.toUpperCase()}</Tag>
+                        <span>Phiếu lương: Tháng {data.month}/{data.year}</span>
+                        <Tag color={data.status === 'paid' ? 'green' : data.status === 'approved' ? 'blue' : 'orange'}>
+                            {data.status === 'paid' ? 'ĐÃ THANH TOÁN' : data.status === 'approved' ? 'ĐÃ DUYỆT' : 'CHỜ DUYỆT'}
+                        </Tag>
                     </div>
                 }
-                extra={<Button icon={<PrinterOutlined />} onClick={() => window.print()}>Print</Button>}
+                extra={<Button icon={<PrinterOutlined />} onClick={() => window.print()}>In phiếu</Button>}
             >
-                <Descriptions title="Employee Information" bordered column={2}>
-                    <Descriptions.Item label="Name">{data.employee?.fullName}</Descriptions.Item>
-                    <Descriptions.Item label="Code">{data.employee?.employeeCode}</Descriptions.Item>
-                    <Descriptions.Item label="Department">{data.employee?.department?.name || 'N/A'}</Descriptions.Item>
-                    <Descriptions.Item label="Position">{data.employee?.position?.title || 'N/A'}</Descriptions.Item>
+                <Descriptions title="Thông tin nhân viên" bordered column={{ xs: 1, sm: 2, md: 2 }}>
+                    <Descriptions.Item label="Họ tên">{data.employee?.fullName}</Descriptions.Item>
+                    <Descriptions.Item label="Mã NV">{data.employee?.employeeCode}</Descriptions.Item>
+                    <Descriptions.Item label="Phòng ban">{data.employee?.department?.name || 'N/A'}</Descriptions.Item>
+                    <Descriptions.Item label="Chức vụ">{data.employee?.position?.title || 'N/A'}</Descriptions.Item>
                 </Descriptions>
 
                 <Divider />
 
-                <Descriptions title="Work Summary" bordered column={2}>
-                    <Descriptions.Item label="Standard Days">{data.standardWorkHours / 8} days</Descriptions.Item>
-                    <Descriptions.Item label="Actual Days">{data.actualWorkDays} days</Descriptions.Item>
-                    <Descriptions.Item label="Overtime">{data.overtimeHours} hours</Descriptions.Item>
+                <Descriptions title="Tổng hợp công" bordered column={{ xs: 1, sm: 2, md: 2 }}>
+                    <Descriptions.Item label="Công chuẩn">{data.standardWorkHours / 8} ngày</Descriptions.Item>
+                    <Descriptions.Item label="Công thực tế">{data.actualWorkDays} ngày</Descriptions.Item>
+                    <Descriptions.Item label="Tăng ca">{data.overtimeHours} giờ</Descriptions.Item>
                 </Descriptions>
 
                 <Divider />
 
-                <Row gutter={24}>
-                    <Col span={12}>
-                        <h3>Income</h3>
+                <Row gutter={[24, 24]}>
+                    <Col xs={24} md={12}>
+                        <h3>Thu nhập</h3>
                         <Descriptions column={1} bordered size="small">
-                            <Descriptions.Item label="Salary V1 (Grade)">{formatCurrency(data.salaryV1)}</Descriptions.Item>
-                            <Descriptions.Item label="Salary V2 (Business)">{formatCurrency(data.salaryV2)}</Descriptions.Item>
-                            <Descriptions.Item label="Allowance">{formatCurrency(data.allowance)}</Descriptions.Item>
-                            <Descriptions.Item label="Bonus/Rewards">{formatCurrency(data.bonus)}</Descriptions.Item>
-                            <Descriptions.Item label="Overtime Pay">{formatCurrency(data.totalOTAmount)}</Descriptions.Item>
-                            <Descriptions.Item label="Total Income" labelStyle={{ fontWeight: 'bold' }} contentStyle={{ fontWeight: 'bold' }}>
+                            <Descriptions.Item label="Lương cơ bản">{formatCurrency(data.salaryV1)}</Descriptions.Item>
+                            <Descriptions.Item label="Phụ cấp">{formatCurrency(data.allowance)}</Descriptions.Item>
+                            <Descriptions.Item label="Thưởng">{formatCurrency(data.bonus)}</Descriptions.Item>
+                            <Descriptions.Item label="Lương làm thêm">{formatCurrency(data.totalOTAmount)}</Descriptions.Item>
+                            <Descriptions.Item label="Tổng thu nhập" labelStyle={{ fontWeight: 'bold' }} contentStyle={{ fontWeight: 'bold' }}>
                                 {formatCurrency(totalIncome)}
                             </Descriptions.Item>
                         </Descriptions>
                     </Col>
-                    <Col span={12}>
-                        <h3>Deductions</h3>
+                    <Col xs={24} md={12}>
+                        <h3>Khấu trừ</h3>
                         <Descriptions column={1} bordered size="small">
-                            <Descriptions.Item label="Insurance (10.5%)">{formatCurrency(data.insuranceDeduction)}</Descriptions.Item>
-                            <Descriptions.Item label="Tax (PIT)">{formatCurrency(data.taxDeduction)}</Descriptions.Item>
-                            <Descriptions.Item label="Other (Fines)">{formatCurrency(data.otherDeduction)}</Descriptions.Item>
-                            <Descriptions.Item label="Total Deduction" labelStyle={{ fontWeight: 'bold' }} contentStyle={{ fontWeight: 'bold', color: 'red' }}>
+                            <Descriptions.Item label="Bảo hiểm (10.5%)">{formatCurrency(data.insuranceDeduction)}</Descriptions.Item>
+                            <Descriptions.Item label="Thuế TNCN">{formatCurrency(data.taxDeduction)}</Descriptions.Item>
+                            <Descriptions.Item label="Phạt">{formatCurrency(data.otherDeduction)}</Descriptions.Item>
+                            <Descriptions.Item label="Tổng khấu trừ" labelStyle={{ fontWeight: 'bold' }} contentStyle={{ fontWeight: 'bold', color: 'red' }}>
                                 {formatCurrency(totalDeduction)}
                             </Descriptions.Item>
                         </Descriptions>
@@ -98,7 +100,7 @@ const PayrollDetail: React.FC = () => {
                 <Divider />
 
                 <div style={{ textAlign: 'right' }}>
-                    <h3>Net Salary</h3>
+                    <h3>Thực nhận</h3>
                     <h1 style={{ color: '#1890ff', margin: 0 }}>{formatCurrency(data.totalSalary)}</h1>
                 </div>
             </Card>

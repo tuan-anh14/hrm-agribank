@@ -210,9 +210,9 @@ const PayrollList: React.FC = () => {
 
     return (
         <div style={{ padding: 20 }}>
-            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h2>{isEmployee ? "Lịch sử lương của tôi" : "Quản lý Bảng lương"}</h2>
-                <Space>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                <h2 style={{ margin: 0 }}>{isEmployee ? "Lịch sử lương của tôi" : "Quản lý Bảng lương"}</h2>
+                <Space wrap>
                     <Select value={month} onChange={setMonth} style={{ width: 100 }}>
                         {Array.from({ length: 12 }, (_, i) => (
                             <Select.Option key={i + 1} value={i + 1}>Tháng {i + 1}</Select.Option>
@@ -235,6 +235,7 @@ const PayrollList: React.FC = () => {
                 dataSource={data}
                 rowKey="id"
                 loading={loading}
+                scroll={{ x: 1000 }}
             />
 
             <Modal
