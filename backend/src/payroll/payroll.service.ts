@@ -56,6 +56,23 @@ export class PayrollService {
             },
         });
 
+        // 3b. Batch fetch all approved work schedules for the month
+        const allSchedules = await this.prisma.workSchedule.findMany({
+            where: {
+                date: { gte: startDate, lte: endDate },
+                status: 'APPROVED',
+            },
+        });
+
+        // Group schedules by employeeId
+        const scheduleMap = new Map<string, any[]>();
+        allSchedules.forEach(sch => {
+            if (!scheduleMap.has(sch.employeeId)) {
+                scheduleMap.set(sch.employeeId, []);
+            }
+            scheduleMap.get(sch.employeeId)!.push(sch);
+        });
+
         // Group attendances by employeeId
         const attendanceMap = new Map<string, any[]>();
         allAttendances.forEach(att => {
@@ -135,6 +152,18 @@ export class PayrollService {
             }
 
             // --- B. Auto-detect Absence and Create Penalty ---
+            // First, clean up existing "Nghỉ không phép" penalties for this month to allow regeneration
+            const monthStr = `${year}-${month.toString().padStart(2, '0')}`;
+            await this.prisma.rewardPenalty.deleteMany({
+                where: {
+                    employeeId: employee.id,
+                    type: RewardPenaltyType.PENALTY,
+                    reason: {
+                        startsWith: `Nghỉ không phép ngày ${monthStr}`,
+                    },
+                },
+            });
+
             const daysInMonth = new Date(year, month, 0).getDate();
             for (let day = 1; day <= daysInMonth; day++) {
                 const currentDay = new Date(year, month - 1, day);
@@ -150,31 +179,48 @@ export class PayrollService {
                 });
 
                 if (!hasAttendance) {
-                    const dateString = currentDay.toISOString().split('T')[0];
-                    const reason = `Nghỉ không phép ngày ${dateString}`;
+                    // Check if penalty applies
+                    let shouldPenalize = true;
 
-                    // Check if penalty already exists to avoid duplicates
-                    const existingPenalty = await this.prisma.rewardPenalty.findFirst({
-                        where: {
-                            employeeId: employee.id,
-                            type: RewardPenaltyType.PENALTY,
-                            reason: reason
-                        }
-                    });
-
-                    if (!existingPenalty) {
-                        // Calculate daily salary for penalty: (Base * Coeff + Allowance) / 22
-                        const base = employee.position?.baseSalary || 0;
-                        const coeff = employee.salaryCoefficient || 1.0;
-                        const allowance = employee.position?.allowance || 0;
-                        const dailySalary = ((base * coeff) + allowance) / 22;
-
-                        await this.rewardPenaltyService.create({
-                            employeeId: employee.id,
-                            amount: Math.round(dailySalary),
-                            type: RewardPenaltyType.PENALTY,
-                            reason: reason
+                    // For PART_TIME: Only penalize if they have an APPROVED schedule for this day
+                    if (employee.type === EmployeeType.PART_TIME) {
+                        const empSchedules = scheduleMap.get(employee.id) || [];
+                        const hasSchedule = empSchedules.some(s => {
+                            const sDate = new Date(s.date);
+                            return sDate.getDate() === day && sDate.getMonth() === month - 1 && sDate.getFullYear() === year;
                         });
+                        if (!hasSchedule) {
+                            shouldPenalize = false;
+                        }
+                    }
+
+                    if (shouldPenalize) {
+                        const dateString = currentDay.toISOString().split('T')[0];
+                        const reason = `Nghỉ không phép ngày ${dateString}`;
+
+                        // Check if penalty already exists to avoid duplicates
+                        const existingPenalty = await this.prisma.rewardPenalty.findFirst({
+                            where: {
+                                employeeId: employee.id,
+                                type: RewardPenaltyType.PENALTY,
+                                reason: reason
+                            }
+                        });
+
+                        if (!existingPenalty) {
+                            // Calculate daily salary for penalty: (Base * Coeff + Allowance) / 22
+                            const base = employee.position?.baseSalary || 0;
+                            const coeff = employee.salaryCoefficient || 1.0;
+                            const allowance = employee.position?.allowance || 0;
+                            const dailySalary = ((base * coeff) + allowance) / 22;
+
+                            await this.rewardPenaltyService.create({
+                                employeeId: employee.id,
+                                amount: Math.round(dailySalary),
+                                type: RewardPenaltyType.PENALTY,
+                                reason: reason
+                            });
+                        }
                     }
                 }
             }
@@ -238,8 +284,11 @@ export class PayrollService {
                 const rate = employee.hourlyRate || 0;
                 totalWorkAmount = rate * totalWorkHours;
 
-                // No V1/V2/Insurance for Part-time usually
-                totalSalary = totalWorkAmount + totalReward - totalPenalty;
+                // Update deductions for Part-time
+                otherDeduction = totalPenalty;
+
+                // Total = Work Amount + Allowance + Reward - Penalty
+                totalSalary = totalWorkAmount + allowance + totalReward - totalPenalty;
             }
 
             // Rounding
@@ -257,7 +306,7 @@ export class PayrollService {
                 year,
                 salaryCoefficient: employee.salaryCoefficient,
                 baseSalary: employee.position?.baseSalary,
-                standardWorkHours,
+                standardWorkHours: employee.type === EmployeeType.PART_TIME ? 0 : standardWorkHours,
                 overtimeHours: 0, // TODO
 
                 salaryV1,

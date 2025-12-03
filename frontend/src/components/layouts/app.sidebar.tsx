@@ -4,14 +4,10 @@ import {
     DashboardOutlined,
     UserOutlined,
     BankOutlined,
-    FileTextOutlined,
     CalendarOutlined,
     DollarOutlined,
-    FieldTimeOutlined,
     ScheduleOutlined,
     FileSearchOutlined,
-    FileDoneOutlined,
-    FormOutlined,
     MessageOutlined,
 } from '@ant-design/icons';
 import { useSidebar } from '@/components/context/sidebar.context';
@@ -39,92 +35,72 @@ const AppSidebar = () => {
     }, [isMobile, setCollapsed]);
 
     const menuItems: MenuProps['items'] = useMemo(() => {
-        const baseItems: MenuProps['items'] = [
-            {
-                key: '/',
-                icon: <DashboardOutlined />,
-                label: 'Dashboard',
-            },
+        // Helper to create menu items
+        const getItem = (
+            label: React.ReactNode,
+            key: React.Key,
+            icon?: React.ReactNode,
+            children?: MenuProps['items'],
+            type?: 'group',
+        ): Required<MenuProps>['items'][number] => {
+            return {
+                key,
+                icon,
+                children,
+                label,
+                type,
+            } as any;
+        }
+
+        const items: MenuProps['items'] = [
+            getItem('Dashboard', '/', <DashboardOutlined />),
         ];
 
-        // Admin/HR only items
-        if (!isEmployee) {
-            baseItems.push(
-                {
-                    key: '/employee',
-                    icon: <UserOutlined />,
-                    label: 'Nhân viên',
-                },
-                {
-                    key: '/department',
-                    icon: <BankOutlined />,
-                    label: 'Phòng ban',
-                },
-                {
-                    key: '/position',
-                    icon: <FileTextOutlined />,
-                    label: 'Chức vụ',
-                },
-                {
-                    key: '/shift',
-                    icon: <FieldTimeOutlined />,
-                    label: 'Ca làm việc',
-                }
+        if (isEmployee) {
+            // --- EMPLOYEE VIEW ---
+            items.push(
+                getItem('Công việc', 'sub-work', <ScheduleOutlined />, [
+                    getItem('Lịch làm việc', '/workschedule'),
+                    getItem('Chấm công', '/attendance'),
+                    getItem('Đơn của tôi', '/request'),
+                ]),
+                getItem('Thu nhập', 'sub-income', <DollarOutlined />, [
+                    getItem('Bảng lương', '/payroll'),
+                    getItem('Khen thưởng / Kỷ luật', '/reward-penalty'),
+                ]),
+                getItem('Tiện ích', 'sub-utils', <MessageOutlined />, [
+                    getItem('Chat', '/chat'),
+                ])
+            );
+        } else {
+            // --- ADMIN / HR VIEW ---
+            items.push(
+                getItem('Quản lý Tổ chức', 'sub-org', <BankOutlined />, [
+                    getItem('Phòng ban', '/department'),
+                    getItem('Chức vụ', '/position'),
+                    getItem('Ca làm việc', '/shift'),
+                ]),
+                getItem('Quản lý Nhân sự', 'sub-hr', <UserOutlined />, [
+                    getItem('Danh sách nhân viên', '/employee'),
+                ]),
+                getItem('Chấm công & Đơn', 'sub-time', <CalendarOutlined />, [
+                    getItem('Quản lý lịch làm', '/workschedule'),
+                    getItem('Quản lý chấm công', '/attendance'),
+                    getItem('Quản lý đơn', '/request'),
+                    getItem('Loại đơn', '/request-type'),
+                ]),
+                getItem('Lương & Phúc lợi', 'sub-payroll', <DollarOutlined />, [
+                    getItem('Quản lý lương', '/payroll'),
+                    getItem('Khen thưởng / Kỷ luật', '/reward-penalty'),
+                ]),
+                getItem('Hệ thống', 'sub-system', <FileSearchOutlined />, [
+                    getItem('Nhật ký hệ thống', '/audit-log'),
+                    getItem('Chat', '/chat'),
+                ])
             );
         }
 
-        // Unified items for all roles
-        baseItems.push(
-            {
-                key: '/workschedule',
-                icon: <ScheduleOutlined />,
-                label: isEmployee ? 'Lịch làm việc' : 'Quản lý lịch làm',
-            },
-            {
-                key: '/attendance',
-                icon: <CalendarOutlined />,
-                label: isEmployee ? 'Chấm công' : 'Quản lý chấm công',
-            },
-            {
-                key: '/request',
-                icon: <FormOutlined />,
-                label: isEmployee ? 'Đơn của tôi' : 'Quản lý đơn',
-            },
-            {
-                key: '/payroll',
-                icon: <DollarOutlined />,
-                label: isEmployee ? 'Bảng lương' : 'Quản lý lương',
-            },
-            {
-                key: '/chat',
-                icon: <MessageOutlined />,
-                label: 'Chat',
-            },
-            {
-                key: '/reward-penalty',
-                icon: <DollarOutlined />,
-                label: isEmployee ? 'Khen thưởng / Kỷ luật' : 'Quản lý Khen thưởng / Kỷ luật',
-            }
-        );
-
-        // Extra Admin/HR items that don't fit into the unified list above or are separate
-        if (!isEmployee) {
-            baseItems.push(
-                {
-                    key: '/request-type',
-                    icon: <FileDoneOutlined />,
-                    label: 'Loại đơn',
-                },
-
-                {
-                    key: '/audit-log',
-                    icon: <FileSearchOutlined />,
-                    label: 'Nhật ký hệ thống',
-                }
-            );
-        }
-
-        return baseItems;
+        return items;
     }, [isEmployee]);
 
     const handleMenuClick = useCallback<NonNullable<MenuProps['onClick']>>((info) => {
