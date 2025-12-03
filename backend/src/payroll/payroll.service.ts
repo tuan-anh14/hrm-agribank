@@ -89,6 +89,49 @@ export class PayrollService {
                 }
                 lateMinutes += att.lateMinutes || 0;
                 earlyMinutes += att.earlyMinutes || 0;
+
+                // --- Retroactive Penalty Scan ---
+                // Check if Late Penalty exists
+                if (att.lateMinutes && att.lateMinutes > 0) {
+                    const reason = `Đi muộn ${att.lateMinutes} phút ngày ${att.date.toISOString().split('T')[0]}`;
+                    const existingPenalty = await this.prisma.rewardPenalty.findFirst({
+                        where: {
+                            employeeId: employee.id,
+                            type: RewardPenaltyType.PENALTY,
+                            reason: { contains: `Đi muộn ${att.lateMinutes} phút ngày ${att.date.toISOString().split('T')[0]}` }
+                        }
+                    });
+
+                    if (!existingPenalty) {
+                        await this.rewardPenaltyService.create({
+                            employeeId: employee.id,
+                            amount: att.lateMinutes * 1000,
+                            type: RewardPenaltyType.PENALTY,
+                            reason: reason
+                        });
+                    }
+                }
+
+                // Check if Early Penalty exists
+                if (att.earlyMinutes && att.earlyMinutes > 0) {
+                    const reason = `Về sớm ${att.earlyMinutes} phút ngày ${att.date.toISOString().split('T')[0]}`;
+                    const existingPenalty = await this.prisma.rewardPenalty.findFirst({
+                        where: {
+                            employeeId: employee.id,
+                            type: RewardPenaltyType.PENALTY,
+                            reason: { contains: `Về sớm ${att.earlyMinutes} phút ngày ${att.date.toISOString().split('T')[0]}` }
+                        }
+                    });
+
+                    if (!existingPenalty) {
+                        await this.rewardPenaltyService.create({
+                            employeeId: employee.id,
+                            amount: att.earlyMinutes * 1000,
+                            type: RewardPenaltyType.PENALTY,
+                            reason: reason
+                        });
+                    }
+                }
             }
 
             // --- B. Auto-detect Absence and Create Penalty ---

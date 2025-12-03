@@ -145,13 +145,24 @@ export class RewardPenaltyService {
         const startDate = new Date(year, month - 1, 1);
         const endDate = new Date(year, month, 0, 23, 59, 59); // Last day of month
 
+        const monthStr = `${year}-${month.toString().padStart(2, '0')}-`;
+
         return this.prisma.rewardPenalty.findMany({
             where: {
                 employeeId,
-                createdAt: {
-                    gte: startDate,
-                    lte: endDate,
-                },
+                OR: [
+                    {
+                        createdAt: {
+                            gte: startDate,
+                            lte: endDate,
+                        },
+                    },
+                    {
+                        reason: {
+                            contains: monthStr,
+                        },
+                    },
+                ],
             },
         });
     }
