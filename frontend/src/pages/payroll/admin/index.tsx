@@ -14,7 +14,7 @@ const PayrollListPage: React.FC = () => {
     const [payrolls, setPayrolls] = useState<Payroll[]>([]);
     const [loading, setLoading] = useState(false);
     const [filterMonth, setFilterMonth] = useState<number | undefined>();
-    const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
+    const [filterYear, setFilterYear] = useState<number | undefined>();
     const navigate = useNavigate();
 
     const loadPayrolls = async () => {
@@ -183,6 +183,8 @@ const PayrollListPage: React.FC = () => {
                         value={filterYear}
                         onChange={setFilterYear}
                         style={{ width: 120 }}
+                        placeholder="Tất cả năm"
+                        allowClear
                     >
                         {years.map(y => (
                             <Option key={y} value={y}>{y}</Option>

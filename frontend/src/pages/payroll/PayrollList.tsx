@@ -3,7 +3,7 @@ import { Table, Button, Modal, Form, Select, DatePicker, message, Tag, Space, Po
 import { CalculatorOutlined, EyeOutlined, CheckOutlined, CloseOutlined, DollarOutlined } from '@ant-design/icons';
 import { getAllPayrollsAPI, generatePayrollAPI, updatePayrollStatusAPI, payPayrollAPI } from '@/services/api';
 import type { Payroll } from '@/types/payroll';
-import dayjs from 'dayjs';
+
 import { useNavigate } from 'react-router-dom';
 import { useCurrentApp } from '@/components/context/app.context';
 
@@ -21,13 +21,15 @@ const PayrollList: React.FC = () => {
     const canAction = isAdmin || isHR;
 
     // Filters
-    const [month, setMonth] = useState<number>(dayjs().month() + 1);
-    const [year, setYear] = useState<number>(dayjs().year());
+    const [month, setMonth] = useState<number | undefined>(undefined);
+    const [year, setYear] = useState<number | undefined>(undefined);
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const params: any = { month, year };
+            const params: any = {};
+            if (month) params.month = month;
+            if (year) params.year = year;
             if (isEmployee && user?.id) {
                 params.employeeId = user.id;
             }
@@ -213,12 +215,12 @@ const PayrollList: React.FC = () => {
             <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
                 <h2 style={{ margin: 0 }}>{isEmployee ? "Lịch sử lương của tôi" : "Quản lý Bảng lương"}</h2>
                 <Space wrap>
-                    <Select value={month} onChange={setMonth} style={{ width: 100 }}>
+                    <Select value={month} onChange={setMonth} style={{ width: 120 }} placeholder="Chọn tháng" allowClear>
                         {Array.from({ length: 12 }, (_, i) => (
                             <Select.Option key={i + 1} value={i + 1}>Tháng {i + 1}</Select.Option>
                         ))}
                     </Select>
-                    <Select value={year} onChange={setYear} style={{ width: 100 }}>
+                    <Select value={year} onChange={setYear} style={{ width: 120 }} placeholder="Chọn năm" allowClear>
                         <Select.Option value={2024}>2024</Select.Option>
                         <Select.Option value={2025}>2025</Select.Option>
                     </Select>

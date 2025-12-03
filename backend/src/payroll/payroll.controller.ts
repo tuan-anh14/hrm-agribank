@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Patch, Req } from '@nestjs/common';
 import { PayrollService } from './payroll.service';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
@@ -40,14 +40,21 @@ export class PayrollController {
     }
 
     @Get()
-    @Roles(Role.ADMIN, Role.HR)
+    @Roles(Role.ADMIN, Role.HR, Role.EMPLOYEE)
     @ApiOperation({ summary: 'Lấy danh sách bảng lương' })
     @ApiQuery({ name: 'employeeId', required: false, description: 'Lọc theo ID nhân viên' })
     @ApiQuery({ name: 'month', required: false, description: 'Lọc theo tháng' })
     @ApiQuery({ name: 'year', required: false, description: 'Lọc theo năm' })
-    async getAll(@Query() query: any) {
+    async getAll(@Query() query: any, @Req() req: any) {
         const filters: any = {};
-        if (query.employeeId) filters.employeeId = query.employeeId;
+
+        // Nếu là employee thì chỉ được xem của chính mình
+        if (req.user.role === Role.EMPLOYEE) {
+            filters.employeeId = req.user.id;
+        } else if (query.employeeId) {
+            filters.employeeId = query.employeeId;
+        }
+
         if (query.month) filters.month = parseInt(query.month);
         if (query.year) filters.year = parseInt(query.year);
 
