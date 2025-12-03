@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { RewardPenaltyService } from './reward-penalty.service';
 import { CreateRewardPenaltyDto } from './dto/create-reward-penalty.dto';
 import { UpdateRewardPenaltyDto } from './dto/update-reward-penalty.dto';
@@ -13,8 +13,8 @@ export class RewardPenaltyController {
     }
 
     @Get()
-    findAll() {
-        return this.rewardPenaltyService.findAll();
+    findAll(@Query() query: any) {
+        return this.rewardPenaltyService.findAll(query);
     }
 
     @Get(':id')

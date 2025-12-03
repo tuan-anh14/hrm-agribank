@@ -91,7 +91,52 @@ export class PayrollService {
                 earlyMinutes += att.earlyMinutes || 0;
             }
 
-            // --- B. Fetch Rewards & Penalties ---
+            // --- B. Auto-detect Absence and Create Penalty ---
+            const daysInMonth = new Date(year, month, 0).getDate();
+            for (let day = 1; day <= daysInMonth; day++) {
+                const currentDay = new Date(year, month - 1, day);
+                const dayOfWeek = currentDay.getDay();
+
+                // Skip weekends (0 = Sunday, 6 = Saturday)
+                if (dayOfWeek === 0 || dayOfWeek === 6) continue;
+
+                // Check if attendance exists
+                const hasAttendance = empAttendances.some(att => {
+                    const attDate = new Date(att.date);
+                    return attDate.getDate() === day && attDate.getMonth() === month - 1 && attDate.getFullYear() === year;
+                });
+
+                if (!hasAttendance) {
+                    const dateString = currentDay.toISOString().split('T')[0];
+                    const reason = `Nghỉ không phép ngày ${dateString}`;
+
+                    // Check if penalty already exists to avoid duplicates
+                    const existingPenalty = await this.prisma.rewardPenalty.findFirst({
+                        where: {
+                            employeeId: employee.id,
+                            type: RewardPenaltyType.PENALTY,
+                            reason: reason
+                        }
+                    });
+
+                    if (!existingPenalty) {
+                        // Calculate daily salary for penalty: (Base * Coeff + Allowance) / 22
+                        const base = employee.position?.baseSalary || 0;
+                        const coeff = employee.salaryCoefficient || 1.0;
+                        const allowance = employee.position?.allowance || 0;
+                        const dailySalary = ((base * coeff) + allowance) / 22;
+
+                        await this.rewardPenaltyService.create({
+                            employeeId: employee.id,
+                            amount: Math.round(dailySalary),
+                            type: RewardPenaltyType.PENALTY,
+                            reason: reason
+                        });
+                    }
+                }
+            }
+
+            // --- C. Fetch Rewards & Penalties (including newly created ones) ---
             const rewardsPenalties = await this.rewardPenaltyService.getMonthlyRewards(employee.id, month, year);
             const totalReward = rewardsPenalties
                 .filter(r => r.type === RewardPenaltyType.REWARD)

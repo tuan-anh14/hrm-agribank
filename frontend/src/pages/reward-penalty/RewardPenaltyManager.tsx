@@ -12,13 +12,18 @@ const RewardPenaltyManager: React.FC = () => {
     const [data, setData] = useState<RewardPenalty[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(false);
+    const [filterEmployeeId, setFilterEmployeeId] = useState<string | undefined>(undefined);
+    const [filterType, setFilterType] = useState<RewardPenaltyType | undefined>(undefined);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form] = Form.useForm();
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const res = await getAllRewardPenaltiesAPI();
+            const params: any = {};
+            if (filterEmployeeId) params.employeeId = filterEmployeeId;
+            if (filterType) params.type = filterType;
+            const res = await getAllRewardPenaltiesAPI(params);
             setData(res);
         } catch (error) {
             message.error('Lấy dữ liệu thất bại');
@@ -38,6 +43,9 @@ const RewardPenaltyManager: React.FC = () => {
 
     useEffect(() => {
         fetchData();
+    }, [filterEmployeeId, filterType]);
+
+    useEffect(() => {
         fetchEmployees();
     }, []);
 
@@ -110,11 +118,38 @@ const RewardPenaltyManager: React.FC = () => {
 
     return (
         <div style={{ padding: 20 }}>
-            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-                <h2>Quản lý Khen thưởng / Kỷ luật</h2>
-                <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
-                    Thêm mới
-                </Button>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+                <h2 style={{ margin: 0 }}>Quản lý Khen thưởng / Kỷ luật</h2>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    <Select
+                        placeholder="Lọc theo nhân viên"
+                        style={{ width: 200 }}
+                        allowClear
+                        showSearch
+                        optionFilterProp="children"
+                        onChange={setFilterEmployeeId}
+                        value={filterEmployeeId}
+                    >
+                        {employees.map(emp => (
+                            <Select.Option key={emp.id} value={emp.id}>
+                                {emp.fullName}
+                            </Select.Option>
+                        ))}
+                    </Select>
+                    <Select
+                        placeholder="Lọc theo loại"
+                        style={{ width: 150 }}
+                        allowClear
+                        onChange={setFilterType}
+                        value={filterType}
+                    >
+                        <Select.Option value={RewardPenaltyType.REWARD}>Khen thưởng</Select.Option>
+                        <Select.Option value={RewardPenaltyType.PENALTY}>Kỷ luật</Select.Option>
+                    </Select>
+                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
+                        Thêm mới
+                    </Button>
+                </div>
             </div>
 
             <Table

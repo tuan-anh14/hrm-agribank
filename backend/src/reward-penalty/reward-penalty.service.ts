@@ -57,8 +57,15 @@ export class RewardPenaltyService {
         return rewardPenalty;
     }
 
-    findAll() {
+    findAll(query: any = {}) {
+        const { employeeId, type } = query;
+        const where: any = {};
+
+        if (employeeId) where.employeeId = employeeId;
+        if (type) where.type = type;
+
         return this.prisma.rewardPenalty.findMany({
+            where,
             include: {
                 employee: {
                     select: {

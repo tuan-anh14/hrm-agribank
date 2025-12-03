@@ -273,9 +273,9 @@ export const createRewardPenaltyAPI = (payload: CreateRewardPenaltyDto) => {
     return axios.post<IBackendRes<RewardPenalty>>(urlBackend, payload);
 }
 
-export const getAllRewardPenaltiesAPI = () => {
+export const getAllRewardPenaltiesAPI = (params?: any) => {
     const urlBackend = "/api/v1/reward-penalty";
-    return axios.get<RewardPenalty[]>(urlBackend);
+    return axios.get<RewardPenalty[]>(urlBackend, { params });
 }
 
 export const deleteRewardPenaltyAPI = (id: string) => {
