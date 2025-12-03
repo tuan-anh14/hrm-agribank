@@ -127,7 +127,7 @@ const CreateRequestPage: React.FC = () => {
     const disabledEndDate = (current: Dayjs | null) => {
         const startDate = form.getFieldValue("startDate");
         if (!startDate) return false;
-        return current && current.isBefore(startDate, "day");
+        return (current && current.isBefore(startDate, "day")) || false;
     };
 
     return (

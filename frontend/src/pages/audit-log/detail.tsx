@@ -6,7 +6,7 @@ import dayjs from 'dayjs';
 import { getAuditLogDetailAPI } from '@/services/api';
 import { notifyError } from '@/utils/notification';
 import type { AuditLogDetail } from '@/types/audit-log';
-import { AuditModule, AuditAction, AuditStatus } from '@/types/audit-log';
+import { AuditStatus } from '@/types/audit-log';
 
 const { Title, Text } = Typography;
 const { Panel } = Collapse;

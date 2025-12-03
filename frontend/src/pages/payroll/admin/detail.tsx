@@ -155,9 +155,14 @@ const PayrollDetailPage: React.FC = () => {
                                 <Text style={{ color: '#52c41a' }}>+{formatCurrency(payroll.bonus)}</Text>
                             </Descriptions.Item>
                         )}
-                        {payroll.deduction && payroll.deduction > 0 && (
-                            <Descriptions.Item label="Khấu trừ">
-                                <Text style={{ color: '#ff4d4f' }}>-{formatCurrency(payroll.deduction)}</Text>
+                        {payroll.otherDeduction && payroll.otherDeduction > 0 && (
+                            <Descriptions.Item label="Phạt">
+                                <Text style={{ color: '#ff4d4f' }}>-{formatCurrency(payroll.otherDeduction)}</Text>
+                            </Descriptions.Item>
+                        )}
+                        {((payroll.insuranceDeduction || 0) + (payroll.taxDeduction || 0)) > 0 && (
+                            <Descriptions.Item label="Khấu trừ (BH + Thuế)">
+                                <Text style={{ color: '#ff4d4f' }}>-{formatCurrency((payroll.insuranceDeduction || 0) + (payroll.taxDeduction || 0))}</Text>
                             </Descriptions.Item>
                         )}
                         <Descriptions.Item label="Trạng thái">

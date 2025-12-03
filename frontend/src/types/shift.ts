@@ -1,8 +1,10 @@
-export enum ShiftType {
-    MORNING = 'MORNING',
-    AFTERNOON = 'AFTERNOON',
-    FULL_DAY = 'FULL_DAY'
-}
+export const ShiftType = {
+    MORNING: 'MORNING',
+    AFTERNOON: 'AFTERNOON',
+    FULL_DAY: 'FULL_DAY'
+} as const;
+
+export type ShiftType = typeof ShiftType[keyof typeof ShiftType];
 
 export interface Shift {
     id: string;

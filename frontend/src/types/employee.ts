@@ -1,7 +1,9 @@
-export enum EmployeeType {
-    FULL_TIME = 'FULL_TIME',
-    PART_TIME = 'PART_TIME'
-}
+export const EmployeeType = {
+    FULL_TIME: 'FULL_TIME',
+    PART_TIME: 'PART_TIME'
+} as const;
+
+export type EmployeeType = typeof EmployeeType[keyof typeof EmployeeType];
 
 export interface Employee {
     id: string;

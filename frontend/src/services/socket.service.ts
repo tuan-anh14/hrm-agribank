@@ -9,7 +9,7 @@ import { ChatClientEvents, ChatServerEvents, SocketIOEvents } from '@/constants/
 class SocketService {
   private socket: Socket | null = null;
   private readonly namespace = '/chat';
-  private reconnectAttempts = 0;
+  // private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 5;
 
   /**
@@ -47,7 +47,7 @@ class SocketService {
     // Event handlers
     this.socket.on(SocketIOEvents.CONNECT, () => {
       console.log('[SocketService] Connected to chat server');
-      this.reconnectAttempts = 0;
+
     });
 
     this.socket.on(SocketIOEvents.DISCONNECT, (reason) => {
@@ -60,7 +60,7 @@ class SocketService {
 
     this.socket.on(SocketIOEvents.RECONNECT_ATTEMPT, (attemptNumber) => {
       console.log(`[SocketService] Reconnection attempt ${attemptNumber}`);
-      this.reconnectAttempts = attemptNumber;
+
     });
 
     this.socket.on(SocketIOEvents.RECONNECT_ERROR, (error) => {
@@ -82,7 +82,7 @@ class SocketService {
       console.log('[SocketService] Disconnecting from chat server');
       this.socket.disconnect();
       this.socket = null;
-      this.reconnectAttempts = 0;
+
     }
   }
 

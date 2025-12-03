@@ -47,13 +47,7 @@ const CreatePositionPage: React.FC = () => {
         }
     };
 
-    const formatCurrency = (value: number | undefined) => {
-        if (!value) return '';
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-        }).format(value);
-    };
+
 
     return (
         <div style={{ padding: "24px", maxWidth: "800px", margin: "0 auto" }}>

@@ -3,11 +3,13 @@
  * Tuân thủ với Prisma schema và Backend API
  */
 
-export enum ChatRoomType {
-  COMPANY_WIDE = 'COMPANY_WIDE',
-  DEPARTMENT_HRM = 'DEPARTMENT_HRM',
-  DIRECT_MESSAGE = 'DIRECT_MESSAGE',
-}
+export const ChatRoomType = {
+  COMPANY_WIDE: 'COMPANY_WIDE',
+  DEPARTMENT_HRM: 'DEPARTMENT_HRM',
+  DIRECT_MESSAGE: 'DIRECT_MESSAGE',
+} as const;
+
+export type ChatRoomType = typeof ChatRoomType[keyof typeof ChatRoomType];
 
 export interface ChatRoomParticipant {
   id: string;

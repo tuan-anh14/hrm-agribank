@@ -5,9 +5,9 @@ import type { Position, CreatePositionPayload, UpdatePositionPayload } from '@/t
 import type { Attendance, CreateAttendancePayload, UpdateAttendancePayload, QueryAttendanceParams, AttendanceListResponse, CheckInPayload, CheckOutPayload } from '@/types/attendance';
 import type { Shift, ShiftListResponse, QueryShiftParams, CreateShiftPayload, UpdateShiftPayload } from '@/types/shift';
 import type { WorkSchedule, WorkScheduleListResponse, QueryWorkScheduleParams, CreateWorkSchedulePayload, UpdateWorkSchedulePayload, ApproveWorkSchedulePayload } from '@/types/workschedule';
-import type { Payroll, GeneratePayrollPayload, QueryPayrollParams, PayrollListResponse } from '@/types/payroll';
+import type { Payroll, GeneratePayrollPayload, QueryPayrollParams } from '@/types/payroll';
 import type { RewardPenalty, CreateRewardPenaltyDto } from '@/types/reward-penalty';
-import type { AuditLog, AuditLogDetail, QueryAuditLogParams, AuditLogListResponse, AuditLogDetailResponse } from '@/types/audit-log';
+import type { QueryAuditLogParams, AuditLogListResponse, AuditLogDetailResponse } from '@/types/audit-log';
 import type { Notification, NotificationListResponse, NotificationDetailResponse, UnreadCountResponse, QueryNotificationParams, CreateNotificationPayload, UpdateNotificationPayload } from '@/types/notification';
 import type { Request, RequestListResponse, QueryRequestParams, CreateRequestPayload, UpdateRequestPayload, ApproveRequestPayload, RequestType, CreateRequestTypePayload, UpdateRequestTypePayload } from '@/types/request';
 import type { ChatRoomsResponse, ChatMessageListResponse, CreateMessagePayload, CreateDirectMessageRoomPayload, QueryMessageParams, MarkRoomAsReadResponse, ChatMessage, ChatRoom } from '@/types/chat';

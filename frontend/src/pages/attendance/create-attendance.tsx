@@ -2,7 +2,7 @@ import { Button, Form, Input, Card, Typography, Space, Select, DatePicker } from
 import type { FormProps } from "antd";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import dayjs, { type Dayjs } from "dayjs";
+import { type Dayjs } from "dayjs";
 import { createAttendanceAPI, getAllEmployeesAPI } from "@/services/api";
 import type { CreateAttendancePayload } from "@/types/attendance";
 import type { Employee } from "@/types/employee";
@@ -30,10 +30,10 @@ const CreateAttendancePage: React.FC = () => {
         const loadEmployees = async () => {
             try {
                 const res = await getAllEmployeesAPI();
-                const list: Employee[] = Array.isArray(res) 
-                    ? res 
-                    : Array.isArray((res as any)?.data) 
-                        ? (res as any).data 
+                const list: Employee[] = Array.isArray(res)
+                    ? res
+                    : Array.isArray((res as any)?.data)
+                        ? (res as any).data
                         : [];
                 setEmployees(list);
             } catch (error) {
@@ -167,9 +167,9 @@ const CreateAttendancePage: React.FC = () => {
                                 { max: 500, message: "Ghi chú không được quá 500 ký tự!" },
                             ]}
                         >
-                            <TextArea 
-                                rows={4} 
-                                placeholder="Ghi chú về chấm công..." 
+                            <TextArea
+                                rows={4}
+                                placeholder="Ghi chú về chấm công..."
                             />
                         </Form.Item>
 

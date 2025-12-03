@@ -1,10 +1,12 @@
-export enum NotificationType {
-  SYSTEM = 'SYSTEM',
-  PAYROLL = 'PAYROLL',
-  ATTENDANCE = 'ATTENDANCE',
-  REQUEST = 'REQUEST',
-  SHIFT = 'SHIFT',
-}
+export const NotificationType = {
+  SYSTEM: 'SYSTEM',
+  PAYROLL: 'PAYROLL',
+  ATTENDANCE: 'ATTENDANCE',
+  REQUEST: 'REQUEST',
+  SHIFT: 'SHIFT',
+} as const;
+
+export type NotificationType = typeof NotificationType[keyof typeof NotificationType];
 
 export interface Notification {
   id: string;
@@ -52,4 +54,3 @@ export interface CreateNotificationPayload {
 export interface UpdateNotificationPayload {
   isRead?: boolean;
 }
-

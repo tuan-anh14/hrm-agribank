@@ -74,7 +74,7 @@ function useAuditLogs(initialLimit: number = 10): UseAuditLogsReturn {
         limit,
       };
       const res = await getAuditLogsAPI(params);
-      const response: AuditLogListResponse = res.data || res;
+      const response: AuditLogListResponse = (res as any).data || res;
       setData(response.items || []);
       setTotal(response.meta?.total || 0);
     } catch (e: any) {

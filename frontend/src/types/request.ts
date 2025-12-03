@@ -1,4 +1,4 @@
-import type { Employee } from '@/types/employee';
+
 
 export type RequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -66,7 +66,7 @@ export interface QueryRequestParams {
 }
 
 export interface CreateRequestPayload {
-    employeeId: string;
+    employeeId?: string;
     requestTypeId: string;
     reason?: string;
     startDate?: string;

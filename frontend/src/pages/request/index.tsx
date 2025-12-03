@@ -73,19 +73,7 @@ async function fetchRequests(params: FetchRequestsParams, isEmployee: boolean): 
     }
 }
 
-interface UseRequestsState {
-    data: Request[];
-    total: number;
-    page: number;
-    limit: number;
-    employeeId?: string;
-    requestTypeId?: string;
-    status?: RequestStatus;
-    startDate?: string;
-    endDate?: string;
-    loading: boolean;
-    error: string | null;
-}
+
 
 function useRequests(initialLimit: number = 10, isEmployee: boolean = false) {
     const [page, setPage] = useState(1);

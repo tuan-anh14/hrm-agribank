@@ -1,37 +1,43 @@
-export enum AuditModule {
-  AUTH = 'AUTH',
-  EMPLOYEE = 'EMPLOYEE',
-  DEPARTMENT = 'DEPARTMENT',
-  POSITION = 'POSITION',
-  ATTENDANCE = 'ATTENDANCE',
-  WORKSCHEDULE = 'WORKSCHEDULE',
-  SHIFT = 'SHIFT',
-  PAYROLL = 'PAYROLL',
-  REWARD_PENALTY = 'REWARD_PENALTY',
-  REQUEST = 'REQUEST',
-  NOTIFICATION = 'NOTIFICATION',
-}
+export const AuditModule = {
+  AUTH: 'AUTH',
+  EMPLOYEE: 'EMPLOYEE',
+  DEPARTMENT: 'DEPARTMENT',
+  POSITION: 'POSITION',
+  ATTENDANCE: 'ATTENDANCE',
+  WORKSCHEDULE: 'WORKSCHEDULE',
+  SHIFT: 'SHIFT',
+  PAYROLL: 'PAYROLL',
+  REWARD_PENALTY: 'REWARD_PENALTY',
+  REQUEST: 'REQUEST',
+  NOTIFICATION: 'NOTIFICATION',
+} as const;
 
-export enum AuditAction {
-  LOGIN = 'LOGIN',
-  LOGOUT = 'LOGOUT',
-  ACTIVATE_ACCOUNT = 'ACTIVATE_ACCOUNT',
-  CREATE = 'CREATE',
-  UPDATE = 'UPDATE',
-  DELETE = 'DELETE',
-  CHECK_IN = 'CHECK_IN',
-  CHECK_OUT = 'CHECK_OUT',
-  APPROVE = 'APPROVE',
-  REJECT = 'REJECT',
-  GENERATE_PAYROLL = 'GENERATE_PAYROLL',
-  UPDATE_STATUS = 'UPDATE_STATUS',
-  PAY = 'PAY',
-}
+export type AuditModule = typeof AuditModule[keyof typeof AuditModule];
 
-export enum AuditStatus {
-  SUCCESS = 'SUCCESS',
-  FAILED = 'FAILED',
-}
+export const AuditAction = {
+  LOGIN: 'LOGIN',
+  LOGOUT: 'LOGOUT',
+  ACTIVATE_ACCOUNT: 'ACTIVATE_ACCOUNT',
+  CREATE: 'CREATE',
+  UPDATE: 'UPDATE',
+  DELETE: 'DELETE',
+  CHECK_IN: 'CHECK_IN',
+  CHECK_OUT: 'CHECK_OUT',
+  APPROVE: 'APPROVE',
+  REJECT: 'REJECT',
+  GENERATE_PAYROLL: 'GENERATE_PAYROLL',
+  UPDATE_STATUS: 'UPDATE_STATUS',
+  PAY: 'PAY',
+} as const;
+
+export type AuditAction = typeof AuditAction[keyof typeof AuditAction];
+
+export const AuditStatus = {
+  SUCCESS: 'SUCCESS',
+  FAILED: 'FAILED',
+} as const;
+
+export type AuditStatus = typeof AuditStatus[keyof typeof AuditStatus];
 
 export type Role = 'ADMIN' | 'HR' | 'EMPLOYEE';
 
@@ -86,4 +92,3 @@ export interface AuditLogListResponse {
 export interface AuditLogDetailResponse {
   data: AuditLogDetail;
 }
-

@@ -1,3 +1,5 @@
+import type { EmployeeType } from './employee';
+
 export interface Payroll {
     id: string;
     employeeId: string;
@@ -30,6 +32,7 @@ export interface Payroll {
         id: string;
         fullName: string;
         employeeCode: string;
+        type?: EmployeeType;
         department?: {
             name: string;
         };
