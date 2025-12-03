@@ -326,7 +326,14 @@ export class PayrollService {
     async getAll(query: any) {
         return this.prisma.payroll.findMany({
             where: query,
-            include: { employee: true },
+            include: {
+                employee: {
+                    include: {
+                        department: true,
+                        position: true,
+                    },
+                },
+            },
             orderBy: [{ year: 'desc' }, { month: 'desc' }],
         });
     }
@@ -334,7 +341,14 @@ export class PayrollService {
     async getById(id: string) {
         const payroll = await this.prisma.payroll.findUnique({
             where: { id },
-            include: { employee: true },
+            include: {
+                employee: {
+                    include: {
+                        department: true,
+                        position: true,
+                    },
+                },
+            },
         });
         if (!payroll) throw new NotFoundException('Payroll not found');
         return payroll;
