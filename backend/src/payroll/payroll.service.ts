@@ -226,7 +226,23 @@ export class PayrollService {
             }
 
             // --- C. Fetch Rewards & Penalties (including newly created ones) ---
-            const rewardsPenalties = await this.rewardPenaltyService.getMonthlyRewards(employee.id, month, year);
+            const rawRewardsPenalties = await this.rewardPenaltyService.getMonthlyRewards(employee.id, month, year);
+
+            // Filter out penalties that clearly belong to another month (e.g. created in Dec but for Nov absence)
+            const rewardsPenalties = rawRewardsPenalties.filter(rp => {
+                if (!rp.reason) return true; // Keep if no reason (manual?)
+
+                // Extract date from reason if present (YYYY-MM-DD)
+                const match = rp.reason.match(/(\d{4})-(\d{2})-(\d{2})/);
+                if (match) {
+                    const rMonth = parseInt(match[2], 10);
+                    const rYear = parseInt(match[1], 10);
+                    // If date found, must match payroll month/year
+                    return rMonth === month && rYear === year;
+                }
+                return true; // Keep if no date found
+            });
+
             const totalReward = rewardsPenalties
                 .filter(r => r.type === RewardPenaltyType.REWARD)
                 .reduce((sum, r) => sum + r.amount, 0);

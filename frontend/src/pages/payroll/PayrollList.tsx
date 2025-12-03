@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Table, Button, Modal, Form, Select, DatePicker, message, Tag, Space, Popconfirm } from 'antd';
 import { CalculatorOutlined, EyeOutlined, CheckOutlined, CloseOutlined, DollarOutlined } from '@ant-design/icons';
-import { getAllPayrollsAPI, generatePayrollAPI, updatePayrollStatusAPI, payPayrollAPI } from '@/services/api';
+import { getAllPayrollsAPI, generatePayrollAPI, updatePayrollStatusAPI, payPayrollAPI, getAllEmployeesAPI } from '@/services/api';
 import type { Payroll } from '@/types/payroll';
+import type { Employee } from '@/types/employee';
 
 import { useNavigate } from 'react-router-dom';
 import { useCurrentApp } from '@/components/context/app.context';
@@ -23,6 +24,24 @@ const PayrollList: React.FC = () => {
     // Filters
     const [month, setMonth] = useState<number | undefined>(undefined);
     const [year, setYear] = useState<number | undefined>(undefined);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | undefined>(undefined);
+
+    useEffect(() => {
+        if (canAction) {
+            fetchEmployees();
+        }
+    }, [canAction]);
+
+    const fetchEmployees = async () => {
+        try {
+            const res = await getAllEmployeesAPI();
+            // @ts-ignore
+            setEmployees(res.data || res);
+        } catch (error) {
+            console.error("Failed to fetch employees", error);
+        }
+    }
 
     const fetchData = async () => {
         setLoading(true);
@@ -32,6 +51,8 @@ const PayrollList: React.FC = () => {
             if (year) params.year = year;
             if (isEmployee && user?.id) {
                 params.employeeId = user.id;
+            } else if (selectedEmployeeId) {
+                params.employeeId = selectedEmployeeId;
             }
             const res = await getAllPayrollsAPI(params);
             // @ts-ignore
@@ -47,7 +68,7 @@ const PayrollList: React.FC = () => {
         if (user) {
             fetchData();
         }
-    }, [month, year, user]);
+    }, [month, year, selectedEmployeeId, user]);
 
     const handleGenerate = async (values: any) => {
         try {
@@ -224,6 +245,24 @@ const PayrollList: React.FC = () => {
                         <Select.Option value={2024}>2024</Select.Option>
                         <Select.Option value={2025}>2025</Select.Option>
                     </Select>
+                    {canAction && (
+                        <Select
+                            showSearch
+                            value={selectedEmployeeId}
+                            onChange={setSelectedEmployeeId}
+                            style={{ width: 200 }}
+                            placeholder="Chọn nhân viên"
+                            allowClear
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                            }
+                            options={employees.map(emp => ({
+                                value: emp.id,
+                                label: `${emp.fullName} (${emp.employeeCode})`
+                            }))}
+                        />
+                    )}
                     {canAction && (
                         <Button type="primary" icon={<CalculatorOutlined />} onClick={() => setIsGenerateModalOpen(true)}>
                             Tạo bảng lương
