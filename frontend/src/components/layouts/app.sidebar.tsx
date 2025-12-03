@@ -99,6 +99,11 @@ const AppSidebar = () => {
                 key: '/chat',
                 icon: <MessageOutlined />,
                 label: 'Chat',
+            },
+            {
+                key: '/reward-penalty',
+                icon: <DollarOutlined />,
+                label: isEmployee ? 'Khen thưởng / Kỷ luật' : 'Quản lý Khen thưởng / Kỷ luật',
             }
         );
 
@@ -110,11 +115,7 @@ const AppSidebar = () => {
                     icon: <FileDoneOutlined />,
                     label: 'Loại đơn',
                 },
-                {
-                    key: '/reward-penalty',
-                    icon: <DollarOutlined />,
-                    label: 'Khen thưởng / Kỷ luật',
-                },
+
                 {
                     key: '/audit-log',
                     icon: <FileSearchOutlined />,

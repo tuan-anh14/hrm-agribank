@@ -297,7 +297,7 @@ export const routes: RouteObject[] = [
       {
         path: '/reward-penalty',
         element: (
-          <ProtectedRoute requiredRole={['ADMIN', 'HR']}>
+          <ProtectedRoute>
             <RewardPenaltyManager />
           </ProtectedRoute>
         ),

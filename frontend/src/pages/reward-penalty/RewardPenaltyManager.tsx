@@ -8,7 +8,10 @@ import type { RewardPenalty, CreateRewardPenaltyDto } from '@/types/reward-penal
 import type { Employee } from '@/types/employee';
 import dayjs from 'dayjs';
 
+import { useCurrentApp } from '@/components/context/app.context';
+
 const RewardPenaltyManager: React.FC = () => {
+    const { user } = useCurrentApp();
     const [data, setData] = useState<RewardPenalty[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(false);
@@ -17,12 +20,22 @@ const RewardPenaltyManager: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [form] = Form.useForm();
 
+    const isAdmin = user?.role === "ADMIN";
+    const isHR = user?.role === "HR";
+    const isEmployee = !isAdmin && !isHR;
+
     const fetchData = async () => {
         setLoading(true);
         try {
             const params: any = {};
             if (filterEmployeeId) params.employeeId = filterEmployeeId;
             if (filterType) params.type = filterType;
+
+            // If employee, force filter by own ID (though backend enforces it too)
+            if (isEmployee && user?.id) {
+                params.employeeId = user.id;
+            }
+
             const res = await getAllRewardPenaltiesAPI(params);
             setData(res);
         } catch (error) {
@@ -33,6 +46,7 @@ const RewardPenaltyManager: React.FC = () => {
     };
 
     const fetchEmployees = async () => {
+        if (isEmployee) return; // Employees don't need to fetch employee list
         try {
             const res = await getAllEmployeesAPI();
             setEmployees(res);
@@ -42,12 +56,16 @@ const RewardPenaltyManager: React.FC = () => {
     };
 
     useEffect(() => {
-        fetchData();
-    }, [filterEmployeeId, filterType]);
+        if (user) {
+            fetchData();
+        }
+    }, [filterEmployeeId, filterType, user]);
 
     useEffect(() => {
-        fetchEmployees();
-    }, []);
+        if (!isEmployee) {
+            fetchEmployees();
+        }
+    }, [isEmployee]);
 
     const handleCreate = async (values: CreateRewardPenaltyDto) => {
         try {
@@ -76,6 +94,7 @@ const RewardPenaltyManager: React.FC = () => {
             title: 'Nhân viên',
             dataIndex: ['employee', 'fullName'],
             key: 'employeeName',
+            hidden: isEmployee,
             render: (_: string, record: RewardPenalty) => `${record.employee?.fullName} (${record.employee?.employeeCode})`
         },
         {
@@ -108,6 +127,7 @@ const RewardPenaltyManager: React.FC = () => {
         {
             title: 'Hành động',
             key: 'action',
+            hidden: isEmployee,
             render: (_: string, record: RewardPenalty) => (
                 <Popconfirm title="Bạn có chắc chắn muốn xóa?" onConfirm={() => handleDelete(record.id)}>
                     <Button danger icon={<DeleteOutlined />} size="small" />
@@ -116,26 +136,30 @@ const RewardPenaltyManager: React.FC = () => {
         }
     ];
 
+    const visibleColumns = columns.filter(col => !col.hidden);
+
     return (
         <div style={{ padding: 20 }}>
             <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
-                <h2 style={{ margin: 0 }}>Quản lý Khen thưởng / Kỷ luật</h2>
+                <h2 style={{ margin: 0 }}>{isEmployee ? "Lịch sử Khen thưởng / Kỷ luật" : "Quản lý Khen thưởng / Kỷ luật"}</h2>
                 <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    <Select
-                        placeholder="Lọc theo nhân viên"
-                        style={{ width: 200 }}
-                        allowClear
-                        showSearch
-                        optionFilterProp="children"
-                        onChange={setFilterEmployeeId}
-                        value={filterEmployeeId}
-                    >
-                        {employees.map(emp => (
-                            <Select.Option key={emp.id} value={emp.id}>
-                                {emp.fullName}
-                            </Select.Option>
-                        ))}
-                    </Select>
+                    {!isEmployee && (
+                        <Select
+                            placeholder="Lọc theo nhân viên"
+                            style={{ width: 200 }}
+                            allowClear
+                            showSearch
+                            optionFilterProp="children"
+                            onChange={setFilterEmployeeId}
+                            value={filterEmployeeId}
+                        >
+                            {employees.map(emp => (
+                                <Select.Option key={emp.id} value={emp.id}>
+                                    {emp.fullName}
+                                </Select.Option>
+                            ))}
+                        </Select>
+                    )}
                     <Select
                         placeholder="Lọc theo loại"
                         style={{ width: 150 }}
@@ -146,14 +170,16 @@ const RewardPenaltyManager: React.FC = () => {
                         <Select.Option value={RewardPenaltyType.REWARD}>Khen thưởng</Select.Option>
                         <Select.Option value={RewardPenaltyType.PENALTY}>Kỷ luật</Select.Option>
                     </Select>
-                    <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
-                        Thêm mới
-                    </Button>
+                    {!isEmployee && (
+                        <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalOpen(true)}>
+                            Thêm mới
+                        </Button>
+                    )}
                 </div>
             </div>
 
             <Table
-                columns={columns}
+                columns={visibleColumns}
                 dataSource={data}
                 rowKey="id"
                 loading={loading}
