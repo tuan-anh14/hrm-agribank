@@ -1,4 +1,4 @@
-import { App, Button, Divider, Form, Input } from 'antd';
+import { App, Button, Divider, Form, Input, Modal } from 'antd';
 import type { FormProps } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +14,7 @@ type FieldType = {
 
 const LoginPage = () => {
     const [isSubmit, setIsSubmit] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const { message, notification } = App.useApp();
     const navigate = useNavigate();
     const { setIsAuthenticated, setUser } = useCurrentApp();
@@ -69,10 +70,10 @@ const LoginPage = () => {
                     throw new Error('Định dạng response không hợp lệ');
                 }
             } else {
-                const errorMsg = res?.message 
+                const errorMsg = res?.message
                     ? (Array.isArray(res.message) ? res.message[0] : res.message)
                     : 'Vui lòng kiểm tra lại thông tin đăng nhập';
-                
+
                 notification.error({
                     message: "Đăng nhập thất bại",
                     description: errorMsg,
@@ -81,12 +82,12 @@ const LoginPage = () => {
             }
         } catch (error: any) {
             console.error('Login error:', error);
-            
+
             let errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra lại kết nối mạng.';
-            
+
             if (error?.response?.data) {
                 const errorData = error.response.data;
-                errorMessage = errorData?.message 
+                errorMessage = errorData?.message
                     ? (Array.isArray(errorData.message) ? errorData.message[0] : errorData.message)
                     : 'Đăng nhập thất bại';
             } else if (error?.message) {
@@ -138,6 +139,12 @@ const LoginPage = () => {
                                 <Input.Password />
                             </Form.Item>
 
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
+                                <a onClick={(e) => { e.preventDefault(); setIsModalOpen(true); }}>
+                                    Quên mật khẩu / Hỗ trợ?
+                                </a>
+                            </div>
+
                             <Form.Item>
                                 <Button type='primary' htmlType='submit' loading={isSubmit} block>
                                     Đăng nhập
@@ -151,6 +158,20 @@ const LoginPage = () => {
                     </section>
                 </div>
             </main>
+            <Modal
+                title="Hỗ trợ đăng nhập"
+                open={isModalOpen}
+                onOk={() => setIsModalOpen(false)}
+                onCancel={() => setIsModalOpen(false)}
+                footer={[
+                    <Button key="ok" type="primary" onClick={() => setIsModalOpen(false)}>
+                        Đã hiểu
+                    </Button>
+                ]}
+                centered
+            >
+                <p>Vui lòng liên hệ bộ phận IT chi nhánh hoặc gọi Hotline nội bộ <strong>1900xxxx</strong> để được cấp lại mật khẩu.</p>
+            </Modal>
         </div>
     );
 };
