@@ -93,8 +93,16 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
     const calendarDays = useMemo(() => {
         const startOfMonth = currentMonth.startOf("month");
         const endOfMonth = currentMonth.endOf("month");
-        const startDate = startOfMonth.startOf("week");
-        const endDate = endOfMonth.endOf("week");
+
+        // Calculate start date (Monday of the first week)
+        const dayOfWeek = startOfMonth.day();
+        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const startDate = startOfMonth.subtract(daysToSubtract, "day");
+
+        // Calculate end date (Sunday of the last week)
+        const endDayOfWeek = endOfMonth.day();
+        const daysToAdd = endDayOfWeek === 0 ? 0 : 7 - endDayOfWeek;
+        const endDate = endOfMonth.add(daysToAdd, "day");
 
         const days: CalendarDay[] = [];
         let currentDate = startDate;
@@ -110,9 +118,11 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
             );
 
             // Default logic: If Full-time and no schedule, assume Full Day
-            // But only if we have a fullDayShift
+            // But only if we have a fullDayShift and it is NOT a weekend (Sat=6, Sun=0)
             let effectiveShiftId = schedule?.shiftId;
-            if (!schedule && isFullTime && fullDayShift) {
+            const isWeekend = currentDate.day() === 0 || currentDate.day() === 6;
+
+            if (!schedule && isFullTime && fullDayShift && !isWeekend) {
                 effectiveShiftId = fullDayShift.id;
             }
 
@@ -133,8 +143,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
         if (filteredWeekday === null) {
             return calendarDays;
         }
+        // UI: 0=T2(1), 1=T3(2)... 5=T7(6), 6=CN(0)
+        const targetDayIndex = filteredWeekday === 6 ? 0 : filteredWeekday + 1;
         return calendarDays.filter(
-            (day) => day.isCurrentMonth && day.date.day() === filteredWeekday
+            (day) => day.isCurrentMonth && day.date.day() === targetDayIndex
         );
     }, [calendarDays, filteredWeekday]);
 
@@ -215,7 +227,7 @@ const CalendarView: React.FC<CalendarViewProps> = ({ employeeId, shifts, employe
         }
     };
 
-    const weekDays = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+    const weekDays = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
 
     return (
         <div className="work-schedule-calendar">
