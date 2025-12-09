@@ -1,4 +1,4 @@
-import { App, Button, Divider, Form, Input, Modal } from 'antd';
+import { Alert, App, Button, Divider, Form, Input, Modal } from 'antd';
 import type { FormProps } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -115,6 +115,19 @@ const LoginPage = () => {
                         <div className='heading'>
                             <h2 className='text text-large'>Đăng nhập</h2>
                             <Divider />
+                        </div>
+                        <div style={{ marginBottom: 20 }}>
+                            <Alert
+                                message="Thông tin đăng nhập Demo (Admin)"
+                                description={
+                                    <div style={{ fontSize: 13 }}>
+                                        <div><b>Tài khoản:</b> admin@agribank.com</div>
+                                        <div><b>Mật khẩu:</b> admin123</div>
+                                    </div>
+                                }
+                                type="info"
+                                showIcon
+                            />
                         </div>
                         <Form
                             name='form-login'
