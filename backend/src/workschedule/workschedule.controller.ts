@@ -33,13 +33,13 @@ export class WorkscheduleController {
   constructor(
     private readonly workscheduleService: WorkscheduleService,
     private readonly employeeService: EmployeeService,
-  ) {}
+  ) { }
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.HR)
   @ApiOperation({ summary: 'Danh sách lịch làm việc' })
-  async getAll(@Query() query: QueryWorkScheduleDto) {
-    return this.workscheduleService.getAll(query);
+  async getAll(@Query() query: QueryWorkScheduleDto, @Req() req: any) {
+    return this.workscheduleService.getAll(query, req.user);
   }
 
   @Get('employee/:employeeId')
@@ -71,7 +71,7 @@ export class WorkscheduleController {
   @Roles(UserRole.ADMIN, UserRole.HR, UserRole.EMPLOYEE)
   @ApiOperation({ summary: 'Xem chi tiết lịch làm việc' })
   async getById(@Param('id') id: string, @Req() req: any) {
-    const schedule = await this.workscheduleService.getById(id);
+    const schedule = await this.workscheduleService.getById(id, req.user);
     if (req.user.role === UserRole.EMPLOYEE) {
       const employee = await this.employeeService.getEmployeeWithAccountByUserId(req.user.id);
       if (!employee || schedule.employeeId !== employee.id) {
@@ -115,14 +115,14 @@ export class WorkscheduleController {
   @Roles(UserRole.ADMIN, UserRole.HR)
   @ApiOperation({ summary: 'Phê duyệt lịch làm việc' })
   async approve(@Param('id') id: string, @Body() dto: ApproveWorkScheduleDto, @Req() req: any) {
-    return this.workscheduleService.approve(id, req.user.id, dto);
+    return this.workscheduleService.approve(id, req.user, dto);
   }
 
   @Delete(':id')
   @Roles(UserRole.ADMIN, UserRole.HR)
   @ApiOperation({ summary: 'Xoá lịch làm việc' })
-  async delete(@Param('id') id: string) {
-    return this.workscheduleService.delete(id);
+  async delete(@Param('id') id: string, @Req() req: any) {
+    return this.workscheduleService.delete(id, req.user);
   }
 
   @Post('notify-month-available')

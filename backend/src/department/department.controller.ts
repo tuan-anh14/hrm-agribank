@@ -14,26 +14,26 @@ import { CurrentUser } from '@/decorator/customize';
 @ApiTags('Department')
 @Controller('department')
 export class DepartmentController {
-  constructor(private readonly departmentService: DepartmentService) {}
+  constructor(private readonly departmentService: DepartmentService) { }
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.HR)
   @ApiOperation({ summary: 'Lấy danh sách phòng ban' })
   @ApiResponse({ status: 200, description: 'Danh sách phòng ban' })
-  async getAll() {
-    return this.departmentService.getAll();
+  async getAll(@CurrentUser() user: any) {
+    return this.departmentService.getAll(user);
   }
 
   @Get(':id')
   @Roles(UserRole.ADMIN, UserRole.HR)
   @ApiOperation({ summary: 'Lấy chi tiết phòng ban theo ID' })
   @ApiResponse({ status: 200, description: 'Thông tin phòng ban' })
-  async getById(@Param('id') id: string) {
-    return this.departmentService.getById(id);
+  async getById(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.departmentService.getById(id, user);
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.HR)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Tạo mới phòng ban' })
   @ApiResponse({ status: 201, description: 'Tạo phòng ban thành công' })
   async create(@Body() data: CreateDepartmentDto, @CurrentUser() user: any) {

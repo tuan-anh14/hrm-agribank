@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { Employee, Account, Prisma, EmployeeType, AuditAction, AuditModule, AuditStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -9,6 +9,7 @@ import {
   notifyEmployeeCreated,
   notifyEmployeeUpdated,
 } from '@/notification/notification-templates.helper';
+import { UserRole } from '@/auth/constants/roles.constants';
 
 type EmployeeWithAccount = Employee & {
   account?: Account | null;
@@ -46,18 +47,45 @@ export class EmployeeService {
     return `EMP${Math.floor(100000 + Math.random() * 900000)}`;
   }
 
-  async getAll(): Promise<Employee[]> {
+  async getAll(user?: any): Promise<Employee[]> {
+    let whereCondition: any = {};
+
+    if (user && user.role === UserRole.HR) {
+      const hrEmployee = await this.prisma.employee.findUnique({
+        where: { id: user.id },
+        select: { departmentId: true }
+      });
+
+      if (hrEmployee?.departmentId) {
+        whereCondition.departmentId = hrEmployee.departmentId;
+      } else {
+        return [];
+      }
+    }
+
     return this.prisma.employee.findMany({
+      where: whereCondition,
       include: { department: true, position: true },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async getById(id: string): Promise<Employee> {
+  async getById(id: string, user?: any): Promise<Employee> {
     const employee = await this.prisma.employee.findUnique({
       where: { id },
       include: { department: true, position: true },
     });
+
+    if (user && user.role === UserRole.HR) {
+      const hrEmployee = await this.prisma.employee.findUnique({
+        where: { id: user.id },
+        select: { departmentId: true }
+      });
+
+      if (employee?.departmentId !== hrEmployee?.departmentId) {
+        throw new ForbiddenException('Bạn chỉ có quyền xem thông tin nhân viên trong cùng phòng ban');
+      }
+    }
 
     if (!employee) {
       throw new NotFoundException(`Employee with ID ${id} not found`);
@@ -73,6 +101,24 @@ export class EmployeeService {
       // Generate employeeCode if not provided
       if (!normalizedData.employeeCode) {
         normalizedData.employeeCode = this.generateEmployeeCode();
+      }
+
+      if (user && user.role === UserRole.HR) {
+        const hrEmployee = await this.prisma.employee.findUnique({
+          where: { id: user.id },
+          select: { departmentId: true }
+        });
+
+        if (!hrEmployee?.departmentId) {
+          throw new ForbiddenException('HR Account does not belong to any department');
+        }
+
+        if (normalizedData.departmentId && normalizedData.departmentId !== hrEmployee.departmentId) {
+          throw new ForbiddenException('You can only create employees in your department');
+        }
+
+        // Force the department to be the same as HR's
+        normalizedData.departmentId = hrEmployee.departmentId;
       }
 
       const employee = await this.prisma.employee.create({
@@ -121,6 +167,21 @@ export class EmployeeService {
       const before = await this.prisma.employee.findUnique({ where: { id } });
       if (!before) {
         throw new NotFoundException(`Employee with ID ${id} not found`);
+      }
+
+      if (user && user.role === UserRole.HR) {
+        const hrEmployee = await this.prisma.employee.findUnique({
+          where: { id: user.id },
+          select: { departmentId: true }
+        });
+
+        if (before.departmentId !== hrEmployee?.departmentId) {
+          throw new ForbiddenException('Bạn chỉ có quyền cập nhật nhân viên trong cùng phòng ban');
+        }
+
+        if (data.departmentId && data.departmentId !== hrEmployee?.departmentId) {
+          throw new ForbiddenException('Bạn không thể chuyển nhân viên sang phòng ban khác');
+        }
       }
 
       const normalizedData = this.normalizeEmployeeDates(data);
@@ -173,6 +234,17 @@ export class EmployeeService {
   async delete(id: string, user?: any): Promise<Employee> {
     try {
       const before = await this.prisma.employee.findUnique({ where: { id } });
+
+      if (user && user.role === UserRole.HR) {
+        const hrEmployee = await this.prisma.employee.findUnique({
+          where: { id: user.id },
+          select: { departmentId: true }
+        });
+
+        if (before?.departmentId !== hrEmployee?.departmentId) {
+          throw new ForbiddenException('Bạn chỉ có quyền xóa nhân viên trong cùng phòng ban');
+        }
+      }
 
       const employee = await this.prisma.employee.delete({
         where: { id },

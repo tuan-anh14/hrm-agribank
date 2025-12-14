@@ -22,10 +22,10 @@ import { JwtAuthGuard } from '@/auth/jwt-auth.guard';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('audit-log')
 export class AuditLogController {
-  constructor(private readonly auditLogService: AuditLogService) {}
+  constructor(private readonly auditLogService: AuditLogService) { }
 
   @Get()
-  @Roles(UserRole.ADMIN, UserRole.HR)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Danh sách audit log với filter & phân trang' })
   async findAll(
     @Query() query: QueryAuditLogDto,
@@ -34,7 +34,7 @@ export class AuditLogController {
   }
 
   @Get(':id')
-  @Roles(UserRole.ADMIN, UserRole.HR)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Chi tiết một audit log' })
   async findOne(@Param('id') id: string): Promise<AuditLogDetailDto> {
     const log = await this.auditLogService.findOne(id);

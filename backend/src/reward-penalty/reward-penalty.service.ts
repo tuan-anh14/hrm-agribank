@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { UserRole } from '@/auth/constants/roles.constants';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateRewardPenaltyDto } from './dto/create-reward-penalty.dto';
 import { UpdateRewardPenaltyDto } from './dto/update-reward-penalty.dto';
@@ -18,7 +19,23 @@ export class RewardPenaltyService {
         private readonly notificationService: NotificationService,
     ) { }
 
-    async create(createRewardPenaltyDto: CreateRewardPenaltyDto) {
+    async create(createRewardPenaltyDto: CreateRewardPenaltyDto, user?: any) {
+        if (user && user.role === UserRole.HR) {
+            const hrEmployee = await this.prisma.employee.findUnique({
+                where: { id: user.id },
+                select: { departmentId: true }
+            });
+
+            const targetEmployee = await this.prisma.employee.findUnique({
+                where: { id: createRewardPenaltyDto.employeeId },
+                select: { departmentId: true }
+            });
+
+            if (targetEmployee?.departmentId !== hrEmployee?.departmentId) {
+                throw new ForbiddenException('Bạn chỉ có quyền tạo thưởng/phạt cho nhân viên trong cùng phòng ban');
+            }
+        }
+
         const rewardPenalty = await this.prisma.rewardPenalty.create({
             data: createRewardPenaltyDto,
         });
@@ -57,9 +74,24 @@ export class RewardPenaltyService {
         return rewardPenalty;
     }
 
-    findAll(query: any = {}) {
+    async findAll(query: any = {}, user?: any) {
         const { employeeId, type } = query;
         const where: any = {};
+
+        if (user && user.role === UserRole.HR) {
+            const hrEmployee = await this.prisma.employee.findUnique({
+                where: { id: user.id },
+                select: { departmentId: true }
+            });
+
+            if (hrEmployee?.departmentId) {
+                where.employee = {
+                    departmentId: hrEmployee.departmentId
+                };
+            } else {
+                return [];
+            }
+        }
 
         if (employeeId) where.employeeId = employeeId;
         if (type) where.type = type;
@@ -79,8 +111,8 @@ export class RewardPenaltyService {
         });
     }
 
-    findOne(id: string) {
-        return this.prisma.rewardPenalty.findUnique({
+    async findOne(id: string, user?: any) {
+        const rewardPenalty = await this.prisma.rewardPenalty.findUnique({
             where: { id },
             include: {
                 employee: {
@@ -88,16 +120,46 @@ export class RewardPenaltyService {
                         id: true,
                         fullName: true,
                         employeeCode: true,
+                        departmentId: true,
                     },
                 },
             },
         });
+
+        if (!rewardPenalty) return null;
+
+        if (user && user.role === UserRole.HR) {
+            const hrEmployee = await this.prisma.employee.findUnique({
+                where: { id: user.id },
+                select: { departmentId: true }
+            });
+
+            if (rewardPenalty.employee?.departmentId !== hrEmployee?.departmentId) {
+                throw new ForbiddenException('Bạn chỉ có quyền xem thưởng/phạt của nhân viên trong cùng phòng ban');
+            }
+        }
+
+        return rewardPenalty;
     }
 
-    async update(id: string, updateRewardPenaltyDto: UpdateRewardPenaltyDto) {
-        const before = await this.prisma.rewardPenalty.findUnique({ where: { id } });
+    async update(id: string, updateRewardPenaltyDto: UpdateRewardPenaltyDto, user?: any) {
+        const before = await this.prisma.rewardPenalty.findUnique({
+            where: { id },
+            include: { employee: true }
+        });
         if (!before) {
             throw new NotFoundException(`RewardPenalty with ID ${id} not found`);
+        }
+
+        if (user && user.role === UserRole.HR) {
+            const hrEmployee = await this.prisma.employee.findUnique({
+                where: { id: user.id },
+                select: { departmentId: true }
+            });
+
+            if (before.employee?.departmentId !== hrEmployee?.departmentId) {
+                throw new ForbiddenException('Bạn chỉ có quyền cập nhật thưởng/phạt của nhân viên trong cùng phòng ban');
+            }
         }
 
         const rewardPenalty = await this.prisma.rewardPenalty.update({
@@ -119,8 +181,22 @@ export class RewardPenaltyService {
         return rewardPenalty;
     }
 
-    async remove(id: string) {
-        const before = await this.prisma.rewardPenalty.findUnique({ where: { id } });
+    async remove(id: string, user?: any) {
+        const before = await this.prisma.rewardPenalty.findUnique({
+            where: { id },
+            include: { employee: true }
+        });
+
+        if (before && user && user.role === UserRole.HR) {
+            const hrEmployee = await this.prisma.employee.findUnique({
+                where: { id: user.id },
+                select: { departmentId: true }
+            });
+
+            if (before.employee?.departmentId !== hrEmployee?.departmentId) {
+                throw new ForbiddenException('Bạn chỉ có quyền xóa thưởng/phạt của nhân viên trong cùng phòng ban');
+            }
+        }
 
         const rewardPenalty = await this.prisma.rewardPenalty.delete({
             where: { id },

@@ -14,7 +14,7 @@ import { CurrentUser } from '@/decorator/customize';
 @ApiTags('Position')
 @Controller('position')
 export class PositionController {
-  constructor(private readonly positionService: PositionService) {}
+  constructor(private readonly positionService: PositionService) { }
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.HR)
@@ -33,7 +33,7 @@ export class PositionController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.HR)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Tạo mới chức vụ' })
   @ApiResponse({ status: 201, description: 'Tạo chức vụ thành công' })
   async create(@Body() data: CreatePositionDto, @CurrentUser() user: any) {
@@ -41,7 +41,7 @@ export class PositionController {
   }
 
   @Put(':id')
-  @Roles(UserRole.ADMIN, UserRole.HR)
+  @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Cập nhật chức vụ' })
   @ApiResponse({ status: 200, description: 'Cập nhật thành công' })
   async update(@Param('id') id: string, @Body() data: UpdatePositionDto, @CurrentUser() user: any) {

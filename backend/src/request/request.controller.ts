@@ -32,14 +32,14 @@ export class RequestController {
   constructor(
     private readonly requestService: RequestService,
     private readonly employeeService: EmployeeService,
-  ) {}
+  ) { }
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.HR)
   @ApiOperation({ summary: 'Danh sách đơn (Admin/HR)' })
   @ApiResponse({ status: 200, description: 'Danh sách đơn' })
-  async getAll(@Query() query: QueryRequestDto) {
-    return this.requestService.getAll(query);
+  async getAll(@Query() query: QueryRequestDto, @Req() req: any) {
+    return this.requestService.getAll(query, req.user);
   }
 
   @Get('employee/:employeeId')
@@ -58,7 +58,7 @@ export class RequestController {
         throw new ForbiddenException('Bạn chỉ có thể xem đơn của chính mình');
       }
     }
-    return this.requestService.getByEmployee(employeeId, query);
+    return this.requestService.getByEmployee(employeeId, query, req.user);
   }
 
   @Get('me')
@@ -78,7 +78,7 @@ export class RequestController {
   @ApiOperation({ summary: 'Xem chi tiết đơn' })
   @ApiResponse({ status: 200, description: 'Chi tiết đơn' })
   async getById(@Param('id') id: string, @Req() req: any) {
-    const request = await this.requestService.getById(id);
+    const request = await this.requestService.getById(id, req.user);
     // Employee chỉ có thể xem đơn của chính mình
     if (req.user.role === UserRole.EMPLOYEE) {
       const employee = await this.employeeService.getEmployeeWithAccountByUserId(req.user.id);
@@ -145,8 +145,8 @@ export class RequestController {
     @Body() dto: ApproveRequestDto,
     @Req() req: any,
   ) {
-    // req.user.id là employee ID từ JWT payload
-    return this.requestService.approve(id, req.user.id, dto);
+    // req.user bao gồm thông tin user từ JWT (id, role, etc)
+    return this.requestService.approve(id, req.user, dto);
   }
 
   @Delete(':id')

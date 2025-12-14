@@ -24,15 +24,15 @@ import { CurrentUser } from '@/decorator/customize';
 @ApiTags('Employee')
 @Controller('employee')
 export class EmployeeController {
-  constructor(private readonly employeeService: EmployeeService) {}
+  constructor(private readonly employeeService: EmployeeService) { }
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.HR)
   @ApiOperation({ summary: 'Lấy danh sách nhân viên' })
   @ApiResponse({ status: 200, description: 'Danh sách nhân viên' })
   @ApiResponse({ status: 403, description: 'Không có quyền truy cập' })
-  async getAll() {
-    return this.employeeService.getAll();
+  async getAll(@CurrentUser() user: any) {
+    return this.employeeService.getAll(user);
   }
 
   @Get(':id')
@@ -40,8 +40,8 @@ export class EmployeeController {
   @ApiOperation({ summary: 'Lấy chi tiết nhân viên theo ID' })
   @ApiResponse({ status: 200, description: 'Thông tin nhân viên' })
   @ApiResponse({ status: 403, description: 'Không có quyền truy cập' })
-  async getById(@Param('id') id: string) {
-    return this.employeeService.getById(id);
+  async getById(@Param('id') id: string, @CurrentUser() user: any) {
+    return this.employeeService.getById(id, user);
   }
 
   @Post()

@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { UserRole } from '@/auth/constants/roles.constants';
 import { PrismaService } from '@/prisma/prisma.service';
 import { RewardPenaltyService } from '../reward-penalty/reward-penalty.service';
 import {
@@ -388,7 +389,40 @@ export class PayrollService {
         return Promise.all(payrollPromises);
     }
 
-    async getAll(query: any) {
+    async getAll(query: any, user?: any) {
+        if (user && user.role === UserRole.HR) {
+            const hrEmployee = await this.prisma.employee.findUnique({
+                where: { id: user.id },
+                select: { departmentId: true }
+            });
+
+            if (!hrEmployee?.departmentId) {
+                return [];
+            }
+
+            // Override or merge employee filter to ensure Department check
+            // Use prisma filtering on relation
+            let whereClause = { ...query };
+
+            // Ensure we are filtering by employees in this department
+            whereClause.employee = {
+                departmentId: hrEmployee.departmentId
+            }
+
+            return this.prisma.payroll.findMany({
+                where: whereClause,
+                include: {
+                    employee: {
+                        include: {
+                            department: true,
+                            position: true,
+                        },
+                    },
+                },
+                orderBy: [{ year: 'desc' }, { month: 'desc' }],
+            });
+        }
+
         return this.prisma.payroll.findMany({
             where: query,
             include: {
@@ -403,7 +437,7 @@ export class PayrollService {
         });
     }
 
-    async getById(id: string) {
+    async getById(id: string, user?: any) {
         const payroll = await this.prisma.payroll.findUnique({
             where: { id },
             include: {
@@ -416,6 +450,18 @@ export class PayrollService {
             },
         });
         if (!payroll) throw new NotFoundException('Payroll not found');
+
+        if (user && user.role === UserRole.HR) {
+            const hrEmployee = await this.prisma.employee.findUnique({
+                where: { id: user.id },
+                select: { departmentId: true }
+            });
+
+            if (payroll.employee?.departmentId !== hrEmployee?.departmentId) {
+                throw new ForbiddenException('Bạn chỉ có quyền xem bảng lương của nhân viên trong cùng phòng ban');
+            }
+        }
+
         return payroll;
     }
 

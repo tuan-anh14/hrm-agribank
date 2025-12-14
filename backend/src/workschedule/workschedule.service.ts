@@ -5,6 +5,7 @@ import {
   NotFoundException,
   ForbiddenException,
 } from '@nestjs/common';
+import { UserRole } from '@/auth/constants/roles.constants';
 import { AuditAction, AuditModule, AuditStatus, Prisma, RequestStatus } from '@prisma/client';
 import { PrismaService } from '@/prisma/prisma.service';
 import { CreateWorkScheduleDto } from './dto/create-workschedule.dto';
@@ -103,12 +104,27 @@ export class WorkscheduleService {
     }
   }
 
-  async getAll(query: QueryWorkScheduleDto = {}) {
+  async getAll(query: QueryWorkScheduleDto = {}, user?: any) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
     const skip = (page - 1) * limit;
 
     const where: Prisma.WorkScheduleWhereInput = {};
+
+    if (user && user.role === UserRole.HR) {
+      const hrEmployee = await this.prisma.employee.findUnique({
+        where: { id: user.id },
+        select: { departmentId: true }
+      });
+
+      if (hrEmployee?.departmentId) {
+        where.employee = {
+          departmentId: hrEmployee.departmentId
+        };
+      } else {
+        return { data: [], total: 0, page, limit, totalPages: 0 };
+      }
+    }
 
     if (query.employeeId) {
       where.employeeId = query.employeeId;
@@ -156,7 +172,7 @@ export class WorkscheduleService {
     };
   }
 
-  async getById(id: string) {
+  async getById(id: string, user?: any) {
     const schedule = await this.prisma.workSchedule.findUnique({
       where: { id },
       include: this.includeRelations,
@@ -166,11 +182,22 @@ export class WorkscheduleService {
       throw new NotFoundException(`Không tìm thấy lịch làm việc ID ${id}`);
     }
 
+    if (user && user.role === UserRole.HR) {
+      const hrEmployee = await this.prisma.employee.findUnique({
+        where: { id: user.id },
+        select: { departmentId: true }
+      });
+
+      if (schedule.employee?.departmentId !== hrEmployee?.departmentId) {
+        throw new ForbiddenException('Bạn chỉ có quyền xem lịch làm việc của nhân viên trong cùng phòng ban');
+      }
+    }
+
     return schedule;
   }
 
-  async getByEmployee(employeeId: string, query: QueryWorkScheduleDto = {}) {
-    return this.getAll({ ...query, employeeId });
+  async getByEmployee(employeeId: string, query: QueryWorkScheduleDto = {}, user?: any) {
+    return this.getAll({ ...query, employeeId }, user);
   }
 
   async create(data: CreateWorkScheduleDto) {
@@ -357,10 +384,25 @@ export class WorkscheduleService {
     return updated;
   }
 
-  async delete(id: string) {
-    const schedule = await this.prisma.workSchedule.findUnique({ where: { id } });
+  async delete(id: string, user?: any) {
+    const schedule = await this.prisma.workSchedule.findUnique({
+      where: { id },
+      include: this.includeRelations,
+    });
+
     if (!schedule) {
       throw new NotFoundException(`Không tìm thấy lịch làm việc ID ${id}`);
+    }
+
+    if (user && user.role === UserRole.HR) {
+      const hrEmployee = await this.prisma.employee.findUnique({
+        where: { id: user.id },
+        select: { departmentId: true }
+      });
+
+      if (schedule.employee?.departmentId !== hrEmployee?.departmentId) {
+        throw new ForbiddenException('Bạn chỉ có quyền xóa lịch làm việc của nhân viên trong cùng phòng ban');
+      }
     }
 
     if (schedule.status !== RequestStatus.PENDING) {

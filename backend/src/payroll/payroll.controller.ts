@@ -58,15 +58,15 @@ export class PayrollController {
         if (query.month) filters.month = parseInt(query.month);
         if (query.year) filters.year = parseInt(query.year);
 
-        return this.payrollService.getAll(filters);
+        return this.payrollService.getAll(filters, req.user);
     }
 
     @Get(':id')
     @Roles(Role.ADMIN, Role.HR, Role.EMPLOYEE)
     @ApiOperation({ summary: 'Lấy chi tiết bảng lương' })
     @ApiParam({ name: 'id', description: 'ID của bảng lương' })
-    async getById(@Param('id') id: string) {
-        return this.payrollService.getById(id);
+    async getById(@Param('id') id: string, @Req() req: any) {
+        return this.payrollService.getById(id, req.user);
     }
 
     @Patch(':id/status')

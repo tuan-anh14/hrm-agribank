@@ -19,6 +19,7 @@ import {
   notifyRequestRejected,
 } from '@/notification/notification-templates.helper';
 import { writeAuditLog, getActorContextFromUser } from '@/audit-log/audit-log.helper';
+import { UserRole } from '@/auth/constants/roles.constants';
 
 @Injectable()
 export class RequestService {
@@ -26,7 +27,7 @@ export class RequestService {
     private readonly prisma: PrismaService,
     private readonly auditLogService: AuditLogService,
     private readonly notificationService: NotificationService,
-  ) {}
+  ) { }
 
   private readonly includeRelations: Prisma.RequestInclude = {
     employee: {
@@ -90,12 +91,27 @@ export class RequestService {
     }
   }
 
-  async getAll(query: QueryRequestDto = {}) {
+  async getAll(query: QueryRequestDto = {}, user?: any) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
     const skip = (page - 1) * limit;
 
     const where: Prisma.RequestWhereInput = {};
+
+    if (user && user.role === UserRole.HR) {
+      const hrEmployee = await this.prisma.employee.findUnique({
+        where: { id: user.id },
+        select: { departmentId: true }
+      });
+
+      if (hrEmployee?.departmentId) {
+        where.employee = {
+          departmentId: hrEmployee.departmentId
+        };
+      } else {
+        return { data: [], total: 0, page, limit, totalPages: 0 };
+      }
+    }
 
     if (query.employeeId) {
       where.employeeId = query.employeeId;
@@ -165,7 +181,7 @@ export class RequestService {
     };
   }
 
-  async getById(id: string) {
+  async getById(id: string, user?: any) {
     const request = await this.prisma.request.findUnique({
       where: { id },
       include: this.includeRelations,
@@ -175,11 +191,22 @@ export class RequestService {
       throw new NotFoundException(`Không tìm thấy đơn ID ${id}`);
     }
 
+    if (user && user.role === UserRole.HR) {
+      const hrEmployee = await this.prisma.employee.findUnique({
+        where: { id: user.id },
+        select: { departmentId: true }
+      });
+
+      if (request.employee?.departmentId !== hrEmployee?.departmentId) {
+        throw new ForbiddenException('Bạn chỉ có quyền xem đơn của nhân viên trong cùng phòng ban');
+      }
+    }
+
     return request;
   }
 
-  async getByEmployee(employeeId: string, query: QueryRequestDto = {}) {
-    return this.getAll({ ...query, employeeId });
+  async getByEmployee(employeeId: string, query: QueryRequestDto = {}, user?: any) {
+    return this.getAll({ ...query, employeeId }, user);
   }
 
   async create(data: CreateRequestDto, user?: any) {
@@ -343,9 +370,22 @@ export class RequestService {
 
     // Chỉ cho phép nhân viên tạo đơn hoặc ADMIN/HR xóa
     if (user && user.employeeId && user.employeeId !== request.employeeId) {
-      const isAdminOrHR = user.role === 'ADMIN' || user.role === 'HR';
-      if (!isAdminOrHR) {
+      const isAdmin = user.role === UserRole.ADMIN;
+      const isHR = user.role === UserRole.HR;
+
+      if (!isAdmin && !isHR) {
         throw new ForbiddenException('Bạn không có quyền xóa đơn này');
+      }
+
+      if (isHR) {
+        const hrEmployee = await this.prisma.employee.findUnique({
+          where: { id: user.id },
+          select: { departmentId: true }
+        });
+
+        if (request.employee?.departmentId !== hrEmployee?.departmentId) {
+          throw new ForbiddenException('Bạn chỉ có quyền xóa đơn của nhân viên trong cùng phòng ban');
+        }
       }
     }
 
@@ -381,7 +421,7 @@ export class RequestService {
     }
   }
 
-  async approve(id: string, approverId: string, dto: ApproveRequestDto) {
+  async approve(id: string, user: any, dto: ApproveRequestDto) {
     const request = await this.prisma.request.findUnique({
       where: { id },
       include: this.includeRelations,
@@ -389,6 +429,17 @@ export class RequestService {
 
     if (!request) {
       throw new NotFoundException(`Không tìm thấy đơn ID ${id}`);
+    }
+
+    if (user && user.role === UserRole.HR) {
+      const hrEmployee = await this.prisma.employee.findUnique({
+        where: { id: user.id },
+        select: { departmentId: true }
+      });
+
+      if (request.employee?.departmentId !== hrEmployee?.departmentId) {
+        throw new ForbiddenException('Bạn chỉ có quyền duyệt đơn của nhân viên trong cùng phòng ban');
+      }
     }
 
     if (request.status !== RequestStatus.PENDING) {
@@ -399,13 +450,13 @@ export class RequestService {
       where: { id },
       data: {
         status: dto.status,
-        approvedById: approverId,
+        approvedById: user.id,
         approvedDate: new Date(),
       },
       include: this.includeRelations,
     });
 
-    const actorContext = await this.getActorContextFromUser({ employeeId: approverId });
+    const actorContext = await this.getActorContextFromUser(user);
     await writeAuditLog(this.auditLogService, {
       base: {
         module: AuditModule.REQUEST,

@@ -10,8 +10,8 @@ export class RewardPenaltyController {
     constructor(private readonly rewardPenaltyService: RewardPenaltyService) { }
 
     @Post()
-    create(@Body() createRewardPenaltyDto: CreateRewardPenaltyDto) {
-        return this.rewardPenaltyService.create(createRewardPenaltyDto);
+    create(@Body() createRewardPenaltyDto: CreateRewardPenaltyDto, @CurrentUser() user: any) {
+        return this.rewardPenaltyService.create(createRewardPenaltyDto, user);
     }
 
     @Get()
@@ -19,21 +19,21 @@ export class RewardPenaltyController {
         if (user.role === 'EMPLOYEE') {
             query.employeeId = user.id;
         }
-        return this.rewardPenaltyService.findAll(query);
+        return this.rewardPenaltyService.findAll(query, user);
     }
 
     @Get(':id')
-    findOne(@Param('id') id: string) {
-        return this.rewardPenaltyService.findOne(id);
+    findOne(@Param('id') id: string, @CurrentUser() user: any) {
+        return this.rewardPenaltyService.findOne(id, user);
     }
 
     @Patch(':id')
-    update(@Param('id') id: string, @Body() updateRewardPenaltyDto: UpdateRewardPenaltyDto) {
-        return this.rewardPenaltyService.update(id, updateRewardPenaltyDto);
+    update(@Param('id') id: string, @Body() updateRewardPenaltyDto: UpdateRewardPenaltyDto, @CurrentUser() user: any) {
+        return this.rewardPenaltyService.update(id, updateRewardPenaltyDto, user);
     }
 
     @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.rewardPenaltyService.remove(id);
+    remove(@Param('id') id: string, @CurrentUser() user: any) {
+        return this.rewardPenaltyService.remove(id, user);
     }
 }
